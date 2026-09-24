@@ -11,6 +11,8 @@ to date whenever a component that ends up in the packaged app is added or remove
 - **[React](https://github.com/facebook/react) and React DOM** (MIT): workbench UI.
 - **[zod](https://github.com/colinhacks/zod)** (MIT): schema validation at every boundary.
 - **[Zustand](https://github.com/pmndrs/zustand)** (MIT): renderer state.
+- **[MSAL for Node.js](https://github.com/AzureAD/microsoft-authentication-library-for-js)**
+  (`@azure/msal-node`, MIT, © Microsoft Corporation): Microsoft Entra sign-in.
 - **[jsonc-parser](https://github.com/microsoft/node-jsonc-parser)** (MIT, © Microsoft
   Corporation): reading and editing the `*.jsonc` config files.
 
