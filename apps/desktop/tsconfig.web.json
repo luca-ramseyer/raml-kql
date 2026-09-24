@@ -10,5 +10,19 @@
     "jsx": "react-jsx",
     "types": ["vite/client"]
   },
-  "include": ["src/renderer/**/*", "src/shared/**/*", "test/setup/dom.ts"]
+  "include": [
+    "src/renderer/**/*",
+    "src/renderer/**/*.json",
+    "src/shared/**/*",
+    "test/setup/dom.ts",
+    // The renderer test harness boots the real IPC stack in jsdom. These modules don't use
+    // Node APIs, so they also type-check in the browser environment.
+    "test/helpers/workbench-harness.ts",
+    "test/helpers/fake-handlers.ts",
+    "test/helpers/fake-ipc.ts",
+    "src/main/ipc/router.ts",
+    "src/main/ipc/handlers.ts",
+    "src/main/security/navigation.ts",
+    "src/preload/api.ts"
+  ]
 }

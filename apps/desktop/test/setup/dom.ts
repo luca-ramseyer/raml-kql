@@ -20,3 +20,35 @@ declare module 'vitest' {
 afterEach(() => {
   cleanup();
 });
+
+// jsdom has no matchMedia; the theme service uses it to follow the OS appearance.
+// Tests can flip `prefers-color-scheme` with `setMediaMatch()` from test/helpers/media.ts.
+if (typeof window.matchMedia !== 'function') {
+  const listeners = new Map<string, Set<() => void>>();
+  const matches = new Map<string, boolean>();
+  Object.assign(window, {
+    matchMedia: (query: string) => ({
+      get matches() {
+        return matches.get(query) ?? false;
+      },
+      media: query,
+      onchange: null,
+      addEventListener: (_type: string, listener: () => void) => {
+        let set = listeners.get(query);
+        if (set === undefined) {
+          set = new Set();
+          listeners.set(query, set);
+        }
+        set.add(listener);
+      },
+      removeEventListener: (_type: string, listener: () => void) => {
+        listeners.get(query)?.delete(listener);
+      },
+      dispatchEvent: () => false,
+    }),
+    __setMediaMatch: (query: string, value: boolean) => {
+      matches.set(query, value);
+      for (const listener of listeners.get(query) ?? []) listener();
+    },
+  });
+}

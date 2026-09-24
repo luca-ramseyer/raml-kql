@@ -1,0 +1,120 @@
+.notification-toasts {
+  position: absolute;
+  right: 3px;
+  bottom: 25px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  width: 450px;
+  gap: 6px;
+}
+
+.notification-toast,
+.notifications-center {
+  overflow: hidden;
+  border: 1px solid var(--vscode-notificationToast-border, transparent);
+  border-radius: 4px;
+  background-color: var(--vscode-notifications-background);
+  box-shadow: 0 0 8px 2px var(--vscode-widget-shadow);
+  color: var(--vscode-notifications-foreground);
+}
+
+.notifications-center {
+  position: absolute;
+  right: 3px;
+  bottom: 25px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  width: 450px;
+  max-height: 50%;
+  border-color: var(--vscode-notificationCenter-border, transparent);
+}
+
+.notifications-center-header {
+  display: flex;
+  flex: 0 0 35px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 0 12px;
+  background-color: var(--vscode-notificationCenterHeader-background);
+  color: var(--vscode-notificationCenterHeader-foreground);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.notifications-center-list {
+  overflow: auto;
+}
+
+.notifications-center-list .notification + .notification {
+  border-top: 1px solid var(--vscode-notifications-border);
+}
+
+.notification {
+  padding: 10px 8px 8px 12px;
+}
+
+.notification-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.notification-icon {
+  flex: 0 0 auto;
+  font-size: 16px;
+}
+
+.severity-info .notification-icon {
+  color: var(--vscode-notificationsInfoIcon-foreground);
+}
+
+.severity-warning .notification-icon {
+  color: var(--vscode-notificationsWarningIcon-foreground);
+}
+
+.severity-error .notification-icon {
+  color: var(--vscode-notificationsErrorIcon-foreground);
+}
+
+.notification-message {
+  flex: 1;
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.notification-toolbar {
+  display: flex;
+  gap: 2px;
+}
+
+.notification-detail {
+  max-height: 200px;
+  margin: 8px 0 0 24px;
+  overflow: auto;
+  font-family: inherit;
+  white-space: pre-wrap;
+}
+
+.notification-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.notification-source {
+  padding-left: 24px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+}
+
+.notification-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.notification-footer:has(.notification-buttons:empty) {
+  display: none;
+}

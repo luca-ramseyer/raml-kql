@@ -1,0 +1,70 @@
+.panel {
+  display: flex;
+  box-sizing: border-box;
+  flex-direction: column;
+  height: 100%;
+  border-top: 1px solid var(--vscode-panel-border);
+  background-color: var(--vscode-panel-background);
+}
+
+.panel-title {
+  display: flex;
+  flex: 0 0 35px;
+  align-items: center;
+  justify-content: space-between;
+  height: 35px;
+  padding: 0 8px;
+}
+
+.panel-tabs {
+  display: flex;
+  height: 100%;
+}
+
+.panel-tab {
+  position: relative;
+  height: 100%;
+  padding: 0 10px;
+  border: none;
+  background: none;
+  color: var(--vscode-panelTitle-inactiveForeground);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.panel-tab:hover,
+.panel-tab.checked {
+  color: var(--vscode-panelTitle-activeForeground);
+}
+
+.panel-tab.checked::after {
+  position: absolute;
+  right: 10px;
+  bottom: 6px;
+  left: 10px;
+  height: 1px;
+  background-color: var(--vscode-panelTitle-activeBorder);
+  content: '';
+}
+
+.panel-tab:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.panel-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.panel-content {
+  overflow: auto;
+  flex: 1;
+  padding: 0 20px;
+}
+
+.panel-empty {
+  color: var(--vscode-descriptionForeground);
+}

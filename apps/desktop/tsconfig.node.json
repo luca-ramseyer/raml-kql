@@ -19,5 +19,5 @@
     "test/**/*",
     "e2e/**/*"
   ],
-  "exclude": ["test/setup/dom.ts"]
+  "exclude": ["test/setup/dom.ts", "test/helpers/workbench-harness.ts"]
 }

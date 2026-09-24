@@ -1,6 +1,15 @@
 import { z } from 'zod';
 
+import {
+  KeybindingsSnapshotSchema,
+  SettingsSnapshotSchema,
+  UserThemesSnapshotSchema,
+} from '../config/config-snapshots';
+import { LayoutStateSchema } from '../layout/layout-state';
+import { MenuBarModelSchema, MenuRoleSchema } from '../menus/menu-model';
+
 import { defineChannel, type AnyChannel, type IpcResult } from './channel';
+import type { RamlKqlEventsApi } from './events';
 
 // ---------------------------------------------------------------------------------------------
 // Schemas
@@ -13,11 +22,21 @@ export const AppInfoSchema = z.object({
   electronVersion: z.string(),
   /** True when running with `--demo` / `RAML_KQL_DEMO=1` (fake data, no network). */
   demoMode: z.boolean(),
+  /** True for `pnpm dev` (unpackaged) builds. */
+  isDevelopment: z.boolean(),
 });
 export type AppInfo = z.infer<typeof AppInfoSchema>;
 
 export const PingRequestSchema = z.object({ message: z.string().max(1024) }).strict();
 export const PingResponseSchema = z.object({ message: z.string(), receivedAt: z.iso.datetime() });
+
+export const SettingsUpdateRequestSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('set'), key: z.string().min(1).max(200), value: z.json() }).strict(),
+  z.object({ action: z.literal('reset'), key: z.string().min(1).max(200) }).strict(),
+]);
+export type SettingsUpdateRequest = z.infer<typeof SettingsUpdateRequestSchema>;
+
+const HexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 
 // ---------------------------------------------------------------------------------------------
 // Contract table: namespace -> method -> channel.
@@ -31,6 +50,69 @@ export const ipcContracts = {
     getInfo: defineChannel('app:getInfo', z.undefined(), AppInfoSchema),
     /** Diagnostic round trip to the main process. */
     ping: defineChannel('app:ping', PingRequestSchema, PingResponseSchema),
+    /** Restart the app, switching demo mode on or off. */
+    relaunch: defineChannel(
+      'app:relaunch',
+      z.object({ demo: z.boolean() }).strict(),
+      z.undefined(),
+    ),
+    /** Native "About" dialog. */
+    showAbout: defineChannel('app:showAbout', z.undefined(), z.undefined()),
+  },
+  settings: {
+    get: defineChannel('settings:get', z.undefined(), SettingsSnapshotSchema),
+    /** Write one key to settings.jsonc, preserving the user's comments and formatting. */
+    update: defineChannel('settings:update', SettingsUpdateRequestSchema, SettingsSnapshotSchema),
+  },
+  keybindings: {
+    get: defineChannel('keybindings:get', z.undefined(), KeybindingsSnapshotSchema),
+  },
+  themes: {
+    /** Colour themes from `<config>/themes/`. Built-in themes ship with the renderer. */
+    listUser: defineChannel('themes:listUser', z.undefined(), UserThemesSnapshotSchema),
+  },
+  layout: {
+    get: defineChannel('layout:get', z.undefined(), LayoutStateSchema),
+    set: defineChannel('layout:set', LayoutStateSchema, z.undefined()),
+  },
+  window: {
+    /** Colours of the native window controls (Windows/Linux title bar overlay). */
+    setTitleBarOverlay: defineChannel(
+      'window:setTitleBarOverlay',
+      z.object({ color: HexColorSchema, symbolColor: HexColorSchema }).strict(),
+      z.undefined(),
+    ),
+    /** Native application menu (macOS). */
+    setMenu: defineChannel('window:setMenu', MenuBarModelSchema, z.undefined()),
+    /** Clipboard/undo actions for the custom menu bar (Windows/Linux). */
+    runEditRole: defineChannel(
+      'window:runEditRole',
+      z.object({ role: MenuRoleSchema }).strict(),
+      z.undefined(),
+    ),
+    toggleFullScreen: defineChannel('window:toggleFullScreen', z.undefined(), z.undefined()),
+    toggleDevTools: defineChannel('window:toggleDevTools', z.undefined(), z.undefined()),
+    reload: defineChannel('window:reload', z.undefined(), z.undefined()),
+    zoom: defineChannel(
+      'window:zoom',
+      z.object({ action: z.enum(['in', 'out', 'reset']) }).strict(),
+      z.object({ level: z.number() }),
+    ),
+  },
+  shell: {
+    /** Open a config file in the OS default editor (until the in-app JSON editor exists). */
+    openConfigFile: defineChannel(
+      'shell:openConfigFile',
+      z.object({ file: z.enum(['settings', 'keybindings']) }).strict(),
+      z.undefined(),
+    ),
+    openConfigFolder: defineChannel('shell:openConfigFolder', z.undefined(), z.undefined()),
+    /** Open an allowlisted https URL in the OS browser. */
+    openExternal: defineChannel(
+      'shell:openExternal',
+      z.object({ url: z.url().max(2000) }).strict(),
+      z.undefined(),
+    ),
   },
 } as const satisfies Record<string, Record<string, AnyChannel>>;
 
@@ -46,12 +128,12 @@ type ApiMethod<C> = [RequestOf<C>] extends [undefined]
   ? () => Promise<IpcResult<ResponseOf<C>>>
   : (request: RequestOf<C>) => Promise<IpcResult<ResponseOf<C>>>;
 
-/** Shape of `window.ramlKql`, derived from the contract table. */
+/** Shape of `window.ramlKql`, derived from the contract table and the event table. */
 export type RamlKqlApi = {
   readonly [NS in keyof IpcContracts]: {
     readonly [M in keyof IpcContracts[NS]]: ApiMethod<IpcContracts[NS][M]>;
   };
-};
+} & { readonly events: RamlKqlEventsApi };
 
 /** Context passed to every main-process handler. */
 export interface IpcHandlerContext {
