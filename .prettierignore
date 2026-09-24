@@ -9,3 +9,5 @@ pnpm-lock.yaml
 # Specs are hand-written prose; don't reflow them.
 docs/spec/
 CLAUDE.md
+# Scanner output (e.g. gitleaks in CI)
+*.sarif
