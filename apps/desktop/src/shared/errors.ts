@@ -16,6 +16,20 @@ export const AppErrorCodeSchema = z.enum([
   'SETTING_UNKNOWN',
   'SETTING_INVALID_VALUE',
   'URL_NOT_ALLOWED',
+  /** MFA, Conditional Access or consent needs the user: "Sign in again". */
+  'AUTH_INTERACTION_REQUIRED',
+  /** The account has no access to this tenant or resource. */
+  'AUTH_NO_ACCESS',
+  /** The user closed or abandoned the sign-in. */
+  'AUTH_CANCELLED',
+  /** Sign-in isn't possible here (no client ID, no OS keyring, Azure CLI missing). */
+  'AUTH_UNAVAILABLE',
+  'AUTH_FAILED',
+  'ACCOUNT_NOT_FOUND',
+  /** No network connection. */
+  'NET_OFFLINE',
+  /** Azure Resource Manager returned an error. */
+  'ARM_ERROR',
 ]);
 export type AppErrorCode = z.infer<typeof AppErrorCodeSchema>;
 
