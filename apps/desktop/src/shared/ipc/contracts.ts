@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { AccountsSnapshotSchema, AddAccountRequestSchema, GuidSchema } from '../auth/models';
 import {
   KeybindingsSnapshotSchema,
   SettingsSnapshotSchema,
@@ -59,6 +60,35 @@ export const ipcContracts = {
     /** Native "About" dialog. */
     showAbout: defineChannel('app:showAbout', z.undefined(), z.undefined()),
   },
+  accounts: {
+    /** Accounts and tenants. Never contains tokens. */
+    get: defineChannel('accounts:get', z.undefined(), AccountsSnapshotSchema),
+    /** Interactive sign-in (system browser or device code). Resolves when finished. */
+    add: defineChannel('accounts:add', AddAccountRequestSchema, AccountsSnapshotSchema),
+    remove: defineChannel(
+      'accounts:remove',
+      z.object({ accountId: z.string().min(1).max(300) }).strict(),
+      AccountsSnapshotSchema,
+    ),
+    /** Sign in again, for the home tenant or one tenant. */
+    reauthenticate: defineChannel(
+      'accounts:reauthenticate',
+      z.object({ accountId: z.string().min(1).max(300), tenantId: GuidSchema.optional() }).strict(),
+      AccountsSnapshotSchema,
+    ),
+    refresh: defineChannel(
+      'accounts:refresh',
+      z.object({ accountId: z.string().min(1).max(300).optional() }).strict(),
+      AccountsSnapshotSchema,
+    ),
+    setLabel: defineChannel(
+      'accounts:setLabel',
+      z
+        .object({ accountId: z.string().min(1).max(300), label: z.string().max(200).nullable() })
+        .strict(),
+      AccountsSnapshotSchema,
+    ),
+  },
   settings: {
     get: defineChannel('settings:get', z.undefined(), SettingsSnapshotSchema),
     /** Write one key to settings.jsonc, preserving the user's comments and formatting. */
@@ -107,6 +137,12 @@ export const ipcContracts = {
       z.undefined(),
     ),
     openConfigFolder: defineChannel('shell:openConfigFolder', z.undefined(), z.undefined()),
+    /** Copy text to the clipboard (the renderer's web clipboard permission is denied). */
+    writeClipboard: defineChannel(
+      'shell:writeClipboard',
+      z.object({ text: z.string().max(100_000) }).strict(),
+      z.undefined(),
+    ),
     /** Open an allowlisted https URL in the OS browser. */
     openExternal: defineChannel(
       'shell:openExternal',

@@ -152,6 +152,40 @@ export const settingDefinitions = [
     category: ['Workbench', 'General'],
     scope: 'user',
   }),
+  define({
+    key: 'auth.provider',
+    schema: z.enum(['builtin', 'custom', 'azureCli']),
+    default: 'builtin',
+    description: 'The sign-in method offered first when adding an account.',
+    category: ['Accounts'],
+    scope: 'user',
+    control: {
+      kind: 'enum',
+      options: ['builtin', 'custom', 'azureCli'],
+      optionDescriptions: [
+        'Microsoft sign-in with the Raml KQL app registration.',
+        'Microsoft sign-in with your organisation’s own app registration (client ID).',
+        'Use the accounts you signed in to with Azure CLI (`az login`).',
+      ],
+    },
+  }),
+  define({
+    key: 'auth.sessionOnly',
+    schema: z.boolean(),
+    default: false,
+    description:
+      'Keep sign-ins in memory only, so you sign in again after every restart. Use this when no OS keyring is available (e.g. Linux without GNOME Keyring or KWallet). Takes effect after a restart.',
+    category: ['Accounts'],
+    scope: 'machine',
+  }),
+  define({
+    key: 'accounts.showTenantsWithoutAccess',
+    schema: z.boolean(),
+    default: false,
+    description: 'Show tenants where the account has no Azure access in the Accounts view.',
+    category: ['Accounts'],
+    scope: 'user',
+  }),
 ] as const satisfies readonly SettingDefinition[];
 
 export type SettingKey = (typeof settingDefinitions)[number]['key'];

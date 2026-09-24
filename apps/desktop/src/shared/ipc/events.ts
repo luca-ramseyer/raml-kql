@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { AccountsSnapshotSchema, DeviceCodePromptSchema } from '../auth/models';
 import {
   KeybindingsSnapshotSchema,
   SettingsSnapshotSchema,
@@ -18,6 +19,9 @@ export const ipcEvents = {
   /** A native menu item was clicked. */
   'menu.runCommand': z.object({ command: z.string().min(1).max(200) }),
   'window.fullScreenChanged': z.object({ fullScreen: z.boolean() }),
+  'accounts.changed': AccountsSnapshotSchema,
+  /** Device code sign-in started: show the code to the user. */
+  'accounts.deviceCode': DeviceCodePromptSchema,
 } as const satisfies Record<string, z.ZodType>;
 
 export type IpcEvents = typeof ipcEvents;
