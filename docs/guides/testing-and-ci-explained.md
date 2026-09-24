@@ -1,6 +1,6 @@
 # Testing and CI, explained (for Luca)
 
-This guide explains *what* the project's testing and CI setup does and *why*, so you can maintain it yourself. Claude Code keeps it updated when the setup changes.
+This guide explains _what_ the project's testing and CI setup does and _why_, so you can maintain it yourself. Claude Code keeps it updated when the setup changes.
 
 ## The one-sentence version
 
@@ -19,13 +19,13 @@ Think of it like detection engineering: a test is an analytic rule for your own 
 ```ts
 it('merges columns and widens long+real to real', () => {
   const merged = mergeTables([tableA_long, tableB_real]);
-  expect(merged.columns.find(c => c.name === 'Count')?.type).toBe('real');
+  expect(merged.columns.find((c) => c.name === 'Count')?.type).toBe('real');
 });
 ```
 
 `it(...)` names the behaviour; `expect(...)` states what must be true. If it isn't, the test fails and tells you exactly what differed.
 
-**2. Component tests (Testing Library).** They render one piece of UI (e.g. the permission prompt) and click it like a user: "clicking *Always allow* stores the grant".
+**2. Component tests (Testing Library).** They render one piece of UI (e.g. the permission prompt) and click it like a user: "clicking _Always allow_ stores the grant".
 
 **3. Integration tests.** They check several real pieces together against a **fake Azure server** that the project contains. The real query engine talks HTTP to a pretend Log Analytics endpoint that can be told to return errors, throttle or hang. That's how the partial-failure logic gets tested without touching a real tenant.
 
@@ -48,22 +48,40 @@ These are not tests but automatic reviewers:
 ## Commands you'll use
 
 ```
-pnpm test            # all unit/integration tests once
-pnpm test --watch    # re-run tests as you edit (great while working)
-pnpm test:e2e        # E2E tests (builds and launches the app in demo mode)
-pnpm lint            # lint + formatting check
-pnpm format          # fix formatting automatically
+pnpm test                          # all unit/integration tests once
+pnpm test --watch                  # re-run tests as you edit (great while working)
+pnpm test --project desktop-node   # only one test project (see below)
+pnpm test --coverage               # also write a coverage report to coverage/index.html
+pnpm test:e2e                      # E2E tests (builds and launches the app in demo mode)
+pnpm lint                          # lint + formatting check
+pnpm format                        # fix formatting automatically
 pnpm typecheck
+pnpm check:licenses                # fail if any dependency has a copyleft licence
 ```
 
 If a test fails, read the output top-down: test name → expected vs received → stack trace pointing at the line.
 
+## How it's wired in this repo
+
+- **One Vitest config** at the repo root (`vitest.config.ts`) with three _projects_:
+  - `desktop-node`: main process, preload and shared code, plus `apps/desktop/test/` (security and integration tests). Runs in plain Node.
+  - `desktop-renderer`: React components, in **jsdom** (a simulated browser).
+  - `packages`: everything under `packages/`.
+- **Where tests live:** unit tests sit next to the code as `something.test.ts`. Cross-module tests go in `apps/desktop/test/integration/`, security regression tests in `apps/desktop/test/security/`, and E2E tests in `apps/desktop/e2e/`.
+- **No real network in tests.** `apps/desktop/test/setup/no-network.ts` runs before every test file and makes any request to a non-local host throw `Blocked real network access in a test`. Local servers (the fake Azure server, later) are allowed. If you see that error, the code under test tried to reach the internet, which is a bug in the test or the code.
+- **Testing Electron code without Electron.** Modules that talk to Electron accept a small interface (for example `IpcMainLike` instead of Electron's `ipcMain`). Tests pass in a fake (`apps/desktop/test/helpers/fake-ipc.ts`), so they run in milliseconds.
+- **E2E tests** build the app, launch it with `--demo` and a throwaway config folder, and drive the real window through Playwright. The app only allows one running instance, so if E2E tests fail with "Target page, context or browser has been closed", check that no other copy of the dev app is running.
+
 ## CI: what happens on GitHub
 
 1. You push a branch and open a **pull request** (PR).
-2. GitHub Actions runs `ci.yml`: install, lint, typecheck, unit + integration tests, then E2E. On `main` it also builds installers for macOS, Windows and Linux.
-3. A green check means safe to merge. A red X means click it, read the log, fix, and push again.
-4. Branch protection (once enabled) makes green CI mandatory for merging to `main`.
+2. GitHub Actions runs `.github/workflows/ci.yml`:
+   - **Lint, typecheck, unit tests** (`check`): scans the history for committed secrets (gitleaks), installs, lints, typechecks, runs the tests with coverage, and runs the licence check. The coverage report is attached to the run as an artifact.
+   - **End-to-end tests** (`e2e`): builds the app and runs the Playwright tests on Linux inside a virtual display (`xvfb-run`). If they fail, the Playwright report (with screenshots and traces) is attached to the run.
+   - **Package** (`build-matrix`): builds installers on macOS, Windows and Linux. Only on `main`, or on a PR with the `full-ci` label (it's expensive on a private repo).
+3. `.github/workflows/pr-title.yml` checks that the PR title is a Conventional Commit (see below), because the PR title becomes the commit message when you squash-merge.
+4. A green check means safe to merge. A red X means click it, read the log, fix, and push again.
+5. Branch protection (once enabled) makes green CI mandatory for merging to `main`.
 
 Why PRs even when you're alone? The PR is where CI runs and where the change history is readable. With Claude Code: let it work on a branch, open a PR, look at the diff and CI, then merge.
 
@@ -78,7 +96,7 @@ Commit messages follow a pattern:
 
 **release-please** reads these messages and keeps a "Release PR" open with the next version number and a generated CHANGELOG. When you want to ship, merge that PR. It tags the release, and `release.yml` builds, signs and uploads the installers to GitHub Releases. Installed apps then see the update through auto-update.
 
-So releasing becomes: *merge the release PR*. That's it.
+So releasing becomes: _merge the release PR_. That's it.
 
 ## Other robots in the repo
 
