@@ -87,3 +87,39 @@ Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Con
 ## D-014 — CI specifics (2026-09-24)
 
 **Decision:** gitleaks and the licence check run in the `check` job from day one. On Ubuntu 24.04 runners, the e2e job re-allows unprivileged user namespaces (`kernel.apparmor_restrict_unprivileged_userns=0`) so Electron runs **with** its Chromium sandbox instead of `--no-sandbox`. CodeQL is deferred until the repo is public (it needs GitHub Advanced Security on private repos). A PR-title check enforces Conventional Commits because PRs are squash-merged.
+
+## D-015 — VS Code colours: imported themes plus the colour-registry defaults (2026-09-24)
+
+**Context:** VS Code themes only list the colours they change. Everything else falls back to defaults registered in VS Code's source code, often as transforms (`transparent(foreground, 0.7)`). High-contrast themes define almost nothing themselves. Copying a few hundred defaults by hand would be error-prone and would drift from VS Code.
+
+**Decision:** two maintainer scripts, pinned to VS Code 1.139.0: `scripts/import-vscode-themes.mjs` flattens the `include` chains of Dark Modern, Light Modern, High Contrast and High Contrast Light into self-contained JSON; `scripts/import-vscode-color-defaults.mjs` _parses_ (never executes) VS Code's colour-registry sources with the TypeScript compiler API and writes every default as a JSON expression. The renderer evaluates those expressions with a port of VS Code's `Color` maths (`platform/theme/color.ts`) and writes the result as `--vscode-*` CSS variables. Both scripts' outputs are committed and reviewed like code; the code is MIT-licensed and attributed in `THIRD_PARTY_NOTICES.md`.
+
+**Consequences:** any VS Code colour theme renders the same as in VS Code, including themes users drop into `<config>/themes/`. Theme colour keys and values are validated (`a.b.c` keys, hex values only) before they become CSS, because themes come from files (and later extensions). Updating to a newer VS Code release means re-running both scripts and reviewing the diff.
+
+## D-016 — Window chrome and menus (2026-09-24)
+
+**Decision:**
+
+- macOS: `titleBarStyle: 'hiddenInset'` with our own title bar and command center (spec 05), plus a **native** application menu. The renderer owns commands and keybindings, so it builds the menu model (including the user's current keybindings) and sends it to the main process over IPC. Command accelerators are display-only (`registerAccelerator: false`), so keybindings.jsonc overrides can't be shadowed by the menu. The Edit menu uses Electron roles, which macOS needs for Cmd+C/V/X/Z/A in text fields.
+- Windows/Linux: frameless (`titleBarStyle: 'hidden'`) with the menu bar (File, Edit, Selection, View, Help) drawn in the title bar, and **native window controls via `titleBarOverlay`**, recoloured on theme change. This deviates slightly from spec 05's "custom window controls": the native overlay keeps OS behaviour such as Windows 11 snap layouts for free, and is what VS Code's "native" controls do on Windows.
+- Menu items whose command doesn't exist yet are hidden, and empty menus (currently "Query") disappear. Menus fill in as later phases register commands.
+
+## D-017 — Keyboard handling (2026-09-24)
+
+**Decision:** keybindings.jsonc uses VS Code's syntax and resolution rules: user entries after defaults, the last matching entry whose `when` holds wins, `-command` removes defaults, and chords (`cmd+k cmd+s`) put the status bar into "waiting for second key". Letters, digits and unshifted punctuation are matched by the character the keyboard layout produced (`event.key`), so shortcuts follow the printed key labels on QWERTZ and AZERTY layouts; everything else falls back to the physical key (`event.code`). The primary keybinding shown in menus and the palette is the last one defined for a command, as in VS Code.
+
+**Consequences:** Alt+letter on macOS layouts that remap letters may match the physical key rather than the label (a rare corner case). A layout-aware keymap like VS Code's native-keymap module can replace this later if needed.
+
+## D-018 — Settings behaviour (2026-09-24)
+
+**Decision:**
+
+- `window.autoDetectColorScheme` defaults to **true** (VS Code's default is false), because the roadmap asks for the app to follow the OS by default. Choosing a theme in the theme picker while auto-detection is on updates the preferred dark/light theme for the current OS appearance.
+- Programmatic edits of settings.jsonc must keep the user's comments (spec 09). `jsonc-parser`'s `modify` removes comments that sit between a removed property and its neighbour, including comments that belong to other settings, so resets use our own comment-preserving removal (`main/config/jsonc-edit.ts`, with tests).
+- Settings changes are optimistic in the UI and roll back when the main process rejects them (e.g. a syntax error in settings.jsonc makes it read-only for the app).
+- **Temporary deviation:** "Open Settings (JSON)" and "Keyboard Shortcuts" open settings.jsonc / keybindings.jsonc in the OS default editor (or reveal the file). Spec 05 wants an in-app Monaco JSON editor with schema validation and a visual keyboard-shortcuts editor; both arrive with Monaco in Phase 4. The JSON Schema is already generated (`settingsJsonSchema()`).
+- Config `extends` and profiles (spec 09) are not implemented yet; `extends` is added to Phase 3, where groups.jsonc and workspaces.jsonc need the same merge semantics.
+
+## D-019 — Renderer structure and state (2026-09-24)
+
+**Decision:** `src/renderer/platform/` holds framework-level services, mirroring VS Code's "platform" layer: commands, context keys and when-clauses, keybindings, theme, settings, layout, notifications, status bar and quick input. `workbench/` holds the layout parts, and `features/` the feature UIs (spec 01). State lives in small Zustand stores exposed through plain functions (`toggleSidebar()`, `notify()`, `registerCommand()`), so commands, menus, tests and later extensions call the same API. Renderer tests boot the real preload API and main-process IPC router in jsdom, with only the main-process services faked (`test/helpers/workbench-harness.ts`).
