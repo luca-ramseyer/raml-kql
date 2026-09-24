@@ -1,0 +1,15 @@
+packages:
+  - apps/*
+  - packages/*
+
+# pnpm 11 blocks dependency install scripts unless explicitly allowed here.
+# Keep this list minimal: every entry runs third-party code at install time.
+allowBuilds:
+  # Downloads the Electron binary for the current platform.
+  electron: true
+  # Downloads the native esbuild binary used by Vite.
+  esbuild: true
+  # Only a fallback check for its prebuilt native binding; not needed.
+  unrs-resolver: false
+  # Squirrel.Windows installer helper pulled in by electron-builder; we build NSIS only.
+  electron-winstaller: false

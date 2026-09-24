@@ -11,12 +11,12 @@ To sign in with MSAL, every desktop app needs a **client ID** (the app's identit
 1. Open the **Microsoft Entra admin center** → **Identity** → **Applications** → **App registrations** → **New registration**.
 2. Fill in the form:
    - **Name:** `Raml KQL`
-   - **Supported account types:** *Accounts in any organizational directory (Any Microsoft Entra ID tenant — Multitenant)*
+   - **Supported account types:** _Accounts in any organizational directory (Any Microsoft Entra ID tenant — Multitenant)_
    - **Redirect URI:** platform **Public client/native (mobile & desktop)**, value `http://localhost`
    - Click **Register**.
 3. On the **Overview** page, copy the **Application (client) ID**. This is `RAML_KQL_CLIENT_ID`. It is not secret; it will be public in the repo/build.
 4. Go to **Authentication**:
-   - Under *Advanced settings*, set **Allow public client flows** to **Yes** (needed for the device-code fallback).
+   - Under _Advanced settings_, set **Allow public client flows** to **Yes** (needed for the device-code fallback).
    - Make sure there are **no** web or SPA redirect URIs, only `http://localhost` under Mobile and desktop.
 5. Go to **API permissions** → **Add a permission**:
    - **Azure Service Management** → Delegated → `user_impersonation`
@@ -28,7 +28,7 @@ To sign in with MSAL, every desktop app needs a **client ID** (the app's identit
 
 ## How consent works for other users
 
-- **Lighthouse users (the most common MSSP case):** they sign in to *their own managing tenant*. Consent is only needed there, once. Customer tenants don't need to consent, because Lighthouse access works through the managing tenant's token.
+- **Lighthouse users (the most common MSSP case):** they sign in to _their own managing tenant_. Consent is only needed there, once. Customer tenants don't need to consent, because Lighthouse access works through the managing tenant's token.
 - **Guest (B2B) access:** the app also needs consent in each tenant the user signs into as a guest.
 - **Who can consent:** many organisations block end-user consent for multi-tenant apps from **unverified publishers**. Then an admin must consent via:
   `https://login.microsoftonline.com/<their-tenant-id>/adminconsent?client_id=<RAML_KQL_CLIENT_ID>`

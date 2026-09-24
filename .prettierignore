@@ -1,0 +1,11 @@
+node_modules/
+out/
+dist/
+release/
+coverage/
+playwright-report/
+test-results/
+pnpm-lock.yaml
+# Specs are hand-written prose; don't reflow them.
+docs/spec/
+CLAUDE.md
