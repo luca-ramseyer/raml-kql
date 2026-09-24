@@ -1,0 +1,27 @@
+/* Base reset. Theme colours arrive in Phase 1 (VS Code theme JSON -> CSS variables). */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background-color: #1f1f1f;
+  color: #cccccc;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', 'Ubuntu', 'Droid Sans', sans-serif;
+  font-size: 13px;
+}
+
+@media (prefers-color-scheme: light) {
+  body {
+    background-color: #ffffff;
+    color: #3b3b3b;
+  }
+}
+
+.workbench {
+  height: 100%;
+}

@@ -1,0 +1,23 @@
+{
+  // Main process, preload, shared code, Node-side tests and tooling config.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // `composite` lets the root tsconfig.json reference this project; declarations go to a
+    // cache folder and are never used at runtime (electron-vite does the real build).
+    "composite": true,
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "outDir": "../../node_modules/.cache/tsc/desktop-node",
+    "types": ["node"]
+  },
+  "include": [
+    "electron.vite.config.ts",
+    "playwright.config.ts",
+    "src/main/**/*",
+    "src/preload/**/*",
+    "src/shared/**/*",
+    "test/**/*",
+    "e2e/**/*"
+  ],
+  "exclude": ["test/setup/dom.ts"]
+}
