@@ -1,0 +1,145 @@
+# 05 — Workbench UI, editor, IntelliSense, tabs, history
+
+## Look and feel: "as close to VS Code as possible"
+
+This is a look-alike built from scratch, not a Code-OSS fork. Match VS Code 1.9x "Modern" themes pixel-for-pixel where practical.
+
+- **Colours:** port the theme colour tokens from VS Code's `Dark Modern` / `Light Modern` / `Dark High Contrast` theme JSON (MIT; attribute it) into the app's theme format. The app's theme format **is** the VS Code colour theme JSON format (`colors` + `tokenColors`). Workbench CSS reads CSS variables generated from the `colors` keys (`--vscode-editor-background` etc.), so any VS Code colour theme JSON can be imported or contributed by extensions unchanged. Unknown keys are ignored.
+- **Fonts:**
+  - UI: `-apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", system-ui, Ubuntu, "Droid Sans", sans-serif` at 13px.
+  - Editor: `editor.fontFamily` default `Menlo, Monaco, "Courier New", monospace` on mac, `Consolas, "Courier New", monospace` on Windows, `"Droid Sans Mono", "monospace", monospace` on Linux; 14px (mac 12px like VS Code), configurable.
+- **Icons:** `@vscode/codicons` only.
+- **Metrics to match VS Code:**
+  - activity bar 48px wide
+  - tab height 35px
+  - status bar 22px
+  - list rows 22px
+  - sidebar title 35px
+  - panel title 35px
+  - 1px borders in `--vscode-*-border` colours
+  - focus outlines using `focusBorder`
+- **Motion:** none beyond VS Code's (no fancy animations).
+- **Title bar:**
+  - macOS: `titleBarStyle: 'hiddenInset'` with traffic lights, and a centred command-center-style search box ("Search queries, commands…") that opens quick open.
+  - Windows/Linux: frameless custom title bar with menu (File, Edit, Selection, View, Query, Help) + window controls, like VS Code's custom title bar.
+- **Context menus, hovers, quick pick, notifications, dialogs:** replicate VS Code's components (quick pick with fuzzy highlight, keyboard-first).
+- **Accessibility:**
+  - Full keyboard navigation.
+  - ARIA roles on trees/lists/tabs.
+  - Respect OS reduced-motion and high contrast.
+  - Visible focus rings.
+  - Target WCAG 2.1 AA for contrast in the default themes (they already are).
+
+## Layout
+
+```
+┌ title bar ───────────────────────────────────────────────────────────────┐
+│A│ PRIMARY SIDEBAR      │ EDITOR GROUP(S): tabs  [▶ Run] [time range ▾]    │
+│C│ (view per activity)  │ ┌─────────────────────────────────────────────┐  │
+│T│                      │ │ Monaco (KQL)                                │  │
+│I│                      │ └─────────────────────────────────────────────┘  │
+│V│                      ├──────────────────────────────────────────────────┤
+│I│                      │ PANEL: Results | Chart | Run | Audit              │
+│T│                      │                                                  │
+│Y│                      │                                                  │
+└─┴──────────────────────┴──────────────────────────────────────────────────┘
+ status bar: account · 12 workspaces · 5 tenants · Aliased · rows · duration · Ln/Col · KQL
+```
+
+Activity bar views (top to bottom):
+
+1. **Targets**: workspace selection for the active tab (spec 03).
+2. **Library**: My Queries + installed query packs (spec 08).
+3. **History**.
+4. **Extensions**: installed, sources, and "Add from URL / file".
+5. Extension-contributed views.
+
+Bottom of the bar: **Accounts** and **Manage** (gear: Settings, Keyboard Shortcuts, Themes, Check for Updates).
+
+**Results placement:** VS Code puts output in the bottom panel, and so does the Log Analytics portal (under the editor). Default: results in the bottom panel of the editor area, **per tab**. Each tab owns its results; switching tabs switches the results. Setting `results.location`: `"panel"` (default) or `"beside"` (results as a split to the right).
+
+## Tabs and editor groups
+
+- Tabs behave like VS Code:
+  - dirty dot
+  - middle-click close
+  - drag to reorder or to another group
+  - pin
+  - preview tabs (italic) when opening from Library/History with single click; double click keeps them
+  - `Ctrl/Cmd+W` close, `Ctrl+Tab` MRU switch
+- Split: `Ctrl/Cmd+\` splits the editor group. Each group has its own tabs; each tab has its own targets, time range and results.
+- Tab title: the query name or `Query 1`, `Query 2`… A running tab shows a spinner codicon (`$(loading~spin)`).
+- **Persistence:** tabs, groups, cursor positions, targets, time range and unsaved text are saved to `state/tabs.json` (debounced 500 ms and on quit). **Result data is never saved** (spec 04).
+- Saving a tab (`Ctrl/Cmd+S`) writes it to My Queries as a `.kql` file (spec 08). Unsaved tabs are fine; they persist as drafts.
+
+## Editor (Monaco + monaco-kusto)
+
+- Language `kusto` via `@kusto/monaco-kusto`. Configure its workers for electron-vite (Vite worker imports). No CDN loaders; everything is bundled.
+- Defaults:
+  - minimap off (`editor.minimap.enabled`)
+  - word wrap off
+  - bracket colorization on
+  - format on demand (`Shift+Alt+F`, using the Kusto formatter)
+  - `Ctrl/Cmd+/` toggle line comment
+- Semantic squiggles from monaco-kusto using the merged schema.
+- **Run behaviour** (like the Log Analytics portal):
+  - `Shift+Enter` or `Ctrl/Cmd+Enter` runs the query **block under the cursor** (statements separated by blank lines, as in the portal), or the selection if there is one.
+  - Setting `editor.runScope`: `"block"` (default) | `"all"`.
+  - `Esc` in the editor while running, or the Stop button, cancels.
+- Hover shows table and column docs (type, description where known) and "available in 7/9 selected workspaces".
+- Snippets: common KQL patterns (summarize by bin, join template, `let` parameters, `parse_json`, `mv-expand`). All use `TimeGenerated`.
+
+## Schema-aware IntelliSense
+
+- `SchemaService` fetches `GET https://api.loganalytics.io/v1/workspaces/{customerId}/metadata` (tables, columns, functions, solutions). If unavailable, fall back to a `getschema`-style query or the ARM tables endpoint; log the choice in DECISIONS.
+- Cache per workspace on disk (`state/schema-cache/<hash>.json`; metadata only, no data), TTL `schema.cacheHours` default 24. There is a manual "Refresh Schema" command.
+- **Merged schema for the active tab's targets:** union of tables and columns.
+  - Each table and column is annotated with its availability count.
+  - Completions show a subtle suffix `3/5` when not available everywhere.
+  - Setting `schema.hideTablesMissingEverywhere` defaults to `true`.
+  - Custom `_CL` tables and workspace functions are included.
+- The merged schema updates when targets change (debounced) and is fed to monaco-kusto (`setSchema` with a synthetic database).
+- Built-in table descriptions: ship a small JSON of descriptions for common Sentinel/Log Analytics tables (write short original descriptions; do not copy Microsoft docs text).
+
+## Time range picker
+
+- Next to Run: presets Last 30 min, 1 h, 4 h, 12 h, 24 h, 48 h, 3 d, 7 d, 30 d, Custom (start/end, local or UTC toggle; setting `time.displayZone` `"local"|"utc"`, default `utc` for SOC work).
+- **"Set in query":** if the parsed query filters on `TimeGenerated` at the top level (e.g. `where TimeGenerated > ago(...)` or `between`), the picker shows "Set in query" and no API timespan is sent (portal behaviour). Detect this via the Kusto syntax tree, not regex.
+
+## History
+
+- Every run appends an entry to `state/history.jsonl`: timestamp, query text, targets (keys), group, time range, per-state counts, total rows, duration. **No result data.**
+- Setting `history.maxEntries` default 5000.
+- The History view groups by day, supports search (text, table names, tenant), and has actions "Open in new tab", "Run again" and "Copy query". There is a "Clear history" command.
+
+## Command palette, quick open, keybindings
+
+- `F1` / `Ctrl/Cmd+Shift+P`: commands, with categories (`Query:`, `Targets:`, `Privacy:`, `Results:`, `Extensions:`, `Accounts:`, `Developer:`).
+- `Ctrl/Cmd+P`: quick open across My Queries, pack queries, history (prefix `>` switches to commands like VS Code; `@` for targets/groups, `#` for tables in the schema).
+- Keybindings: VS Code defaults where meaningful. Also:
+  - `Ctrl/Cmd+Shift+E` Targets
+  - `Ctrl/Cmd+Shift+L` Library
+  - `Ctrl/Cmd+Shift+H` History
+  - `Ctrl/Cmd+Shift+X` Extensions
+  - `Ctrl/Cmd+,` Settings
+  - `Ctrl/Cmd+K Ctrl/Cmd+S` Keyboard Shortcuts editor (VS Code-like: table, search, record keys)
+- `when`-clauses as in spec 01. `keybindings.jsonc` uses VS Code's format (`key`, `command`, `when`, `-command` to remove).
+
+## Settings UI
+
+- A VS Code-like settings editor: search, "Commonly Used", categories generated from the settings schema, and a modified indicator with "Reset".
+- "Open Settings (JSON)" opens `settings.jsonc` in a Monaco tab with JSON schema validation and completions.
+- Settings are defined once in a zod-based schema registry (spec 09). The UI, JSON schema and defaults are all generated from it.
+
+## Empty and first-run states
+
+1. **Welcome tab**, like VS Code's welcome page: Add account, Open demo mode, Import config, Add query pack source, Recent tabs, and links to docs.
+2. After the first sign-in, discovery runs and the user lands in Settings → Workspaces with a hint: "Choose which workspaces appear in the query view."
+3. A query tab is ready with a starter query:
+
+```kusto
+SigninLogs
+| where TimeGenerated > ago(1d)
+| summarize SignIns = count(), FailedSignIns = countif(ResultType != "0") by UserPrincipalName
+| top 20 by FailedSignIns
+```
