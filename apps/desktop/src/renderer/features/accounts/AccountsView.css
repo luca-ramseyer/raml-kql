@@ -1,0 +1,94 @@
+.accounts-view {
+  padding-bottom: 8px;
+}
+
+.accounts-row {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding-right: 8px;
+  cursor: pointer;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.accounts-row:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.accounts-row:focus-visible {
+  outline: 1px solid var(--vscode-list-focusOutline, var(--vscode-focusBorder));
+  outline-offset: -1px;
+}
+
+.account-row {
+  padding-left: 8px;
+}
+
+.tenant-row {
+  padding-left: 44px;
+  cursor: default;
+}
+
+.twistie {
+  width: 16px;
+}
+
+.accounts-label {
+  overflow: hidden;
+  flex-shrink: 1;
+  text-overflow: ellipsis;
+}
+
+.accounts-description {
+  overflow: hidden;
+  flex-shrink: 2;
+  opacity: 0.7;
+  font-size: 0.9em;
+  text-overflow: ellipsis;
+}
+
+.accounts-actions {
+  display: none;
+  margin-left: auto;
+  gap: 2px;
+}
+
+.account-row:hover .accounts-actions,
+.account-row:focus-within .accounts-actions {
+  display: flex;
+}
+
+.accounts-signin {
+  margin-left: auto;
+}
+
+.tenant-state {
+  font-size: 14px;
+}
+
+.state-ok .tenant-state {
+  color: var(--vscode-testing-iconPassed, var(--vscode-charts-green));
+}
+
+.state-needsReauth .tenant-state {
+  color: var(--vscode-notificationsWarningIcon-foreground);
+}
+
+.state-noAccess .tenant-state,
+.state-noAccess .accounts-label {
+  opacity: 0.6;
+}
+
+.accounts-hidden-note {
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
+
+.accounts-footnote {
+  display: flex;
+  align-items: center;
+  margin: 12px 20px 0;
+  color: var(--vscode-descriptionForeground);
+  gap: 6px;
+}

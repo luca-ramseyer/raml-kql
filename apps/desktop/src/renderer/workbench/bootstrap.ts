@@ -1,4 +1,10 @@
 import type { AppInfo } from '../../shared/ipc/contracts';
+import { registerAccountCommands } from '../features/accounts/account-commands';
+import {
+  applyAccountsSnapshot,
+  loadAccounts,
+  showDeviceCode,
+} from '../features/accounts/accounts-store';
 import { executeCommand, useCommands } from '../platform/commands';
 import { setContextKey, useContextKeys } from '../platform/context-keys';
 import { openEditor, useEditors } from '../platform/editors';
@@ -64,9 +70,13 @@ export async function startWorkbench({
     }),
     watchOsAppearance(),
     useSettings.subscribe(refreshTheme),
+    bridge.events.on('accounts.changed', applyAccountsSnapshot),
+    bridge.events.on('accounts.deviceCode', showDeviceCode),
     registerBuiltinCommands(),
+    registerAccountCommands(),
     registerQuickAccess(),
   );
+  await loadAccounts();
 
   // Context keys mirrored from state.
   const syncContext = (): void => {

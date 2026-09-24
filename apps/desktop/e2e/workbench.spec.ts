@@ -64,9 +64,16 @@ test('changes the theme via the Settings UI and writes settings.jsonc', async ({
     .selectOption('Default Light Modern');
 
   await expect.poll(() => editorBackground(window)).toBe('#ffffff');
-  const settings = readFileSync(path.join(configDir, 'settings.jsonc'), 'utf8');
-  expect(settings).toContain('"window.autoDetectColorScheme": false');
-  expect(settings).toContain('"workbench.colorTheme": "Default Light Modern"');
+  // The UI updates optimistically; the file write follows shortly after.
+  const settingsFile = (): string => {
+    try {
+      return readFileSync(path.join(configDir, 'settings.jsonc'), 'utf8');
+    } catch {
+      return '';
+    }
+  };
+  await expect.poll(settingsFile).toContain('"window.autoDetectColorScheme": false');
+  await expect.poll(settingsFile).toContain('"workbench.colorTheme": "Default Light Modern"');
 });
 
 test('applies external edits to settings.jsonc live', async ({ window, configDir }) => {

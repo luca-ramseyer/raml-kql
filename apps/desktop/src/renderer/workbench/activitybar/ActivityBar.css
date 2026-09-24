@@ -69,3 +69,20 @@
   outline: 1px solid var(--vscode-contrastActiveBorder);
   outline-offset: -2px;
 }
+
+.activity-badge {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  box-sizing: border-box;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 20px;
+  background-color: var(--vscode-activityBarBadge-background);
+  color: var(--vscode-activityBarBadge-foreground);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+}
