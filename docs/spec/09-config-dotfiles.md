@@ -14,6 +14,8 @@ Resolution order:
 
 The command "Open Config Folder" opens it in the file manager.
 
+Machine-local data that must never be shared (the encrypted MSAL token cache and the session result cache) lives in the OS app-data folder, not here. `RAML_KQL_USER_DATA_DIR` (an absolute path) moves it, like VS Code's `--user-data-dir`; the e2e tests use it (D-032).
+
 ## Files
 
 ```

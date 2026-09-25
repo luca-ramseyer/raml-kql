@@ -223,3 +223,53 @@ Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Con
 - "Set in query" uses the Kusto language service's classifications (tokens from the real parser) rather than a regex. It reports true when a `where`/`filter` predicate compares `TimeGenerated` with `> >= < <= == between !between in !in`. Comments and string literals never count. This is token-level rather than a full syntax-tree walk, and it counts `where` clauses inside subqueries (`join`, `let`) too. It's a close approximation of "top level", deliberately erring towards "Set in query". A syntax-tree walk can replace it if false positives show up.
 - Custom ranges are entered as `YYYY-MM-DD HH:mm` in two input boxes (quick-input style, keyboard-first) in `time.displayZone` (default UTC), and stored as ISO instants. The API `timespan` is `PTnM`/`PTnH`/`PnD` for presets and `start/end` for custom ranges, and it is omitted when "Set in query".
 - Until tab persistence (Phase 7), the first New Query of a session starts with the sample query, and later ones are empty.
+
+## D-031 — Query engine (2026-09-25)
+
+**Context:** spec 04 "Fan-out engine", "Log Analytics Query API" and "Service limits".
+
+**Decision:**
+
+- **Thin typed client, not the SDK.** `@azure/monitor-query-logs` (the current successor of `@azure/monitor-query`) runs its requests through the Azure core pipeline on Node's HTTP stack. That bypasses the OS proxy (D-023), and its results don't expose the raw `render`/`statistics` payloads the way the engine needs. `main/azure/log-analytics-query.ts` is a thin client on `AzureHttp` instead. It classifies failures (`throttled`, `transient`, `network`, `badRequest`, `unauthorized`, `forbidden`, `notFound`, `timeout`, `cancelled`) for the retry policy, and keeps the innermost server error as `Code: message`.
+- **Endpoint:** Learn now shows `api.loganalytics.azure.com`. The app keeps `api.loganalytics.io`: it is still served, and it is the token audience used everywhere (`https://api.loganalytics.io/Data.Read`). Both hosts come from `CloudProfile`.
+- **Limits** (verified 2026-09, `main/query/limits.ts`, linked from the code):
+  - 5 concurrent queries and 200 requests per 30 s per user;
+  - 500,000 rows and ~100 MiB (64 MB compressed) per result;
+  - a 10-minute maximum `Prefer: wait`; a server timeout returns 504, which is mapped to `timeout`.
+- **Scheduling:** one scheduler with a queue per principal (the account ID). Each principal gets a concurrency limit (`query.maxConcurrentPerAccount`, default 4), a token bucket (150 per 30 s) and a cooldown after a 429 that pauses all of that principal's requests. On top sits a global cap (`query.maxConcurrentTotal`). Targets are interleaved round-robin by tenant. "Warm tokens first" isn't done: tokens are coalesced per (account, tenant) anyway, so the first request of a tenant pays once.
+- **Retries** follow spec 04: at most 3 attempts with full-jitter backoff, only for 429/5xx/network.
+  - 401: one silent forced refresh (`forceRefresh` through `AuthService` to MSAL), then `AUTH_INTERACTION_REQUIRED`.
+  - 403/404: the next access path, when `query.fallbackAccessPaths` is on.
+  - Timeouts: never retried.
+  - Auth failures of an (account, tenant) pair mark the tenant's other workspaces in the run `skipped` without calling the API.
+- **Fail-fast** applies only to the first workspace that finishes with a query error. Errors that are legitimately per-workspace (a table or column that can't be resolved) never trigger it. Queued workspaces become `skipped`, and the renderer asks "Run Anyway", which re-runs the skipped ones with fail-fast off for that run.
+- **Pre-flight syntax check** runs in the renderer: the Monaco Kusto worker already has the parser and the merged schema, so a second copy of the language service in the main process isn't needed. Only diagnostics with codes `KS0xx` (syntax: "Missing …", "Malformed …") within the lines being run block the run. Semantic diagnostics (`KS1xx`+) don't block.
+- **Run scope:** Shift+Enter and Ctrl/Cmd+Enter run the selection, the blank-line-separated block under the cursor, or everything (`editor.runScope`). Inside Monaco they are Monaco commands, as is Escape while running, so Monaco's own bindings (Ctrl+Enter inserting a line) don't win. "Set in query" is taken from the whole document's detection (D-030).
+- **One run per tab:** a new run of a tab cancels and frees the previous one. Closing a tab frees its results.
+- **Events:** `query.runChanged` snapshots carry only states, counts and table shapes, coalesced to at most one per 100 ms. Rows are paged with `results.page`.
+- **Demo mode** uses `DemoDataSource`:
+  - deterministic seeded data per (query, workspace, table);
+  - `take`/`limit`/`top` and `count`, and the sample query;
+  - a semantic error for tables a demo workspace doesn't have;
+  - 403 for the forbidden workspace, 2.5 s for the slow one and one 429 for the "throttle once" one.
+    Results are labelled "Demo data".
+
+## D-032 — Result store and audit log (2026-09-25)
+
+**Decision:**
+
+- **Result store.**
+  - Results are stored per workspace batch, with the attribution values held once per batch rather than per row. Merged columns are resolved when a page is read: attribution first, then first-seen order, with types widened as in D-029.
+  - The memory cost is estimated from the JSON size. Above `results.memoryBudgetMB`, the oldest batches (of any tab) spill to `<userData>/session-cache/<sessionId>/<n>.bin`.
+  - Spill files are encrypted with AES-256-GCM: the key is 32 random bytes that exist only in memory, each chunk gets a random 12-byte IV, and the run ID is the associated data.
+  - `will-quit` deletes the folder and zeroes the key. Start-up wipes the whole `session-cache` folder.
+  - The row cap (`results.maxMergedRows`) counts per run across all tables. The workspace that crosses it is marked `partial` (`TRUNCATED`) and the run `truncated`.
+- **Attribution** columns hold real names in the main process. Aliasing is applied when rendering (the same rule as everywhere, D-026). Names the inventory doesn't know show as "Unlisted …" in presentation mode.
+- **Audit log.**
+  - One `audit/audit-YYYY-MM.jsonl` file per month (UTC).
+  - One line per attempt, plus sign-in and sign-out; accounts restored at startup are not logged as sign-ins.
+  - `prev` is the SHA-256 of the previous line across files, starting from `sha256:000…` for the first line. Appends are serialized so the chain can't fork.
+  - Retention pruning deletes whole months, so verification treats the oldest kept line as the anchor: it proves nothing was edited or removed within the kept history, not that older months existed.
+  - `audit.includeQueryText: false` stores only `queryHash`.
+- **MSAL through AzureHttp:** MSAL's `system.networkClient` is `AzureHttp.msalNetworkModule()`, so sign-in and token refresh now follow the OS proxy too. This completes D-023.
+- **`RAML_KQL_USER_DATA_DIR`** (absolute path) moves the machine-local data (MSAL cache, session result cache), like VS Code's `--user-data-dir`. e2e uses it, so test runs never touch the real profile.

@@ -57,3 +57,12 @@ Claude Code appends items here when blocked, and keeps working. Tick them off wh
   3. `~/.raml-kql/state/schema-cache/` contains hashed `.json` files with only table, column and function names (no data, no workspace names in file names);
   4. Command Palette → "Query: Refresh Schema" works, and a workspace you can't read produces the "could not be loaded for 1 of n workspaces" warning.
      The metadata API has no maintained Learn reference (D-029). If any workspace's schema is missing although you can query it, please note which kind of workspace it is.
+
+## Added during Phase 5
+
+- [ ] **Live query test.** Signed in with discovery done, open a query tab (⌘N / Ctrl+N), keep the sample query and press Shift+Enter:
+  1. Results fill in as workspaces finish; the pill reads like "12 ✓ · 1 failed · 00:07". Click it for the Run tab: every workspace has a state, rows, duration and attempts, and failures show the server's message (e.g. `SemanticError: … Failed to resolve table …` for workspaces without `SigninLogs`).
+  2. Press Escape during a longer query: it stops, and finished workspaces keep their rows.
+  3. "Audit: Verify Log Integrity" from the Command Palette reports the log as intact; `~/.raml-kql/audit/audit-YYYY-MM.jsonl` has one line per workspace attempt and no result values.
+  4. Quit the app: the `session-cache` folder in the app's data folder (macOS: `~/Library/Application Support/Raml KQL/`) is empty.
+- [ ] **Proxy test (if you work behind a proxy).** With the OS proxy configured, sign in, discover and run a query. All three should work without extra settings, because sign-in, ARM and Log Analytics now all use Chromium's network stack (D-023, D-032).

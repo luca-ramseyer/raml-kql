@@ -78,15 +78,23 @@ Version targets:
 
 ## Phase 5 — Query engine
 
-- [ ] Fan-out orchestrator with per-account concurrency, rate limiting, timeouts, retries and cancellation (spec 04)
-- [ ] `AzureHttp` on Electron `net.fetch`, and MSAL routed through it so sign-in honours the OS proxy (D-023)
-- [ ] Pre-flight parse check (don't fan out syntactically broken queries)
-- [ ] Merge with attribution columns; multiple result tables
-- [ ] Per-workspace status panel and "Re-run failed"
-- [ ] Encrypted session result cache with memory budget and spill-to-disk
-- [ ] Audit log (hash-chained JSONL)
+- [x] Fan-out orchestrator with per-account concurrency, rate limiting, timeouts, retries and cancellation (spec 04)
+- [x] `AzureHttp` on Electron `net.fetch`, and MSAL routed through it so sign-in honours the OS proxy (D-023)
+- [x] Pre-flight parse check (don't fan out syntactically broken queries)
+- [x] Merge with attribution columns; multiple result tables
+- [x] Per-workspace status panel and "Re-run failed"
+- [x] Encrypted session result cache with memory budget and spill-to-disk
+- [x] Audit log (hash-chained JSONL)
 
 **Acceptance:** Engine integration tests against a fake Log Analytics server cover success, 429 with Retry-After, 5xx retry, timeout, partial error, cancellation and row-cap truncation. The cache is gone after quit (test). The audit log verifies (test).
+
+> Status:
+> - `src/main/query/query-engine.test.ts` runs the real client against the fake Log Analytics server (`test/fake-azure/`). It covers success with the request headers, 429 with Retry-After, 5xx retries, server and client timeouts, partial errors, cancellation of running and queued workspaces, row-cap truncation, access-path fallback, the 401 refresh, fail-fast, auth aggregation, re-runs and auditing.
+> - The cache: `result-store.test.ts` covers encryption, spill, dispose and the crash wipe, and `e2e/query.spec.ts` shows the session cache is gone after quitting the real app.
+> - The audit log: `audit-log.test.ts` covers verification, tampering, rotation and retention.
+> - In demo mode, e2e covers the run, merged results with attribution and aliasing, the syntax pre-flight, Escape to cancel and Re-run Failed.
+> - The results view is a 200-row preview until the grid arrives in Phase 6.
+> - Details are in D-031 and D-032. Live query and proxy tests are in `docs/HUMAN-TODO.md`.
 
 ## Phase 6 — Results
 
