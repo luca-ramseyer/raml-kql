@@ -1,0 +1,76 @@
+.dialog-overlay {
+  position: fixed;
+  z-index: 2600;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  background-color: rgba(0, 0, 0, 0.3);
+  inset: 0;
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, calc(100vw - 32px));
+  max-height: 76vh;
+  padding: 16px 20px 14px;
+  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-widget-border, transparent));
+  border-radius: 6px;
+  background-color: var(--vscode-editorWidget-background);
+  box-shadow: 0 0 12px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
+  color: var(--vscode-editorWidget-foreground, var(--vscode-foreground));
+}
+
+.dialog-body {
+  display: flex;
+  min-height: 0;
+  gap: 14px;
+}
+
+.dialog-icon.codicon {
+  flex: 0 0 auto;
+  font-size: 32px;
+}
+
+.dialog-icon.info {
+  color: var(--vscode-notificationsInfoIcon-foreground, #3794ff);
+}
+
+.dialog-icon.warning,
+.dialog-icon.shield {
+  color: var(--vscode-notificationsWarningIcon-foreground, #cca700);
+}
+
+.dialog-icon.error {
+  color: var(--vscode-notificationsErrorIcon-foreground, #f14c4c);
+}
+
+.dialog-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 8px;
+}
+
+.dialog-message {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.dialog-detail {
+  overflow: auto;
+  min-height: 0;
+  color: var(--vscode-descriptionForeground);
+  line-height: 1.45;
+}
+
+.dialog-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: 16px;
+  gap: 8px;
+}

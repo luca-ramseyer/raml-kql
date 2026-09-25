@@ -1,8 +1,8 @@
 import { tenantsNeedingReauth, useAccounts } from '../features/accounts/accounts-store';
 import { AccountsView } from '../features/accounts/AccountsView';
+import { ExtensionsView } from '../features/extensions/ExtensionsView';
 import { HistoryView } from '../features/history/HistoryView';
 import { LibraryView } from '../features/library/LibraryView';
-import { WelcomeView } from '../features/placeholders/WelcomeView';
 import { TargetsView } from '../features/targets/TargetsView';
 
 /**
@@ -66,9 +66,15 @@ export const VIEWS: readonly ViewDescriptor[] = [
     title: 'Extensions',
     icon: 'extensions',
     position: 'top',
-    component: () => (
-      <WelcomeView paragraphs={['Installed extensions and extension sources will appear here.']} />
-    ),
+    component: ExtensionsView,
+    actions: [
+      {
+        icon: 'desktop-download',
+        title: 'Install from File…',
+        command: 'extensions.installFromFile',
+      },
+      { icon: 'refresh', title: 'Refresh', command: 'extensions.refresh' },
+    ],
   },
   {
     id: 'workbench.view.accounts',

@@ -61,6 +61,10 @@ export interface ConfigPaths {
   readonly sourcesFile: string;
   readonly sourcesDir: string;
   readonly packSourcesStateFile: string;
+  readonly extensionsFile: string;
+  readonly extensionsDir: string;
+  readonly permissionsFile: string;
+  readonly extensionStorageDir: string;
 }
 
 export function configPaths(root: string): ConfigPaths {
@@ -83,6 +87,10 @@ export function configPaths(root: string): ConfigPaths {
     sourcesFile: path.join(root, 'sources.jsonc'),
     sourcesDir: path.join(root, 'sources'),
     packSourcesStateFile: path.join(root, 'state', 'pack-sources.json'),
+    extensionsFile: path.join(root, 'extensions.jsonc'),
+    extensionsDir: path.join(root, 'extensions'),
+    permissionsFile: path.join(root, 'permissions.jsonc'),
+    extensionStorageDir: path.join(root, 'state', 'extension-storage'),
   };
 }
 

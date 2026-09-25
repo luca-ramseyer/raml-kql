@@ -59,6 +59,13 @@ export function evaluateSettingsText(
   return { values, problems: valueProblems };
 }
 
+function rawSettings(text: string | undefined): Record<string, unknown> {
+  if (text === undefined) return {};
+  const { tree, problems } = parseJsonc(text, 'settings.jsonc');
+  if (problems.length > 0 || tree?.type !== 'object') return {};
+  return getNodeValue(tree) as Record<string, unknown>;
+}
+
 export const NEW_SETTINGS_FILE = `{
   // Raml KQL settings. Open the Settings editor (Ctrl/Cmd+,) to browse every option.
 }
@@ -70,6 +77,8 @@ export class SettingsService {
   /** Valid values from the user's own file (without `extends` layers). */
   private userValues: SettingsSnapshot['values'] = {};
   private readonly listeners = new Set<(snapshot: SettingsSnapshot) => void>();
+  /** Every key of the user's file as written (extension settings aren't in the registry). */
+  private raw: Record<string, unknown> = {};
   /** Serialises writes so two quick edits can't overwrite each other. */
   private writeQueue: Promise<unknown> = Promise.resolve();
 
@@ -77,6 +86,11 @@ export class SettingsService {
 
   get current(): SettingsSnapshot {
     return this.snapshot;
+  }
+
+  /** A key's value as written in settings.jsonc, unvalidated (extension settings). */
+  rawValue(key: string): unknown {
+    return this.raw[key];
   }
 
   onDidChange(listener: (snapshot: SettingsSnapshot) => void): () => void {
@@ -89,6 +103,7 @@ export class SettingsService {
     let next: SettingsSnapshot;
     try {
       const text = await readTextFile(this.filePath);
+      this.raw = rawSettings(text);
       const user = evaluateSettingsText(text, this.userValues);
       this.userValues = user.values;
       const base = await this.extendedValues(text);

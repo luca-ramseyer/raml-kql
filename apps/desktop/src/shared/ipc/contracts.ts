@@ -6,6 +6,12 @@ import {
   SettingsSnapshotSchema,
   UserThemesSnapshotSchema,
 } from '../config/config-snapshots';
+import {
+  ExtensionIdSchema,
+  ExtensionsSnapshotSchema,
+  InstallResultSchema,
+  UiResponseSchema,
+} from '../extensions/models';
 import { LayoutStateSchema } from '../layout/layout-state';
 import { MenuBarModelSchema, MenuRoleSchema } from '../menus/menu-model';
 import {
@@ -301,6 +307,60 @@ export const ipcContracts = {
       'packs:applyUpdate',
       z.object({ sourceId: z.string().max(100), sha: z.string().regex(GIT_SHA) }).strict(),
       PacksSnapshotSchema,
+    ),
+  },
+  extensions: {
+    /** Installed extensions and their grants (spec 07). */
+    list: defineChannel('extensions:list', z.undefined(), ExtensionsSnapshotSchema),
+    /** Pick a `.rkqlx` in the OS dialog and describe it (nothing is installed yet). */
+    installFromFile: defineChannel(
+      'extensions:installFromFile',
+      z.undefined(),
+      InstallResultSchema,
+    ),
+    confirmInstall: defineChannel(
+      'extensions:confirmInstall',
+      z.object({ previewId: z.string().min(1).max(100) }).strict(),
+      ExtensionsSnapshotSchema,
+    ),
+    cancelInstall: defineChannel(
+      'extensions:cancelInstall',
+      z.object({ previewId: z.string().min(1).max(100) }).strict(),
+      z.undefined(),
+    ),
+    uninstall: defineChannel(
+      'extensions:uninstall',
+      z.object({ id: ExtensionIdSchema }).strict(),
+      ExtensionsSnapshotSchema,
+    ),
+    setEnabled: defineChannel(
+      'extensions:setEnabled',
+      z.object({ id: ExtensionIdSchema, enabled: z.boolean() }).strict(),
+      ExtensionsSnapshotSchema,
+    ),
+    /** Run a contributed command; `runId` is the active tab's query run (grant scope). */
+    executeCommand: defineChannel(
+      'extensions:executeCommand',
+      z
+        .object({
+          command: z.string().min(1).max(200),
+          args: z.array(z.json()).max(20),
+          runId: z.string().max(100).optional(),
+        })
+        .strict(),
+      z.object({ value: z.json().optional() }),
+    ),
+    /** The workbench's answer to an `extensions.uiRequest` event. */
+    respond: defineChannel('extensions:respond', UiResponseSchema, z.undefined()),
+    revoke: defineChannel(
+      'extensions:revoke',
+      z.object({ id: ExtensionIdSchema, permission: z.string().max(300).optional() }).strict(),
+      ExtensionsSnapshotSchema,
+    ),
+    readme: defineChannel(
+      'extensions:readme',
+      z.object({ id: ExtensionIdSchema }).strict(),
+      z.object({ readme: z.string().optional() }),
     ),
   },
   history: {

@@ -30,3 +30,23 @@ export function buildWorkbenchCsp({ mode }: CspOptions): string {
     .map(([name, values]) => `${name} ${values.join(' ')}`)
     .join('; ');
 }
+
+/**
+ * The hidden extension host page (spec 07): scripts from the app bundle and blob: (the
+ * extensions' code) only, and no network at all. Its session also blocks every request.
+ */
+export function buildExtensionHostCsp({ mode }: CspOptions): string {
+  const dev = mode === 'development';
+  const directives: Record<string, string[]> = {
+    'default-src': ["'none'"],
+    'script-src': ["'self'", 'blob:'],
+    'worker-src': ["'self'", 'blob:'],
+    'connect-src': dev ? ['ws://localhost:*'] : ["'none'"],
+    'base-uri': ["'none'"],
+    'form-action': ["'none'"],
+    'object-src': ["'none'"],
+  };
+  return Object.entries(directives)
+    .map(([name, values]) => `${name} ${values.join(' ')}`)
+    .join('; ');
+}

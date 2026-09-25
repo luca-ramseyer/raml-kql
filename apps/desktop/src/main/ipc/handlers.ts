@@ -7,6 +7,7 @@ import type {
   UserThemesSnapshot,
 } from '../../shared/config/config-snapshots';
 import { AppError } from '../../shared/errors';
+import type { ExtensionsSnapshot, InstallResult } from '../../shared/extensions/models';
 import type {
   AppInfo,
   AuditVerification,
@@ -119,6 +120,7 @@ export interface HandlerDependencies {
     reveal(path: string | undefined): void;
   };
   packs: PacksOperations;
+  extensions: ExtensionsOperations;
   window: WindowOperations;
   shell: {
     openConfigFile(file: 'settings' | 'keybindings'): Promise<void>;
@@ -149,6 +151,20 @@ export interface PacksOperations {
   }>;
   updatePreview(sourceId: string): Promise<UpdatePreview>;
   applyUpdate(sourceId: string, sha: string): Promise<PacksSnapshot>;
+}
+
+/** Extensions (spec 07). */
+export interface ExtensionsOperations {
+  snapshot(): Promise<ExtensionsSnapshot>;
+  installFromFile(): Promise<InstallResult>;
+  confirmInstall(previewId: string): Promise<ExtensionsSnapshot>;
+  cancelInstall(previewId: string): void;
+  uninstall(id: string): Promise<ExtensionsSnapshot>;
+  setEnabled(id: string, enabled: boolean): Promise<ExtensionsSnapshot>;
+  executeCommand(command: string, args: unknown[], runId?: string): Promise<unknown>;
+  respond(requestId: number, value: unknown): void;
+  revoke(id: string, permission?: string): Promise<ExtensionsSnapshot>;
+  readme(id: string): Promise<string | undefined>;
 }
 
 /** Builds the main-process implementation of every IPC contract. */
@@ -227,6 +243,28 @@ export function createIpcHandlers(deps: HandlerDependencies): IpcHandlers {
     },
     themes: {
       listUser: () => deps.userThemes(),
+    },
+    extensions: {
+      list: () => deps.extensions.snapshot(),
+      installFromFile: () => deps.extensions.installFromFile(),
+      confirmInstall: ({ previewId }) => deps.extensions.confirmInstall(previewId),
+      cancelInstall: ({ previewId }) => {
+        deps.extensions.cancelInstall(previewId);
+      },
+      uninstall: ({ id }) => deps.extensions.uninstall(id),
+      setEnabled: ({ id, enabled }) => deps.extensions.setEnabled(id, enabled),
+      executeCommand: async ({ command, args, runId }) => {
+        const value = await deps.extensions.executeCommand(command, args, runId);
+        return value === undefined ? {} : { value: value as z.core.util.JSONType };
+      },
+      respond: ({ requestId, value }) => {
+        deps.extensions.respond(requestId, value);
+      },
+      revoke: ({ id, permission }) => deps.extensions.revoke(id, permission),
+      readme: async ({ id }) => {
+        const readme = await deps.extensions.readme(id);
+        return readme === undefined ? {} : { readme };
+      },
     },
     packs: {
       list: () => deps.packs.snapshot(),

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { ExtensionManifestSchema } from './extension-manifest';
 import { PackIndexSchema, PackManifestSchema, PackQueryMetaSchema } from './schemas';
 
 /**
@@ -11,6 +12,10 @@ export const JSON_SCHEMA_FILES = {
   'rkqlpack.schema.json': { schema: PackManifestSchema, title: 'Raml KQL query pack manifest' },
   'rkql-query.schema.json': { schema: PackQueryMetaSchema, title: 'Raml KQL pack query metadata' },
   'rkql-index.schema.json': { schema: PackIndexSchema, title: 'Raml KQL pack index' },
+  'rkql-extension.schema.json': {
+    schema: ExtensionManifestSchema,
+    title: 'Raml KQL extension manifest (package.json)',
+  },
 } as const;
 
 export function buildJsonSchemas(): Record<keyof typeof JSON_SCHEMA_FILES, string> {

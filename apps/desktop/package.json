@@ -28,6 +28,7 @@
   "devDependencies": {
     "@kusto/monaco-kusto": "15.0.1",
     "@playwright/test": "^1.63.0",
+    "@raml-kql/extension-api": "workspace:*",
     "@raml-kql/pack-schema": "workspace:*",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

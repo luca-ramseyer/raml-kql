@@ -8,6 +8,12 @@ import {
   showDeviceCode,
 } from '../features/accounts/accounts-store';
 import { preloadQueryEditorWhenIdle } from '../features/editor/editor-preload';
+import { registerExtensionCommands } from '../features/extensions/extension-commands';
+import {
+  loadExtensions,
+  startExtensionContributions,
+} from '../features/extensions/extensions-store';
+import { handleUiRequest } from '../features/extensions/ui-requests';
 import { loadHistory } from '../features/history/history-store';
 import { loadMyQueries } from '../features/library/my-queries';
 import { refreshPacks, registerPackCommands } from '../features/packs/pack-commands';
@@ -111,6 +117,8 @@ export async function startWorkbench({
     bridge.events.on('history.changed', () => void loadHistory()),
     bridge.events.on('queries.changed', () => void loadMyQueries()),
     bridge.events.on('packs.changed', () => void refreshPacks()),
+    bridge.events.on('extensions.changed', () => void loadExtensions()),
+    bridge.events.on('extensions.uiRequest', handleUiRequest),
     useInventory.subscribe(() => {
       syncTargetsWithInventory();
     }),
@@ -119,6 +127,8 @@ export async function startWorkbench({
     registerWorkspaceCommands(),
     registerQueryCommands(),
     registerPackCommands(),
+    registerExtensionCommands(),
+    startExtensionContributions(),
     registerResultCommands(),
     registerQuickAccess(),
     startPrivacy(),
@@ -150,6 +160,7 @@ export async function startWorkbench({
   void loadMyQueries();
   void loadHistory();
   void refreshPacks();
+  void loadExtensions();
 
   // Status bar: "$(server) 12 workspaces · 5 tenants" for the current selection (spec 03).
   const targetsItem = registerStatusBarItem({

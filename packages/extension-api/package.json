@@ -6,9 +6,14 @@
   "license": "MIT",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./runtime": "./src/runtime.ts",
+    "./protocol": "./src/protocol.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"
-  }
+  },
+  "files": [
+    "src"
+  ]
 }

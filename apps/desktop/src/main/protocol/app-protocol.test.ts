@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { APP_ENTRY_URL, resolveAppFile } from './app-protocol';
+import { APP_ENTRY_URL, EXTHOST_HOST, resolveAppFile } from './app-protocol';
 
 const root = path.resolve('/opt/raml-kql/renderer');
 
@@ -42,4 +42,17 @@ describe('resolveAppFile', () => {
       expect(resolveAppFile(url, root)).toBeUndefined();
     },
   );
+});
+
+describe('extension host origin', () => {
+  it('serves only the host page and bundle assets', () => {
+    expect(resolveAppFile('raml-kql://exthost/exthost/index.html', root, EXTHOST_HOST)).toBe(
+      path.join(root, 'exthost', 'index.html'),
+    );
+    expect(resolveAppFile('raml-kql://exthost/assets/a.js', root, EXTHOST_HOST)).toBe(
+      path.join(root, 'assets', 'a.js'),
+    );
+    expect(resolveAppFile('raml-kql://exthost/index.html', root, EXTHOST_HOST)).toBeUndefined();
+    expect(resolveAppFile('raml-kql://app/assets/a.js', root, EXTHOST_HOST)).toBeUndefined();
+  });
 });
