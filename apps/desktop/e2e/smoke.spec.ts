@@ -7,7 +7,7 @@ test('launches with the app title', async ({ window }) => {
 test('renderer reaches the main process over typed IPC in demo mode', async ({ window }) => {
   // `data-demo-mode` is only set after a successful `app:getInfo` round trip.
   await expect(window.locator('.workbench-root')).toHaveAttribute('data-demo-mode', 'true');
-  await expect(window.getByRole('button', { name: /Demo mode/ })).toBeVisible();
+  await expect(window.getByRole('button', { name: 'Demo Mode', exact: true })).toBeVisible();
 });
 
 test('renderer has no Node.js access', async ({ window }) => {

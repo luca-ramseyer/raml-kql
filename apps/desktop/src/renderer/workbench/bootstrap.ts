@@ -1,10 +1,26 @@
 import type { AppInfo } from '../../shared/ipc/contracts';
 import { registerAccountCommands } from '../features/accounts/account-commands';
 import {
+  accountName,
   applyAccountsSnapshot,
   loadAccounts,
+  setNameFormatters,
   showDeviceCode,
 } from '../features/accounts/accounts-store';
+import { currentNamer, startPrivacy } from '../features/privacy/privacy';
+import {
+  selectedWorkspaces,
+  syncTargetsWithInventory,
+  useTargets,
+} from '../features/targets/targets-store';
+import {
+  applyGroups,
+  applyInventory,
+  loadInventory,
+  notifyNewWorkspaces,
+  useInventory,
+} from '../features/workspaces/inventory-store';
+import { registerWorkspaceCommands } from '../features/workspaces/workspace-commands';
 import { executeCommand, useCommands } from '../platform/commands';
 import { setContextKey, useContextKeys } from '../platform/context-keys';
 import { openEditor, useEditors } from '../platform/editors';
@@ -72,11 +88,54 @@ export async function startWorkbench({
     useSettings.subscribe(refreshTheme),
     bridge.events.on('accounts.changed', applyAccountsSnapshot),
     bridge.events.on('accounts.deviceCode', showDeviceCode),
+    bridge.events.on('inventory.changed', applyInventory),
+    bridge.events.on('inventory.newWorkspaces', ({ count }) => {
+      notifyNewWorkspaces(count);
+    }),
+    bridge.events.on('groups.changed', applyGroups),
+    useInventory.subscribe(syncTargetsWithInventory),
     registerBuiltinCommands(),
     registerAccountCommands(),
+    registerWorkspaceCommands(),
     registerQuickAccess(),
+    startPrivacy(),
   );
+  setNameFormatters({
+    tenant: (tenant) => currentNamer().tenant(tenant.tenantId, tenant),
+    account: (account) => currentNamer().account(account.id, accountName(account)),
+  });
+  // Inventory first, so tenant aliases exist before account notifications are worded.
+  await loadInventory();
   await loadAccounts();
+  syncTargetsWithInventory();
+
+  // Status bar: "$(server) 12 workspaces · 5 tenants" for the current selection (spec 03).
+  const targetsItem = registerStatusBarItem({
+    id: 'status.targets',
+    alignment: 'left',
+    priority: 1000,
+    text: '',
+    tooltip: 'Selected targets. Click to show Targets.',
+    command: 'workbench.view.targets',
+  });
+  const updateTargetsItem = (): void => {
+    const selected = selectedWorkspaces();
+    const tenants = new Set(selected.map((w) => w.tenantId)).size;
+    targetsItem.update({
+      text:
+        useInventory.getState().inventory.workspaces.length === 0
+          ? ''
+          : `$(server) ${String(selected.length)} workspace${selected.length === 1 ? '' : 's'} · ${String(tenants)} tenant${tenants === 1 ? '' : 's'}`,
+    });
+  };
+  updateTargetsItem();
+  disposers.push(
+    useTargets.subscribe(updateTargetsItem),
+    useInventory.subscribe(updateTargetsItem),
+    () => {
+      targetsItem.dispose();
+    },
+  );
 
   // Context keys mirrored from state.
   const syncContext = (): void => {

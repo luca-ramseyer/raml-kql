@@ -1,8 +1,14 @@
-import { expect, test } from './fixtures';
+import { expect, test, writeSettings } from './fixtures';
+
+// These tests check real account and tenant names; aliasing has its own e2e test.
+test.beforeEach(({ configDir }) => {
+  writeSettings(configDir, { 'privacy.aliasing.activeOnStartup': false });
+});
 
 /** Phase 2 acceptance: "In demo mode, 2 fake accounts with 3 tenants are shown." */
 
-test('demo mode shows 2 accounts with 3 tenants', async ({ window }) => {
+test('demo mode shows 2 accounts with 3 tenants', async ({ launch }) => {
+  const { window } = await launch();
   await window.getByRole('tab', { name: /^Accounts/ }).click();
   const tree = window.getByRole('tree', { name: 'Accounts' });
   await expect(tree.getByRole('treeitem', { level: 1 })).toHaveCount(2);
@@ -15,8 +21,9 @@ test('demo mode shows 2 accounts with 3 tenants', async ({ window }) => {
 });
 
 test('a tenant that needs sign-in is badged, notified once, and resolved by signing in', async ({
-  window,
+  launch,
 }) => {
+  const { window } = await launch();
   const accountsTab = window.getByRole('tab', { name: /^Accounts/ });
   await expect(accountsTab).toHaveAttribute('title', /1 needs attention/);
   const notification = window.getByRole('status', {
@@ -32,7 +39,8 @@ test('a tenant that needs sign-in is badged, notified once, and resolved by sign
   ).toHaveCount(0);
 });
 
-test('demo accounts never touch the real accounts.jsonc', async ({ window, configDir }) => {
+test('demo accounts never touch the real accounts.jsonc', async ({ launch, configDir }) => {
+  const { window } = await launch();
   const { existsSync } = await import('node:fs');
   const path = await import('node:path');
   await window.getByRole('tab', { name: /^Accounts/ }).click();

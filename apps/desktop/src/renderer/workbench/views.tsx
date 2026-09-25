@@ -1,7 +1,7 @@
 import { tenantsNeedingReauth, useAccounts } from '../features/accounts/accounts-store';
 import { AccountsView } from '../features/accounts/AccountsView';
 import { WelcomeView } from '../features/placeholders/WelcomeView';
-import { useContextKeys } from '../platform/context-keys';
+import { TargetsView } from '../features/targets/TargetsView';
 
 /**
  * Sidebar views shown by the activity bar (spec 05). Each view has a "show" command
@@ -22,35 +22,22 @@ export interface ViewDescriptor {
   useBadge?: () => number;
 }
 
-function DemoModeAction(): React.JSX.Element {
-  const demo = useContextKeys((state) => state.values['demoMode'] === true);
-  return demo ? (
-    <WelcomeView paragraphs={['Demo mode is on: every view shows fake, deterministic data.']} />
-  ) : (
-    <WelcomeView
-      paragraphs={['No Azure access yet? Explore Raml KQL with fake tenants and workspaces.']}
-      actions={[{ label: 'Restart in Demo Mode', command: 'workbench.action.restartInDemoMode' }]}
-    />
-  );
-}
-
 export const VIEWS: readonly ViewDescriptor[] = [
   {
     id: 'workbench.view.targets',
     title: 'Targets',
     icon: 'target',
     position: 'top',
-    component: () => (
-      <>
-        <WelcomeView
-          paragraphs={[
-            'Targets are the Log Analytics workspaces a query runs against.',
-            'Workspaces appear here after you add an account and choose which workspaces to enable.',
-          ]}
-        />
-        <DemoModeAction />
-      </>
-    ),
+    component: TargetsView,
+    actions: [
+      { icon: 'save', title: 'Save Selection as Group…', command: 'targets.saveSelectionAsGroup' },
+      { icon: 'refresh', title: 'Refresh Workspaces', command: 'workspaces.refresh' },
+      {
+        icon: 'settings',
+        title: 'Workspaces Settings',
+        command: 'workbench.action.openWorkspacesSettings',
+      },
+    ],
   },
   {
     id: 'workbench.view.library',

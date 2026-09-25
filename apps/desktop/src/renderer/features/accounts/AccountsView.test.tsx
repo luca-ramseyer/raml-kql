@@ -3,12 +3,14 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  findQuickInputBox,
   installWorkbenchHarness,
   resetWorkbenchState,
 } from '../../../../test/helpers/workbench-harness';
 import type { AccountsSnapshot } from '../../../shared/auth/models';
 import { App } from '../../App';
 import { applySettingsSnapshot } from '../../platform/settings';
+import { setAliased } from '../privacy/privacy';
 
 import { applyAccountsSnapshot } from './accounts-store';
 import { AccountsView } from './AccountsView';
@@ -46,7 +48,13 @@ afterEach(() => {
   resetWorkbenchState();
 });
 
-function withAccounts(snapshot: AccountsSnapshot = SNAPSHOT) {
+/** These tests check real names; aliasing has its own test below. */
+const REAL_NAMES = { 'privacy.aliasing.activeOnStartup': false };
+
+function withAccounts(
+  snapshot: AccountsSnapshot = SNAPSHOT,
+  settings: Record<string, unknown> = REAL_NAMES,
+) {
   const signedIn: AccountsSnapshot = {
     ...snapshot,
     accounts: snapshot.accounts.map((a) => ({
@@ -57,17 +65,22 @@ function withAccounts(snapshot: AccountsSnapshot = SNAPSHOT) {
       })),
     })),
   };
-  const harness = installWorkbenchHarness({
-    accounts: {
-      snapshot: () => snapshot,
-      addAccount: vi.fn(() => Promise.resolve(snapshot)),
-      removeAccount: vi.fn(() => Promise.resolve({ ...snapshot, accounts: [] })),
-      reauthenticate: vi.fn(() => Promise.resolve(signedIn)),
-      refresh: vi.fn(() => Promise.resolve(snapshot)),
-      setLabel: vi.fn(() => Promise.resolve(snapshot)),
+  const harness = installWorkbenchHarness(
+    {
+      accounts: {
+        snapshot: () => snapshot,
+        addAccount: vi.fn(() => Promise.resolve(snapshot)),
+        removeAccount: vi.fn(() => Promise.resolve({ ...snapshot, accounts: [] })),
+        reauthenticate: vi.fn(() => Promise.resolve(signedIn)),
+        refresh: vi.fn(() => Promise.resolve(snapshot)),
+        setLabel: vi.fn(() => Promise.resolve(snapshot)),
+      },
     },
-  });
+    settings as never,
+  );
   act(() => {
+    applySettingsSnapshot({ values: settings as never, problems: [] });
+    setAliased(settings['privacy.aliasing.activeOnStartup'] !== false);
     applyAccountsSnapshot(snapshot);
   });
   return harness;
@@ -188,8 +201,8 @@ describe('accounts in the workbench', () => {
     render(<App />);
     await screen.findByTestId('workbench');
     fireEvent.keyDown(window, { key: 'F1', code: 'F1' });
-    await user.type(await screen.findByRole('combobox'), 'custom client{Enter}');
-    const input = await screen.findByRole('combobox');
+    await user.type(await findQuickInputBox(), 'custom client{Enter}');
+    const input = await findQuickInputBox();
     await user.type(input, 'not-a-guid{Enter}');
     expect(screen.getByRole('alert')).toHaveTextContent('Enter the client ID as a GUID.');
     expect(harness.deps.accounts.addAccount).not.toHaveBeenCalled();
@@ -202,5 +215,14 @@ describe('accounts in the workbench', () => {
         flow: 'browser',
       });
     });
+  });
+
+  it('aliases account and tenant names by default (presentation privacy)', () => {
+    withAccounts(SNAPSHOT, {});
+    render(<AccountsView />);
+    const tree = screen.getByRole('tree', { name: 'Accounts' });
+    expect(within(tree).queryByText('analyst@contoso.example')).not.toBeInTheDocument();
+    expect(within(tree).queryByText('Contoso')).not.toBeInTheDocument();
+    expect(within(tree).getByText('Account 1')).toBeInTheDocument();
   });
 });

@@ -22,12 +22,25 @@ export const useAccounts = create<AccountsState>(() => ({
   signingIn: false,
 }));
 
+/** Real names. The UI shows names through the aliasing namer (see setNameFormatters). */
 export function tenantName(tenant: TenantInfo): string {
   return tenant.displayName ?? tenant.defaultDomain ?? tenant.tenantId;
 }
 
 export function accountName(account: Account): string {
   return account.label ?? account.username;
+}
+
+/**
+ * Display-name formatters for text this store produces (notifications). The workbench
+ * installs aliasing-aware ones at startup; injected to avoid an import cycle with privacy.
+ */
+const formatters = { tenant: tenantName, account: accountName };
+export function setNameFormatters(next: {
+  tenant: (tenant: TenantInfo) => string;
+  account: (account: Account) => string;
+}): void {
+  Object.assign(formatters, next);
 }
 
 /** Tenants that need the user to sign in again, across all accounts. */
@@ -64,10 +77,12 @@ export function applyAccountsSnapshot(snapshot: AccountsSnapshot): void {
       severity: 'warning',
       message:
         pending.length === 1
-          ? `${tenantName(first.tenant)} needs you to sign in again.`
+          ? `${formatters.tenant(first.tenant)} needs you to sign in again.`
           : `${String(pending.length)} tenants need you to sign in again.`,
       detail: pending
-        .map(({ account, tenant }) => `${tenantName(tenant)} (${accountName(account)})`)
+        .map(
+          ({ account, tenant }) => `${formatters.tenant(tenant)} (${formatters.account(account)})`,
+        )
         .join('\n'),
       actions: [{ label: 'Sign in', run: () => void signInToPendingTenants() }],
     });

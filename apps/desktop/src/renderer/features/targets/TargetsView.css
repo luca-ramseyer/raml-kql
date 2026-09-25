@@ -1,0 +1,100 @@
+.targets-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.targets-controls {
+  display: flex;
+  flex-direction: column;
+  padding: 0 12px 6px 20px;
+  gap: 6px;
+}
+
+.targets-group,
+.targets-search {
+  width: 100%;
+}
+
+.targets-summary {
+  display: flex;
+  justify-content: space-between;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+}
+
+.targets-refreshing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.targets-row {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding-right: 8px;
+  cursor: pointer;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.targets-row:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.targets-row:focus-visible {
+  outline: 1px solid var(--vscode-list-focusOutline, var(--vscode-focusBorder));
+  outline-offset: -1px;
+}
+
+.targets-row.tenant {
+  padding-left: 8px;
+}
+
+.targets-row.workspace {
+  padding-left: 30px;
+}
+
+.targets-row.workspace.nested {
+  padding-left: 48px;
+}
+
+.targets-row.subscription {
+  padding-left: 30px;
+  color: var(--vscode-descriptionForeground);
+  cursor: default;
+}
+
+.targets-checkbox {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+}
+
+.targets-label {
+  overflow: hidden;
+  flex-shrink: 1;
+  text-overflow: ellipsis;
+}
+
+.targets-description {
+  overflow: hidden;
+  flex-shrink: 2;
+  opacity: 0.7;
+  font-size: 0.9em;
+  text-overflow: ellipsis;
+}
+
+.targets-sentinel {
+  color: var(--vscode-charts-blue, var(--vscode-textLink-foreground));
+  font-size: 13px;
+}
+
+.targets-warning {
+  color: var(--vscode-notificationsWarningIcon-foreground);
+}
+
+.targets-signin {
+  margin-left: auto;
+}

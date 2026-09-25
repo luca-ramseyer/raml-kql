@@ -4,7 +4,7 @@ import { create } from 'zustand';
  * Open editors (tabs) of the single editor group. Phase 1 has the Welcome page and the
  * Settings editor; query editors (Phase 4), groups and persistence (Phase 7) build on this.
  */
-export type EditorKind = 'welcome' | 'settings';
+export type EditorKind = 'welcome' | 'settings' | 'workspaces';
 
 export interface EditorInput {
   id: string;
@@ -23,6 +23,7 @@ export const useEditors = create<EditorsState>(() => ({ editors: [], activeId: u
 const SINGLETONS: Record<EditorKind, Omit<EditorInput, 'id'>> = {
   welcome: { kind: 'welcome', title: 'Welcome', icon: 'home' },
   settings: { kind: 'settings', title: 'Settings', icon: 'settings' },
+  workspaces: { kind: 'workspaces', title: 'Workspaces', icon: 'server' },
 };
 
 /** Open (or focus) a singleton editor such as Welcome or Settings. */

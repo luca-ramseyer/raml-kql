@@ -64,3 +64,15 @@ export { expect } from '@playwright/test';
 
 /** `ControlOrMeta` is Cmd on macOS and Ctrl elsewhere, like VS Code's CtrlCmd. */
 export const MOD = 'ControlOrMeta';
+
+/** The quick input's text box (command palette, quick open, pickers). */
+export function quickInput(window: Page) {
+  return window.getByRole('dialog', { name: 'Quick input' }).getByRole('combobox');
+}
+
+/** Write settings.jsonc into the throwaway config dir before launching. */
+export function writeSettings(configDir: string, values: Record<string, unknown>): void {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- tiny sync helper for tests
+  const { writeFileSync } = require('node:fs') as typeof import('node:fs');
+  writeFileSync(path.join(configDir, 'settings.jsonc'), JSON.stringify(values, null, 2));
+}
