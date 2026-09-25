@@ -1,13 +1,14 @@
 import { executeCommand } from '../../platform/commands';
 import { useLayout } from '../../platform/layout';
 import { Codicon } from '../common/Codicon';
-import { getView, VIEWS } from '../views';
+import { getView, useViews } from '../views';
 
 import './Sidebar.css';
 
 export function Sidebar(): React.JSX.Element {
   const activeView = useLayout((state) => state.sidebar.activeView);
-  const view = getView(activeView) ?? VIEWS[0];
+  const views = useViews();
+  const view = getView(activeView, views) ?? views[0];
   if (view === undefined) return <aside className="part sidebar" />;
   const Content = view.component;
   return (

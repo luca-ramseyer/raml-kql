@@ -23,6 +23,7 @@ import {
   session,
   shell,
 } from 'electron';
+import type { z } from 'zod';
 
 import type { QueryRunRequest, RerunRequest } from '../shared/query/models';
 import { buildWorkbenchCsp } from '../shared/security/csp';
@@ -75,6 +76,12 @@ import { ExtensionManager, InstalledEntrySchema } from './extensions/extension-m
 import { EXTENSION_LIMITS, extensionError, readExtensionZip } from './extensions/extension-package';
 import { ExtensionSecrets, ExtensionStorage } from './extensions/extension-stores';
 import {
+  EXTENSION_UI_SCHEME,
+  extensionUiCsp,
+  resolveExtensionFile,
+} from './extensions/extension-ui-protocol';
+import { resolveGitExtension } from './extensions/git-install';
+import {
   PermissionBroker,
   PersistedGrantSchema,
   type PromptAnswer,
@@ -96,6 +103,7 @@ import { withParameters } from './packs/parameters';
 import { JsoncSourcesStore } from './packs/sources-config';
 import { APP_ENTRY_URL, APP_ORIGIN, APP_SCHEME, resolveAppFile } from './protocol/app-protocol';
 import { QueriesService } from './queries/queries-service';
+import { DataSourceRegistry, LOG_ANALYTICS_SOURCE } from './query/data-sources';
 import { ENGINE_DEFAULTS } from './query/limits';
 import { QueryEngine } from './query/query-engine';
 import { Scheduler } from './query/scheduler';
@@ -166,6 +174,8 @@ protocol.registerSchemesAsPrivileged([
     scheme: APP_SCHEME,
     privileges: { standard: true, secure: true, supportFetchAPI: true, codeCache: true },
   },
+  // Extension UI (views, result renderers) in sandboxed iframes (spec 07).
+  { scheme: EXTENSION_UI_SCHEME, privileges: { standard: true, secure: true } },
 ]);
 
 if (!app.requestSingleInstanceLock()) {
@@ -594,13 +604,81 @@ async function createExtensions(audit: AuditLog) {
     },
     onChange: () => {
       emit('extensions.changed', {});
+      void userThemes.reload();
+    },
+    postToWebview: (_extensionId, viewId, message) => {
+      emit('extensions.webviewPost', { viewId, message: message as z.core.util.JSONType });
     },
   });
+  userThemes.setExtensionThemes(() => manager.themes());
+  settings.onDidChangeRaw((keys) => {
+    manager.configurationChanged(keys);
+  });
+  protocol.handle(EXTENSION_UI_SCHEME, async (request) => {
+    const url = new URL(request.url);
+    const folder = manager.folderOf(url.hostname);
+    const file = folder === undefined ? undefined : resolveExtensionFile(folder, url.pathname);
+    if (file === undefined) return new Response('Not found', { status: 404 });
+    const response = await net.fetch(pathToFileURL(file).toString());
+    const headers = new Headers(response.headers);
+    headers.set(
+      'Content-Security-Policy',
+      extensionUiCsp(
+        url.hostname,
+        devServerOrigin === undefined ? [APP_ORIGIN] : [APP_ORIGIN, devServerOrigin],
+      ),
+    );
+    headers.set('X-Content-Type-Options', 'nosniff');
+    return new Response(response.body, { status: response.status, headers });
+  });
+  // Release lookups (GitHub/GitLab APIs) are the app's own traffic, through the OS proxy.
+  const appFetch = (url: string, init?: RequestInit): Promise<Response> => net.fetch(url, init);
+  const checkUpdates = async (): Promise<{ updates: number; errors: string[] }> => {
+    let updates = 0;
+    const errors: string[] = [];
+    for (const source of manager.gitSources()) {
+      try {
+        const newer = await resolveGitExtension({
+          url: source.url,
+          fetch: appFetch,
+          tempRoot: app.getPath('temp'),
+          newerThan: source.version,
+        });
+        manager.setUpdate(
+          source.id,
+          newer === undefined ? undefined : { version: newer.pkg.manifest.version, tag: newer.tag },
+        );
+        if (newer === undefined) continue;
+        updates += 1;
+        // `extensions.autoUpdate`: only updates that ask for no new permissions.
+        if (effective('extensions.autoUpdate')) {
+          const preview = manager.preview(newer.pkg, {
+            type: 'git',
+            url: newer.url,
+            tag: newer.tag,
+            ...(newer.sha === undefined ? {} : { sha: newer.sha }),
+          });
+          if (preview.replaces?.addedPermissions.length === 0)
+            await manager.install(preview.previewId);
+          else manager.cancelPreview(preview.previewId);
+        }
+      } catch (error) {
+        errors.push(`${source.id}: ${error instanceof Error ? error.message : 'the check failed'}`);
+      }
+    }
+    return { updates, errors };
+  };
+  // Daily update check (spec 07); updates are shown, never installed silently.
+  setTimeout(() => {
+    if (!effective('extensions.checkForUpdates') || manager.gitSources().length === 0) return;
+    void checkUpdates().catch(() => undefined);
+  }, 20_000);
   const refreshNames = async (): Promise<void> => {
     names = new Map((await manager.snapshot()).extensions.map((e) => [e.id, e.displayName]));
   };
   await manager.load().catch(() => undefined);
   await refreshNames();
+  void userThemes.reload();
   app.on('will-quit', () => {
     void manager.dispose();
     host.dispose();
@@ -628,6 +706,48 @@ async function createExtensions(audit: AuditLog) {
         preview: manager.preview(pkg, { type: 'file', name: path.basename(file) }),
       };
     },
+    installFromGit: async (url) => {
+      const resolved = await resolveGitExtension({
+        url,
+        fetch: appFetch,
+        tempRoot: app.getPath('temp'),
+      });
+      if (resolved === undefined) return { type: 'cancelled' };
+      return {
+        type: 'preview',
+        preview: manager.preview(resolved.pkg, {
+          type: 'git',
+          url: resolved.url,
+          tag: resolved.tag,
+          ...(resolved.sha === undefined ? {} : { sha: resolved.sha }),
+        }),
+      };
+    },
+    checkUpdates: () => checkUpdates(),
+    update: async (id) => {
+      const source = manager.gitSources().find((s) => s.id === id);
+      if (source === undefined)
+        throw extensionError('Only extensions installed from git can be updated.');
+      const resolved = await resolveGitExtension({
+        url: source.url,
+        fetch: appFetch,
+        tempRoot: app.getPath('temp'),
+        newerThan: source.version,
+      });
+      if (resolved === undefined) {
+        manager.setUpdate(id, undefined);
+        return { type: 'cancelled' };
+      }
+      return {
+        type: 'preview',
+        preview: manager.preview(resolved.pkg, {
+          type: 'git',
+          url: resolved.url,
+          tag: resolved.tag,
+          ...(resolved.sha === undefined ? {} : { sha: resolved.sha }),
+        }),
+      };
+    },
     confirmInstall: async (previewId) => {
       const snapshot = await manager.install(previewId);
       await refreshNames();
@@ -638,7 +758,13 @@ async function createExtensions(audit: AuditLog) {
     },
     uninstall: (id) => manager.uninstall(id),
     setEnabled: (id, enabled) => manager.setEnabled(id, enabled),
-    executeCommand: (command, args, runId) => manager.executeCommand(command, args, runId),
+    executeCommand: (command, args, runId, fromResults) =>
+      manager.executeCommand(command, args, runId, fromResults),
+    enrich: (extensionId, enricherId, runId, entities) =>
+      manager.enrich(extensionId, enricherId, runId, entities),
+    resultsAccess: (extensionId, runId, rows) => manager.resultsAccess(extensionId, runId, rows),
+    resolveView: (viewId) => manager.resolveView(viewId),
+    webviewMessage: (viewId, message) => manager.webviewMessage(viewId, message),
     respond: (requestId, value) => {
       ui.respond(requestId, value);
     },
@@ -743,18 +869,13 @@ function createQueryServices(auth: AuthService, discovery: DiscoveryService) {
       emit('history.changed', {});
     },
   });
-  const accountName = (accountId: string): string =>
-    auth.snapshot().accounts.find((a) => a.id === accountId)?.username ?? accountId;
-  const engine = new QueryEngine({
-    workspace: (resourceId) =>
-      discovery.snapshot().workspaces.find((w) => w.resourceId === resourceId),
-    tenantName: (tenantId) => {
-      const tenant = discovery.snapshot().tenants.find((t) => t.tenantId === tenantId);
-      return tenant?.displayName ?? tenant?.defaultDomain ?? tenantId;
-    },
-    accountName,
-    getToken: (request) => auth.getToken(request),
-    source: mode.demo
+  // The built-in Log Analytics source (or the demo source) behind the same interface as
+  // extension data sources (spec 01).
+  const dataSources = new DataSourceRegistry();
+  dataSources.register(
+    LOG_ANALYTICS_SOURCE,
+    'Log Analytics',
+    mode.demo
       ? new DemoDataSource()
       : {
           execute: (request) =>
@@ -770,6 +891,19 @@ function createQueryServices(auth: AuthService, discovery: DiscoveryService) {
               signal: request.signal,
             }),
         },
+  );
+  const accountName = (accountId: string): string =>
+    auth.snapshot().accounts.find((a) => a.id === accountId)?.username ?? accountId;
+  const engine = new QueryEngine({
+    workspace: (resourceId) =>
+      discovery.snapshot().workspaces.find((w) => w.resourceId === resourceId),
+    tenantName: (tenantId) => {
+      const tenant = discovery.snapshot().tenants.find((t) => t.tenantId === tenantId);
+      return tenant?.displayName ?? tenant?.defaultDomain ?? tenantId;
+    },
+    accountName,
+    getToken: (request) => auth.getToken(request),
+    source: dataSources.router(),
     scheduler: new Scheduler({
       perPrincipal: () => effective('query.maxConcurrentPerAccount'),
       total: () => effective('query.maxConcurrentTotal'),

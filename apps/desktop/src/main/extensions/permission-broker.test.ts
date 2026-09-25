@@ -138,4 +138,34 @@ describe('PermissionBroker', () => {
     ]);
     expect((await store.read()).items).toEqual([]);
   });
+
+  it('asks once for several permissions of one action', async () => {
+    const { prompt, broker, fetchCheck } = setup(['run']);
+    const readSelection = {
+      extensionId: EXT,
+      permission: 'results.readSelection',
+      declared: { id: 'results.readSelection' as const, reason: 'Read values' },
+      runId: 'run-1',
+      detail: '',
+    };
+    const network = {
+      extensionId: EXT,
+      permission: 'network',
+      declared: NETWORK,
+      runId: 'run-1',
+      host: 'www.virustotal.com',
+      detail: '',
+    };
+    expect(
+      await broker.checkMany([readSelection, network], 'send 14 values to www.virustotal.com'),
+    ).toBe(true);
+    expect(prompt).toHaveBeenCalledTimes(1);
+    expect(prompt).toHaveBeenCalledWith(
+      expect.objectContaining({ permission: 'results.readSelection + network', risk: 'high' }),
+    );
+    // Both are granted for the run: the enricher's fetches don't ask again.
+    expect(await fetchCheck('run-1')).toBe(true);
+    expect(prompt).toHaveBeenCalledTimes(1);
+    expect(await broker.checkMany([{ ...readSelection, runId: 'run-2' }], 'x')).toBe(false);
+  });
 });

@@ -79,6 +79,7 @@ export class SettingsService {
   private readonly listeners = new Set<(snapshot: SettingsSnapshot) => void>();
   /** Every key of the user's file as written (extension settings aren't in the registry). */
   private raw: Record<string, unknown> = {};
+  private readonly rawListeners = new Set<(keys: string[]) => void>();
   /** Serialises writes so two quick edits can't overwrite each other. */
   private writeQueue: Promise<unknown> = Promise.resolve();
 
@@ -86,6 +87,12 @@ export class SettingsService {
 
   get current(): SettingsSnapshot {
     return this.snapshot;
+  }
+
+  /** Keys of settings.jsonc whose written value changed (including unknown keys). */
+  onDidChangeRaw(listener: (keys: string[]) => void): () => void {
+    this.rawListeners.add(listener);
+    return () => this.rawListeners.delete(listener);
   }
 
   /** A key's value as written in settings.jsonc, unvalidated (extension settings). */
@@ -103,7 +110,12 @@ export class SettingsService {
     let next: SettingsSnapshot;
     try {
       const text = await readTextFile(this.filePath);
+      const before = this.raw;
       this.raw = rawSettings(text);
+      const changed = [...new Set([...Object.keys(before), ...Object.keys(this.raw)])].filter(
+        (key) => JSON.stringify(before[key]) !== JSON.stringify(this.raw[key]),
+      );
+      if (changed.length > 0) for (const listener of this.rawListeners) listener(changed);
       const user = evaluateSettingsText(text, this.userValues);
       this.userValues = user.values;
       const base = await this.extendedValues(text);

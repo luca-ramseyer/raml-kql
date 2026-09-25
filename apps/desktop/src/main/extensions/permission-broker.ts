@@ -116,23 +116,8 @@ export class PermissionBroker {
     const risk = permissionRisk(permission);
     if (risk === 'low') return true;
 
-    const matches = (g: Pick<Grant, 'extensionId' | 'permission' | 'hosts'>): boolean =>
-      g.extensionId === extensionId && g.permission === permission && this.covers(g, request.host);
-    const persisted = await this.loadPersisted();
-    if (
-      persisted.some((g) =>
-        matches({ extensionId: g.extension, permission: g.permission, hosts: g.hosts }),
-      )
-    ) {
-      return true;
-    }
-    if (this.session.some(matches)) return true;
-    const runKey =
-      request.runId ??
-      (request.invocationId === undefined ? undefined : `invocation:${request.invocationId}`);
-    if (runKey !== undefined && this.runs.some((g) => matches(g) && g.runId === runKey))
-      return true;
-
+    if (await this.granted(request)) return true;
+    const runKey = this.runKeyOf(request);
     const key = `${extensionId}|${permission}|${runKey ?? ''}|${request.host ?? ''}`;
     if (this.denied.has(key)) return false;
     const inFlight = this.pending.get(key);
@@ -144,6 +129,73 @@ export class PermissionBroker {
     } finally {
       this.pending.delete(key);
     }
+  }
+
+  private runKeyOf(request: PermissionCheck): string | undefined {
+    return (
+      request.runId ??
+      (request.invocationId === undefined ? undefined : `invocation:${request.invocationId}`)
+    );
+  }
+
+  /** Granted already (low risk, always, session, or this run)? */
+  private async granted(request: PermissionCheck): Promise<boolean> {
+    const { extensionId, permission } = request;
+    if (permissionRisk(permission) === 'low') return true;
+    const matches = (g: Pick<Grant, 'extensionId' | 'permission' | 'hosts'>): boolean =>
+      g.extensionId === extensionId && g.permission === permission && this.covers(g, request.host);
+    const persisted = await this.loadPersisted();
+    if (
+      persisted.some((g) =>
+        matches({ extensionId: g.extension, permission: g.permission, hosts: g.hosts }),
+      )
+    ) {
+      return true;
+    }
+    if (this.session.some(matches)) return true;
+    const runKey = this.runKeyOf(request);
+    return runKey !== undefined && this.runs.some((g) => matches(g) && g.runId === runKey);
+  }
+
+  private async record(
+    request: PermissionCheck,
+    answer: GrantScope,
+    runKey: string | undefined,
+  ): Promise<void> {
+    const { extensionId, permission } = request;
+    const hosts = permission === 'network' ? networkHosts(request.declared) : undefined;
+    const grant: Grant = {
+      extensionId,
+      permission,
+      scope: answer,
+      ...(hosts === undefined ? {} : { hosts }),
+      grantedAt: this.now(),
+    };
+    if (answer === 'run') {
+      this.runs.push({ ...grant, ...(runKey === undefined ? {} : { runId: runKey }) });
+    } else if (answer === 'session') {
+      this.session.push(grant);
+    } else {
+      const persisted = await this.loadPersisted();
+      const next = [
+        ...persisted.filter((g) => !(g.extension === extensionId && g.permission === permission)),
+        {
+          extension: extensionId,
+          permission,
+          ...(hosts === undefined ? {} : { hosts }),
+          grantedAt: grant.grantedAt,
+        },
+      ];
+      await this.options.store.write(next);
+      this.persisted = next;
+    }
+    this.options.audit({
+      event: 'grant',
+      extension: extensionId,
+      permission,
+      scope: answer,
+      ...(hosts === undefined ? {} : { hosts }),
+    });
   }
 
   private async ask(
@@ -167,37 +219,48 @@ export class PermissionBroker {
       this.options.audit({ event: 'deny', extension: extensionId, permission });
       return false;
     }
-    const grant: Grant = {
-      extensionId,
-      permission,
-      scope: answer,
-      ...(hosts === undefined ? {} : { hosts }),
-      grantedAt: this.now(),
-    };
-    if (answer === 'run')
-      this.runs.push({ ...grant, ...(runKey === undefined ? {} : { runId: runKey }) });
-    else if (answer === 'session') this.session.push(grant);
-    else {
-      const persisted = await this.loadPersisted();
-      const next = [
-        ...persisted.filter((g) => !(g.extension === extensionId && g.permission === permission)),
-        {
-          extension: extensionId,
-          permission,
-          ...(hosts === undefined ? {} : { hosts }),
-          grantedAt: grant.grantedAt,
-        },
-      ];
-      await this.options.store.write(next);
-      this.persisted = next;
+    await this.record(request, answer, runKey);
+    return true;
+  }
+
+  /**
+   * Several permissions for one action (e.g. enrichment: read the selected values and send
+   * them to a host): one prompt for everything not granted yet, and the answer applies to all.
+   */
+  async checkMany(requests: PermissionCheck[], detail: string): Promise<boolean> {
+    const missing: PermissionCheck[] = [];
+    for (const request of requests) {
+      if (request.declared === undefined) return false;
+      if (await this.granted(request)) continue;
+      missing.push(request);
     }
-    this.options.audit({
-      event: 'grant',
-      extension: extensionId,
-      permission,
-      scope: answer,
-      ...(hosts === undefined ? {} : { hosts }),
+    if (missing.length === 0) return true;
+    const [first] = missing;
+    if (first === undefined) return true;
+    const runKey = this.runKeyOf(first);
+    const key = `${first.extensionId}|${missing.map((m) => m.permission).join('+')}|${runKey ?? ''}`;
+    if (this.denied.has(key)) return false;
+    const hosts = missing.flatMap((m) => networkHosts(m.declared) ?? []);
+    const risks = missing.map((m) => permissionRisk(m.permission));
+    const answer = await this.options.prompt({
+      extensionId: first.extensionId,
+      permission: missing.map((m) => m.permission).join(' + '),
+      risk: risks.includes('high') ? 'high' : risks.includes('medium') ? 'medium' : 'low',
+      detail,
+      reason: missing
+        .map((m) => m.declared?.reason ?? '')
+        .filter((r) => r !== '')
+        .join(' · '),
+      ...(hosts.length === 0 ? {} : { hosts }),
+      hasRun: first.runId !== undefined,
     });
+    if (answer === undefined || answer === 'deny') {
+      this.denied.add(key);
+      for (const m of missing)
+        this.options.audit({ event: 'deny', extension: m.extensionId, permission: m.permission });
+      return false;
+    }
+    for (const m of missing) await this.record(m, answer, runKey);
     return true;
   }
 

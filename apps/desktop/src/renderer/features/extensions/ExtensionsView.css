@@ -125,3 +125,11 @@
 .permission-detail p {
   margin: 0 0 6px;
 }
+
+.extension-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: transparent;
+}

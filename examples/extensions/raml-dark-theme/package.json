@@ -1,0 +1,21 @@
+{
+  "name": "raml-dark-theme",
+  "publisher": "raml",
+  "displayName": "Raml Dark",
+  "version": "1.0.0",
+  "description": "A dark colour theme with teal accents. An example of a theme-only extension: data, no code, no permissions.",
+  "license": "MIT",
+  "repository": "https://github.com/luca-ramseyer/raml-kql",
+  "engines": {
+    "raml-kql": "^1.0.0"
+  },
+  "contributes": {
+    "themes": [
+      {
+        "label": "Raml Dark",
+        "uiTheme": "vs-dark",
+        "path": "themes/raml-dark.json"
+      }
+    ]
+  }
+}

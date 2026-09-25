@@ -41,4 +41,15 @@ describe('when-clauses', () => {
     expect(matchesWhen(undefined, {})).toBe(true);
     expect(matchesWhen('(broken', { broken: true })).toBe(false);
   });
+
+  it('matches regular expressions with =~', () => {
+    expect(matchesWhen('cellEntityType =~ /ip|domain|sha256/', { cellEntityType: 'ip' })).toBe(
+      true,
+    );
+    expect(matchesWhen('cellEntityType =~ /^ip$/i', { cellEntityType: 'IP' })).toBe(true);
+    expect(matchesWhen('cellEntityType =~ /ip|domain/', { cellEntityType: 'url' })).toBe(false);
+    expect(matchesWhen('cellEntityType =~ /ip/', {})).toBe(false);
+    expect(matchesWhen('a =~ /x/ && b', { a: 'x', b: true })).toBe(true);
+    expect(matchesWhen('a =~ nope', { a: 'x' })).toBe(false);
+  });
 });

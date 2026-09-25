@@ -1,0 +1,74 @@
+{
+  "name": "virustotal-enricher",
+  "publisher": "raml",
+  "displayName": "VirusTotal Enricher",
+  "version": "1.0.0",
+  "description": "Look up IP addresses, domains, URLs and file hashes from query results on VirusTotal, and show the verdicts as extra columns.",
+  "license": "MIT",
+  "repository": "https://github.com/luca-ramseyer/raml-kql",
+  "engines": {
+    "raml-kql": "^1.0.0"
+  },
+  "main": "dist/extension.js",
+  "activationEvents": [
+    "onEnricher:virustotal",
+    "onCommand:virustotal.setApiKey"
+  ],
+  "permissions": [
+    {
+      "id": "network",
+      "hosts": [
+        "www.virustotal.com"
+      ],
+      "reason": "Query the VirusTotal API"
+    },
+    {
+      "id": "results.readSelection",
+      "reason": "Read the values you choose to enrich"
+    },
+    {
+      "id": "secrets",
+      "reason": "Store your VirusTotal API key"
+    }
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "virustotal.setApiKey",
+        "title": "Set API Key…",
+        "category": "VirusTotal"
+      },
+      {
+        "command": "virustotal.clearApiKey",
+        "title": "Remove API Key",
+        "category": "VirusTotal"
+      }
+    ],
+    "enrichers": [
+      {
+        "id": "virustotal",
+        "title": "VirusTotal",
+        "entityTypes": [
+          "ip",
+          "domain",
+          "url",
+          "sha256",
+          "sha1",
+          "md5"
+        ]
+      }
+    ],
+    "configuration": {
+      "title": "VirusTotal",
+      "properties": {
+        "virustotal-enricher.maxLookupsPerRun": {
+          "type": "integer",
+          "default": 25,
+          "minimum": 1,
+          "maximum": 500,
+          "description": "At most this many values are looked up per enrichment (the public API allows 4 per minute)."
+        }
+      }
+    }
+  }
+}

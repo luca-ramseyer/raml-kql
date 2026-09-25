@@ -1,3 +1,7 @@
+import { useMemo } from 'react';
+
+import { useExtensions } from '../../features/extensions/extensions-store';
+import { RendererView } from '../../features/extensions/RendererView';
 import { ChartView } from '../../features/results/chart/ChartView';
 import { ResultsView } from '../../features/results/ResultsView';
 import { RunView } from '../../features/results/RunView';
@@ -23,15 +27,44 @@ const PANEL_TABS = [
   { id: 'audit', title: 'Audit', empty: 'The local audit log of queries you ran appears here.' },
 ] as const;
 
+interface PanelTab {
+  id: string;
+  title: string;
+  empty: string;
+  renderer?: { extensionId: string; ui: string };
+}
+
+/** Result renderers from enabled extensions get a panel tab each (spec 07). */
+function usePanelTabs(): PanelTab[] {
+  const extensions = useExtensions((s) => s.snapshot.extensions);
+  return useMemo(
+    () => [
+      ...PANEL_TABS,
+      ...extensions
+        .filter((e) => e.enabled && e.state !== 'failed')
+        .flatMap((e) =>
+          (e.contributes.resultRenderers ?? []).map((r) => ({
+            id: `renderer:${r.id}`,
+            title: r.title,
+            empty: '',
+            renderer: { extensionId: e.id, ui: r.ui },
+          })),
+        ),
+    ],
+    [extensions],
+  );
+}
+
 export function Panel(): React.JSX.Element {
   const { activeTab, maximized } = useLayout((state) => state.panel);
-  const tab = PANEL_TABS.find((t) => t.id === activeTab) ?? PANEL_TABS[0];
+  const tabs = usePanelTabs();
+  const tab: PanelTab = tabs.find((t) => t.id === activeTab) ?? PANEL_TABS[0];
 
   return (
     <section className="part panel" aria-label="Panel">
       <div className="panel-title">
         <div className="panel-tabs" role="tablist">
-          {PANEL_TABS.map((t) => (
+          {tabs.map((t) => (
             <button
               key={t.id}
               type="button"
@@ -70,7 +103,14 @@ export function Panel(): React.JSX.Element {
         </div>
       </div>
       <div className="panel-content" role="tabpanel" aria-label={tab.title}>
-        {tab.id === 'results' ? (
+        {tab.renderer !== undefined ? (
+          <RendererView
+            key={tab.id}
+            extensionId={tab.renderer.extensionId}
+            title={tab.title}
+            ui={tab.renderer.ui}
+          />
+        ) : tab.id === 'results' ? (
           <ResultsView />
         ) : tab.id === 'run' ? (
           <RunView />

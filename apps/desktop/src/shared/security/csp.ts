@@ -22,6 +22,8 @@ export function buildWorkbenchCsp({ mode }: CspOptions): string {
     'font-src': ["'self'", 'data:'],
     'connect-src': dev ? ["'self'", 'ws://localhost:*'] : ["'self'"],
     'worker-src': ["'self'"],
+    // Extension views and result renderers: sandboxed iframes from `rkql-ext:` (spec 07).
+    'frame-src': ['rkql-ext:'],
     'base-uri': ["'none'"],
     'form-action': ["'none'"],
     'object-src': ["'none'"],

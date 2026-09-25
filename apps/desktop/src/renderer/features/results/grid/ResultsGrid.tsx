@@ -21,6 +21,7 @@ import type { ViewState } from '../../../../shared/results/view';
 import { useSetting } from '../../../platform/settings';
 import { getBridge, unwrap } from '../../../services/ipc';
 import { ContextMenu, type MenuEntry } from '../../../workbench/common/ContextMenu';
+import { extensionCellMenu, overlayColumnDefs, useEnrichment } from '../../extensions/enrichment';
 import {
   appendWhere,
   copyText,
@@ -101,9 +102,13 @@ export function ResultsGrid({
     viewRef.current = ui.view;
   });
 
+  const overlays = useEnrichment((s) => s.byRun[run.runId]);
   const columnDefs = useMemo<ColDef<GridRow>[]>(
-    () => buildColumnDefs(columns, { zone, shownAttribution, hidden: hiddenColumns }),
-    [columns, zone, shownAttribution, hiddenColumns],
+    () => [
+      ...buildColumnDefs(columns, { zone, shownAttribution, hidden: hiddenColumns }),
+      ...overlayColumnDefs(overlays ?? [], fieldOf),
+    ],
+    [columns, zone, shownAttribution, hiddenColumns, overlays],
   );
 
   const datasource = useMemo<IDatasource>(
@@ -337,6 +342,19 @@ export function ResultsGrid({
             run: () => void copyText(link.url, 'Link copied.'),
           },
         ]),
+        ...extensionCellMenu({
+          runId: run.runId,
+          column: index,
+          columnName: column?.name ?? '',
+          value,
+          columnValues: () => {
+            const values: unknown[] = [];
+            apiRef.current?.forEachNode((node) => {
+              values.push(node.data?.[fieldOf(index)]);
+            });
+            return values;
+          },
+        }),
       ];
       setMenu({ x: mouse.clientX, y: mouse.clientY, entries });
     },

@@ -29,3 +29,7 @@ Thumbs.db
 
 # Scanner output (e.g. gitleaks in CI)
 *.sarif
+
+# Built example extensions (pnpm build:examples)
+examples/extensions/*/dist/
+examples/extensions/dist/

@@ -69,6 +69,20 @@ describe('SettingsService', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  it('keeps extension settings as written and reports which keys changed', async () => {
+    writeFileSync(file, '{ "virustotal-enricher.maxLookupsPerRun": 10, "editor.fontSize": 13 }');
+    const service = new SettingsService(file);
+    await service.reload();
+    expect(service.rawValue('virustotal-enricher.maxLookupsPerRun')).toBe(10);
+    const changed = vi.fn();
+    service.onDidChangeRaw(changed);
+    writeFileSync(file, '{ "virustotal-enricher.maxLookupsPerRun": 5, "editor.fontSize": 13 }');
+    await service.reload();
+    expect(changed).toHaveBeenCalledWith(['virustotal-enricher.maxLookupsPerRun']);
+    await service.reload();
+    expect(changed).toHaveBeenCalledTimes(1);
+  });
+
   it('creates settings.jsonc on first write', async () => {
     const service = new SettingsService(file);
     const snapshot = await service.update({

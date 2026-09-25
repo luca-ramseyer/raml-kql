@@ -142,23 +142,24 @@ export function createExtensionRuntime(port: RuntimePort): ExtensionRuntime {
       },
     },
     secrets: {
-      get: (key) => call('secrets.get', { key }),
+      get: async (key) => (await call<string | null>('secrets.get', { key })) ?? undefined,
       set: (key, value) => call('secrets.set', { key, value }),
       delete: (key) => call('secrets.delete', { key }),
     },
     storage: {
-      get: (key) => call('storage.get', { key }),
+      get: async <T>(key: string) => (await call<T | null>('storage.get', { key })) ?? undefined,
       set: (key, value) => call('storage.set', { key, value }),
     },
     configuration: {
-      get: (key) => call('configuration.get', { key }),
+      get: async <T>(key: string) =>
+        (await call<T | null>('configuration.get', { key })) ?? undefined,
       onDidChangeConfiguration(listener) {
         configListeners.add(listener);
         return disposable(() => configListeners.delete(listener));
       },
     },
     editor: {
-      getActiveQuery: () => call('editor.getActiveQuery'),
+      getActiveQuery: async () => (await call<string | null>('editor.getActiveQuery')) ?? undefined,
       insertText: (text) => call('editor.insertText', { text }),
       openQueryTab: (options) => call('editor.openQueryTab', options),
     },

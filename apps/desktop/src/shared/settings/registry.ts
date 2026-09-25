@@ -517,6 +517,15 @@ export const settingDefinitions = [
     scope: 'user',
   }),
   define({
+    key: 'extensions.checkForUpdates',
+    schema: z.boolean(),
+    default: true,
+    description:
+      'Check extensions installed from git for newer releases on startup. Updates are shown, not installed.',
+    category: ['Extensions'],
+    scope: 'user',
+  }),
+  define({
     key: 'extensions.autoUpdate',
     schema: z.boolean(),
     default: false,

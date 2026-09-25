@@ -1,3 +1,4 @@
+import type { EntityType } from '@raml-kql/pack-schema/extension-manifest';
 import type { z } from 'zod';
 
 import type { AccountsSnapshot, AddAccountRequest } from '../../shared/auth/models';
@@ -7,7 +8,11 @@ import type {
   UserThemesSnapshot,
 } from '../../shared/config/config-snapshots';
 import { AppError } from '../../shared/errors';
-import type { ExtensionsSnapshot, InstallResult } from '../../shared/extensions/models';
+import type {
+  EnrichmentResultData,
+  ExtensionsSnapshot,
+  InstallResult,
+} from '../../shared/extensions/models';
 import type {
   AppInfo,
   AuditVerification,
@@ -157,11 +162,28 @@ export interface PacksOperations {
 export interface ExtensionsOperations {
   snapshot(): Promise<ExtensionsSnapshot>;
   installFromFile(): Promise<InstallResult>;
+  installFromGit(url: string): Promise<InstallResult>;
+  checkUpdates(): Promise<{ updates: number; errors: string[] }>;
+  update(id: string): Promise<InstallResult>;
   confirmInstall(previewId: string): Promise<ExtensionsSnapshot>;
   cancelInstall(previewId: string): void;
   uninstall(id: string): Promise<ExtensionsSnapshot>;
   setEnabled(id: string, enabled: boolean): Promise<ExtensionsSnapshot>;
-  executeCommand(command: string, args: unknown[], runId?: string): Promise<unknown>;
+  executeCommand(
+    command: string,
+    args: unknown[],
+    runId?: string,
+    fromResults?: boolean,
+  ): Promise<unknown>;
+  enrich(
+    extensionId: string,
+    enricherId: string,
+    runId: string | undefined,
+    entities: { type: EntityType; value: string }[],
+  ): Promise<EnrichmentResultData[]>;
+  resultsAccess(extensionId: string, runId: string | undefined, rows: number): Promise<boolean>;
+  resolveView(viewId: string): Promise<void>;
+  webviewMessage(viewId: string, message: unknown): Promise<void>;
   respond(requestId: number, value: unknown): void;
   revoke(id: string, permission?: string): Promise<ExtensionsSnapshot>;
   readme(id: string): Promise<string | undefined>;
@@ -247,20 +269,35 @@ export function createIpcHandlers(deps: HandlerDependencies): IpcHandlers {
     extensions: {
       list: () => deps.extensions.snapshot(),
       installFromFile: () => deps.extensions.installFromFile(),
+      installFromGit: ({ url }) => deps.extensions.installFromGit(url),
+      checkUpdates: () => deps.extensions.checkUpdates(),
+      update: ({ id }) => deps.extensions.update(id),
       confirmInstall: ({ previewId }) => deps.extensions.confirmInstall(previewId),
       cancelInstall: ({ previewId }) => {
         deps.extensions.cancelInstall(previewId);
       },
       uninstall: ({ id }) => deps.extensions.uninstall(id),
       setEnabled: ({ id, enabled }) => deps.extensions.setEnabled(id, enabled),
-      executeCommand: async ({ command, args, runId }) => {
-        const value = await deps.extensions.executeCommand(command, args, runId);
+      executeCommand: async ({ command, args, runId, fromResults }) => {
+        const value = await deps.extensions.executeCommand(command, args, runId, fromResults);
         return value === undefined ? {} : { value: value as z.core.util.JSONType };
       },
       respond: ({ requestId, value }) => {
         deps.extensions.respond(requestId, value);
       },
       revoke: ({ id, permission }) => deps.extensions.revoke(id, permission),
+      enrich: async ({ extensionId, enricherId, runId, entities }) => ({
+        results: await deps.extensions.enrich(extensionId, enricherId, runId, entities),
+      }),
+      resultsAccess: async ({ extensionId, runId, rows }) => ({
+        allowed: await deps.extensions.resultsAccess(extensionId, runId, rows),
+      }),
+      resolveView: async ({ viewId }) => {
+        await deps.extensions.resolveView(viewId);
+      },
+      webviewMessage: async ({ viewId, message }) => {
+        await deps.extensions.webviewMessage(viewId, message);
+      },
       readme: async ({ id }) => {
         const readme = await deps.extensions.readme(id);
         return readme === undefined ? {} : { readme };

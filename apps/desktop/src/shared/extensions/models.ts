@@ -1,5 +1,6 @@
 import {
   ContributesSchema,
+  ENTITY_TYPES,
   PermissionDeclarationSchema,
 } from '@raml-kql/pack-schema/extension-manifest';
 import { z } from 'zod';
@@ -163,3 +164,19 @@ export const UiRequestEventSchema = z.object({
 export const UiResponseSchema = z
   .object({ requestId: z.number().int(), value: z.json().optional() })
   .strict();
+
+export const EntitySchema = z.object({ type: z.enum(ENTITY_TYPES), value: z.string().max(2000) });
+
+/** What an enricher returns per value (shown as extra result columns). */
+export const EnrichmentResultSchema = z.object({
+  entity: EntitySchema,
+  fields: z
+    .record(z.string().max(100), z.union([z.string().max(2000), z.number(), z.boolean(), z.null()]))
+    .refine((fields) => Object.keys(fields).length <= 20, { message: 'at most 20 fields' }),
+  url: z
+    .url()
+    .max(2000)
+    .refine((u) => u.startsWith('https://'), { message: 'https only' })
+    .optional(),
+});
+export type EnrichmentResultData = z.infer<typeof EnrichmentResultSchema>;

@@ -36,6 +36,8 @@ export const WorkspaceSchema = z.object({
   resourceGroup: z.string().max(300),
   /** Microsoft Sentinel is enabled on this workspace (a badge only). */
   sentinel: z.boolean(),
+  /** The data source that runs queries here (spec 01); Log Analytics when omitted. */
+  dataSourceId: z.string().max(200).optional(),
   retentionInDays: z.number().int().optional(),
   sku: z.string().max(100).optional(),
   /** Every account/tenant route to this workspace, in discovery order. */

@@ -119,11 +119,48 @@ async function resolveTheme(
 }
 
 /** Holds the current user themes and notifies when the themes folder changes. */
+/** A colour theme contributed by an extension (spec 07: data only, no include files). */
+export interface ExtensionThemeSource {
+  extensionId: string;
+  label: string;
+  uiTheme: string;
+  json: string;
+}
+
+export function extensionTheme(source: ExtensionThemeSource): ColorTheme {
+  const { tree, problems } = parseJsonc(source.json, source.label);
+  if (problems.length > 0 || tree === undefined)
+    throw new Error('The theme file is not valid JSON.');
+  const raw = getNodeValue(tree) as RawTheme;
+  const colors =
+    typeof raw.colors === 'object' && raw.colors !== null && !Array.isArray(raw.colors)
+      ? (raw.colors as Record<string, unknown>)
+      : {};
+  return {
+    id: `extension:${source.extensionId}:${source.label}`,
+    label: source.label.slice(0, 200),
+    uiTheme:
+      (['vs', 'vs-dark', 'hc-black', 'hc-light'] as const).find((t) => t === source.uiTheme) ??
+      'vs-dark',
+    colors: sanitizeColors(colors),
+    tokenColors: (Array.isArray(raw.tokenColors) ? (raw.tokenColors as unknown[]) : []).slice(
+      0,
+      5000,
+    ),
+  };
+}
+
 export class UserThemesService {
   private snapshot: UserThemesSnapshot = { themes: [], problems: [] };
   private readonly listeners = new Set<(snapshot: UserThemesSnapshot) => void>();
+  private extensionThemes: () => Promise<ExtensionThemeSource[]> = () => Promise.resolve([]);
 
   constructor(private readonly themesDir: string) {}
+
+  /** Themes from enabled extensions join the user's themes (call `reload` after changes). */
+  setExtensionThemes(provider: () => Promise<ExtensionThemeSource[]>): void {
+    this.extensionThemes = provider;
+  }
 
   get current(): UserThemesSnapshot {
     return this.snapshot;
@@ -138,6 +175,27 @@ export class UserThemesService {
     let next: UserThemesSnapshot;
     try {
       next = await loadUserThemes(this.themesDir);
+      const labels = new Set(next.themes.map((t) => t.label));
+      for (const source of await this.extensionThemes()) {
+        try {
+          const theme = extensionTheme(source);
+          if (labels.has(theme.label)) continue;
+          labels.add(theme.label);
+          next = { ...next, themes: [...next.themes, theme] };
+        } catch (error) {
+          next = {
+            ...next,
+            problems: [
+              ...next.problems,
+              {
+                file: `extension ${source.extensionId}`,
+                line: 0,
+                message: (error as Error).message,
+              },
+            ],
+          };
+        }
+      }
     } catch (error) {
       next = {
         themes: this.snapshot.themes,

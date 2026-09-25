@@ -9,6 +9,7 @@ import {
   revokeGrant,
   setExtensionEnabled,
   uninstallExtension,
+  updateExtension,
 } from './extension-commands';
 import { loadExtensions, useExtensions } from './extensions-store';
 
@@ -102,6 +103,15 @@ function ExtensionItem({
             </ul>
           )}
           <div className="extension-actions">
+            {extension.update === undefined ? null : (
+              <button
+                type="button"
+                className="button button-primary"
+                onClick={() => void updateExtension(extension.id)}
+              >
+                Update to {extension.update.version}
+              </button>
+            )}
             <button
               type="button"
               className="button button-secondary"
@@ -143,6 +153,13 @@ export function ExtensionsView(): React.JSX.Element {
           onClick={() => void executeCommand('extensions.installFromFile')}
         >
           Install from File…
+        </button>
+        <button
+          type="button"
+          className="button button-secondary welcome-view-button"
+          onClick={() => void executeCommand('extensions.installFromGit')}
+        >
+          Install from Git URL…
         </button>
       </div>
     );

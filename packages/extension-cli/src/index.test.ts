@@ -57,4 +57,38 @@ describe('runCli', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it('scaffolds, validates and packages an extension', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'rk-ext-cli-'));
+    try {
+      const target = path.join(dir, 'hello-ext');
+      expect(run(['init', target, '--publisher', 'contoso']).code).toBe(0);
+      // Not built yet: dist/extension.js is missing.
+      const unbuilt = run(['validate', target]);
+      expect(unbuilt.code).toBe(1);
+      expect(unbuilt.err).toContain('dist/extension.js');
+
+      mkdirSync(path.join(target, 'dist'));
+      writeFileSync(
+        path.join(target, 'dist', 'extension.js'),
+        "import x from 'lodash';\nexport function activate() {}",
+      );
+      expect(run(['validate', target]).err).toContain('bundle it into one file');
+
+      writeFileSync(path.join(target, 'dist', 'extension.js'), 'export function activate() {}');
+      expect(run(['validate', target])).toMatchObject({
+        code: 0,
+        out: 'contoso.hello-ext 0.1.0: no problems found.',
+      });
+      const out = path.join(dir, 'hello.rkqlx');
+      const packaged = run(['package', target, '-o', out]);
+      expect(packaged.code).toBe(0);
+      // Sources and tooling are left out: package.json, README.md and the bundle.
+      expect(packaged.out).toContain('Packaged 3 files');
+      expect(run(['init', target, '--publisher', 'contoso']).code).toBe(1);
+      expect(run(['init', path.join(dir, 'Bad Name'), '--publisher', 'contoso']).code).toBe(2);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

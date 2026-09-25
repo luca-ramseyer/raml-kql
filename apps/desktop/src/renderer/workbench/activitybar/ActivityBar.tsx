@@ -5,7 +5,7 @@ import { keybindingLabel, useKeybindings } from '../../platform/keybindings/keyb
 import { showView, useLayout } from '../../platform/layout';
 import { Codicon } from '../common/Codicon';
 import { ContextMenu, type MenuEntry } from '../common/ContextMenu';
-import { VIEWS, type ViewDescriptor } from '../views';
+import { useViews, type ViewDescriptor } from '../views';
 
 import './ActivityBar.css';
 
@@ -70,11 +70,14 @@ function ActivityItem({
 export function ActivityBar(): React.JSX.Element {
   const { visible, activeView } = useLayout((state) => state.sidebar);
   const [menu, setMenu] = useState<{ x: number; y: number } | undefined>();
+  const views = useViews();
 
   const renderViews = (position: 'top' | 'bottom'): React.JSX.Element[] =>
-    VIEWS.filter((view) => view.position === position).map((view) => (
-      <ActivityItem key={view.id} view={view} active={visible && activeView === view.id} />
-    ));
+    views
+      .filter((view) => view.position === position)
+      .map((view) => (
+        <ActivityItem key={view.id} view={view} active={visible && activeView === view.id} />
+      ));
 
   return (
     <nav className="part activitybar" aria-label="Activity Bar">

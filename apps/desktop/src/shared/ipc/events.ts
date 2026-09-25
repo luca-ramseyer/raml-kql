@@ -42,6 +42,8 @@ export const ipcEvents = {
   'extensions.changed': z.object({}),
   /** An extension needs the workbench (a message, a prompt, the editor); answer with `extensions.respond`. */
   'extensions.uiRequest': UiRequestEventSchema,
+  /** An extension posted a message to its sidebar view. */
+  'extensions.webviewPost': z.object({ viewId: z.string(), message: z.json() }),
 } as const satisfies Record<string, z.ZodType>;
 
 export type IpcEvents = typeof ipcEvents;

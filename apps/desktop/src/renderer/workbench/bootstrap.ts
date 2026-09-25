@@ -14,6 +14,7 @@ import {
   startExtensionContributions,
 } from '../features/extensions/extensions-store';
 import { handleUiRequest } from '../features/extensions/ui-requests';
+import { dispatchWebviewPost } from '../features/extensions/webview-bus';
 import { loadHistory } from '../features/history/history-store';
 import { loadMyQueries } from '../features/library/my-queries';
 import { refreshPacks, registerPackCommands } from '../features/packs/pack-commands';
@@ -119,6 +120,7 @@ export async function startWorkbench({
     bridge.events.on('packs.changed', () => void refreshPacks()),
     bridge.events.on('extensions.changed', () => void loadExtensions()),
     bridge.events.on('extensions.uiRequest', handleUiRequest),
+    bridge.events.on('extensions.webviewPost', dispatchWebviewPost),
     useInventory.subscribe(() => {
       syncTargetsWithInventory();
     }),

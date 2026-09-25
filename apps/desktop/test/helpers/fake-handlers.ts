@@ -128,6 +128,9 @@ export function fakeHandlerDependencies(
     extensions: {
       snapshot: vi.fn(() => Promise.resolve({ extensions: [], grants: [], problems: [] })),
       installFromFile: vi.fn(() => Promise.resolve({ type: 'cancelled' as const })),
+      installFromGit: vi.fn(() => Promise.resolve({ type: 'cancelled' as const })),
+      checkUpdates: vi.fn(() => Promise.resolve({ updates: 0, errors: [] })),
+      update: vi.fn(() => Promise.resolve({ type: 'cancelled' as const })),
       confirmInstall: vi.fn(() => Promise.resolve({ extensions: [], grants: [], problems: [] })),
       cancelInstall: vi.fn(),
       uninstall: vi.fn(() => Promise.resolve({ extensions: [], grants: [], problems: [] })),
@@ -136,6 +139,10 @@ export function fakeHandlerDependencies(
       respond: vi.fn(),
       revoke: vi.fn(() => Promise.resolve({ extensions: [], grants: [], problems: [] })),
       readme: vi.fn(() => Promise.resolve(undefined)),
+      enrich: vi.fn(() => Promise.resolve([])),
+      resultsAccess: vi.fn(() => Promise.resolve(false)),
+      resolveView: vi.fn(() => Promise.resolve()),
+      webviewMessage: vi.fn(() => Promise.resolve()),
     },
     packs: {
       snapshot: vi.fn(() => Promise.resolve({ sources: [], packs: [], problems: [] })),

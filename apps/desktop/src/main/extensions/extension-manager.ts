@@ -8,6 +8,7 @@ import {
   extensionId,
   hostAllowed,
   networkHosts,
+  type EntityType,
   type ConfigurationProperty,
   type ExtensionManifest,
   type PermissionDeclaration,
@@ -17,13 +18,16 @@ import { z } from 'zod';
 import type { ConfigProblem } from '../../shared/config/config-snapshots';
 import { AppError } from '../../shared/errors';
 import {
+  EnrichmentResultSchema,
   ExtensionSourceSchema,
+  type EnrichmentResultData,
   type ExtensionInfo,
   type ExtensionSource,
   type ExtensionsSnapshot,
   type InstallPreview,
   type UiRequest,
 } from '../../shared/extensions/models';
+import { ENTITY_LABELS } from '../../shared/results/entities';
 import type { ListStore } from '../config/jsonc-list-store';
 
 import { ExtensionConnection, type ConnectionPort } from './extension-connection';
@@ -89,6 +93,8 @@ export interface ExtensionManagerOptions {
   env: () => { appVersion: string; theme: string; presentationMode: boolean };
   audit: (event: ExtensionAuditEvent) => void;
   onChange: () => void;
+  /** A worker posted to its webview (sidebar view). */
+  postToWebview?: (extensionId: string, webviewId: string, message: unknown) => void;
   now?: () => Date;
   /** Activation and call timeouts (tests shorten them). */
   timeouts?: { activateMs?: number; commandMs?: number };
@@ -246,6 +252,8 @@ export class ExtensionManager {
   private problems: ConfigProblem[] = [];
   private readonly previews = new Map<string, PendingInstall>();
   private nextProgress = 1;
+  /** Newer versions found by the update check (git sources). */
+  private readonly updates = new Map<string, { version: string; tag: string }>();
   private queue: Promise<unknown> = Promise.resolve();
 
   constructor(private readonly options: ExtensionManagerOptions) {}
@@ -367,11 +375,30 @@ export class ExtensionManager {
     };
   }
 
+  /** Git-sourced extensions (for the update check). */
+  gitSources(): { id: string; url: string; version: string }[] {
+    return this.loaded.flatMap((ext) =>
+      ext.entry.source.type === 'git'
+        ? [{ id: ext.entry.id, url: ext.entry.source.url, version: ext.entry.version }]
+        : [],
+    );
+  }
+
+  setUpdate(id: string, update: { version: string; tag: string } | undefined): void {
+    if (update === undefined) this.updates.delete(id);
+    else this.updates.set(id, update);
+    this.options.onChange();
+  }
+
   async snapshot(): Promise<ExtensionsSnapshot> {
     return {
       extensions: this.loaded.flatMap((ext) => {
         const info = this.info(ext);
-        return info === undefined ? [] : [info];
+        if (info === undefined) return [];
+        const update = this.updates.get(ext.entry.id);
+        return [
+          update === undefined || update.version === info.version ? info : { ...info, update },
+        ];
       }),
       grants: await this.options.broker.grants(),
       problems: this.problems,
@@ -468,6 +495,7 @@ export class ExtensionManager {
       }
       const { items } = await this.options.store.read();
       await this.options.store.write([...items.filter((i) => i.id !== id), entry]);
+      this.updates.delete(id);
       this.options.audit({
         event: existing === undefined ? 'install' : 'update',
         extension: id,
@@ -595,6 +623,17 @@ export class ExtensionManager {
     ext.state = ext.entry.enabled ? 'inactive' : 'disabled';
   }
 
+  /** settings.jsonc changed: tell running extensions about their own settings that changed. */
+  configurationChanged(changed: readonly string[]): void {
+    for (const ext of this.loaded) {
+      if (ext.connection === undefined || ext.state !== 'active') continue;
+      const own = ext.manifest?.contributes?.configuration?.properties ?? {};
+      const keys = changed.filter((key) => key in own);
+      if (keys.length > 0)
+        void ext.connection.invoke('configuration', { keys }, 10_000).catch(() => undefined);
+    }
+  }
+
   async dispose(): Promise<void> {
     for (const ext of this.loaded) await this.deactivate(ext);
   }
@@ -625,14 +664,156 @@ export class ExtensionManager {
     );
   }
 
-  /** Run a contributed command (from the palette, a menu or a keybinding). */
-  async executeCommand(command: string, args: unknown[], runId?: string): Promise<unknown> {
+  /**
+   * Run a contributed command (from the palette, a menu or a keybinding). From a result cell's
+   * menu the arguments carry result values: that needs `results.readSelection`.
+   */
+  async executeCommand(
+    command: string,
+    args: unknown[],
+    runId?: string,
+    fromResults = false,
+  ): Promise<unknown> {
     const ext = this.ownerOfCommand(command);
     if (ext === undefined) throw extensionError(`No installed extension provides ${command}.`);
+    if (fromResults) {
+      const ok = await this.options.broker.check({
+        extensionId: ext.entry.id,
+        permission: 'results.readSelection',
+        declared: this.declared(ext, 'results.readSelection'),
+        runId,
+        detail: 'read the result value you right-clicked',
+      });
+      if (!ok) throw denied('Permission denied: results.readSelection.');
+    }
     const connection = await this.activate(ext);
     return this.withInvocation(ext, runId, () =>
       connection.invoke('command', { command, args }, this.options.timeouts?.commandMs ?? 120_000),
     );
+  }
+
+  // --- Enrichment, result renderers and views ----------------------------------------------
+
+  /** Enrich selected result values (spec 07): one prompt for reading and sending them. */
+  async enrich(
+    extensionId: string,
+    enricherId: string,
+    runId: string | undefined,
+    entities: { type: EntityType; value: string }[],
+  ): Promise<EnrichmentResultData[]> {
+    const ext = this.find(extensionId);
+    const enricher = ext?.manifest?.contributes?.enrichers?.find((e) => e.id === enricherId);
+    if (ext === undefined || enricher === undefined)
+      throw extensionError('That enricher is not installed.');
+    const wanted = entities.filter((e) => enricher.entityTypes.includes(e.type)).slice(0, 500);
+    if (wanted.length === 0) return [];
+    const network = this.declared(ext, 'network');
+    const hosts = networkHosts(network) ?? [];
+    const types = [...new Set(wanted.map((e) => ENTITY_LABELS[e.type]))].join(', ');
+    const count = `${String(wanted.length)} ${wanted.length === 1 ? 'value' : 'values'} (${types})`;
+    const ok = await this.options.broker.checkMany(
+      [
+        {
+          extensionId,
+          permission: 'results.readSelection',
+          declared: this.declared(ext, 'results.readSelection'),
+          runId,
+          detail: '',
+        },
+        ...(network === undefined
+          ? []
+          : [
+              {
+                extensionId,
+                permission: 'network',
+                declared: network,
+                runId,
+                host: (hosts[0] ?? '').replace(/^\*\./, ''),
+                detail: '',
+              },
+            ]),
+      ],
+      hosts.length === 0
+        ? `read ${count} from this result`
+        : `send ${count} from this result to ${hosts.join(', ')}`,
+    );
+    if (!ok) throw denied('Permission denied: the values were not sent.');
+    const connection = await this.activate(ext);
+    const raw = await this.withInvocation(ext, runId, () =>
+      connection.invoke(
+        'enrich',
+        { provider: enricherId, entities: wanted, cancelId: randomBytes(6).toString('hex') },
+        this.options.timeouts?.commandMs ?? 120_000,
+      ),
+    );
+    const parsed = z.array(EnrichmentResultSchema).max(1000).safeParse(raw);
+    if (!parsed.success)
+      throw extensionError(
+        `${name(ext.manifest, extensionId)} returned invalid enrichment results.`,
+      );
+    return parsed.data;
+  }
+
+  /** A result renderer wants the active result's rows: `results.read`, per run by default. */
+  async resultsAccess(
+    extensionId: string,
+    runId: string | undefined,
+    rows: number,
+  ): Promise<boolean> {
+    const ext = this.find(extensionId);
+    if (ext === undefined) return false;
+    return this.options.broker.check({
+      extensionId,
+      permission: 'results.read',
+      declared: this.declared(ext, 'results.read'),
+      runId,
+      detail: `read ${String(rows)} rows of this result to draw them`,
+    });
+  }
+
+  /** A contributed sidebar view became visible: start the extension and resolve the view. */
+  async resolveView(viewId: string): Promise<void> {
+    const ext = this.loaded.find((e) =>
+      e.manifest?.contributes?.views?.sidebar?.some((v) => v.id === viewId),
+    );
+    if (ext === undefined)
+      throw extensionError(`No installed extension provides the view ${viewId}.`);
+    const connection = await this.activate(ext);
+    if (!ext.views.has(viewId)) return; // the extension doesn't talk to its view
+    await connection.invoke('webview.resolve', { viewId, webviewId: viewId }, 10_000);
+  }
+
+  async webviewMessage(viewId: string, message: unknown): Promise<void> {
+    const ext = this.loaded.find((e) => e.views.has(viewId));
+    if (ext?.connection === undefined) return;
+    await ext.connection.invoke('webview.message', { webviewId: viewId, message }, 10_000);
+  }
+
+  /** The installed folder of an extension (the `rkql-ext:` protocol serves files from it). */
+  folderOf(extensionId: string): string | undefined {
+    const ext = this.find(extensionId);
+    return ext?.manifest === undefined || !ext.entry.enabled ? undefined : ext.dir;
+  }
+
+  /** Colour themes contributed by enabled extensions (data only: no activation needed). */
+  async themes(): Promise<{ extensionId: string; label: string; uiTheme: string; json: string }[]> {
+    const out: { extensionId: string; label: string; uiTheme: string; json: string }[] = [];
+    for (const ext of this.loaded) {
+      if (!ext.entry.enabled || ext.manifest === undefined) continue;
+      for (const theme of ext.manifest.contributes?.themes ?? []) {
+        try {
+          out.push({
+            extensionId: ext.entry.id,
+            label: theme.label,
+            uiTheme: theme.uiTheme,
+            json: await readFile(path.join(ext.dir, theme.path), 'utf8'),
+          });
+        } catch {
+          // A missing theme file is reported by the theme list as absent.
+        }
+      }
+    }
+    return out;
   }
 
   // --- The host API --------------------------------------------------------------------------
@@ -766,9 +947,12 @@ export class ExtensionManager {
         ext.views.add(view);
         return undefined;
       }
-      case 'webview.post':
-        // Webview messaging arrives with the webview contribution (Phase 9, part 2).
+      case 'webview.post': {
+        const webviewId = String(args['webviewId']);
+        if (!ext.views.has(webviewId)) throw new Error(`${webviewId} is not a registered view.`);
+        this.options.postToWebview?.(id, webviewId, args['message']);
         return undefined;
+      }
       case 'net.fetch':
         return this.fetch(
           ext,

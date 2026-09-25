@@ -3,10 +3,11 @@ import {
   type PermissionDeclaration,
 } from '@raml-kql/pack-schema/extension-manifest';
 
-import type { InstallPreview } from '../../../shared/extensions/models';
+import type { InstallPreview, InstallResult } from '../../../shared/extensions/models';
 import { registerCommand } from '../../platform/commands';
 import { showDialog } from '../../platform/dialogs';
-import { notify } from '../../platform/notifications';
+import { dismissNotification, notify } from '../../platform/notifications';
+import { showInputBox } from '../../platform/quickinput/quick-input';
 import { getBridge, unwrap } from '../../services/ipc';
 import { Codicon } from '../../workbench/common/Codicon';
 
@@ -85,27 +86,98 @@ export async function confirmInstall(preview: InstallPreview): Promise<boolean> 
   return choice === 0;
 }
 
+async function installPreview(result: InstallResult): Promise<void> {
+  if (result.type === 'cancelled') return;
+  const { preview } = result;
+  if (!(await confirmInstall(preview))) {
+    await unwrap(getBridge().extensions.cancelInstall({ previewId: preview.previewId })).catch(
+      () => undefined,
+    );
+    return;
+  }
+  setExtensionsSnapshot(
+    await unwrap(getBridge().extensions.confirmInstall({ previewId: preview.previewId })),
+  );
+  notify({
+    severity: 'info',
+    message: `${preview.replaces === undefined ? 'Installed' : 'Updated'} ${preview.extension.displayName} ${preview.extension.version}.`,
+    source: 'Extensions',
+  });
+}
+
 export async function installFromFile(): Promise<void> {
   try {
-    const result = await unwrap(getBridge().extensions.installFromFile());
-    if (result.type === 'cancelled') return;
-    const { preview } = result;
-    if (!(await confirmInstall(preview))) {
-      await unwrap(getBridge().extensions.cancelInstall({ previewId: preview.previewId })).catch(
-        () => undefined,
-      );
+    await installPreview(await unwrap(getBridge().extensions.installFromFile()));
+  } catch (error) {
+    reportExtensionError(error, 'The extension could not be installed.');
+  }
+}
+
+function askUrl(): Promise<string | undefined> {
+  return new Promise((resolve) => {
+    showInputBox({
+      placeholder: 'https://github.com/contoso/raml-kql-extension',
+      prompt: 'Git repository of the extension (its newest compatible release is installed)',
+      validate: (value) =>
+        value.trim() === '' || /^https?:\/\//i.test(value.trim())
+          ? undefined
+          : 'Enter an https:// URL.',
+      onAccept: (value) => {
+        resolve(value.trim());
+      },
+      onCancel: () => {
+        resolve(undefined);
+      },
+    });
+  });
+}
+
+export async function installFromGit(): Promise<void> {
+  const url = await askUrl();
+  if (url === undefined || url === '') return;
+  const progress = notify({
+    severity: 'info',
+    message: `Looking for releases in ${url}…`,
+    source: 'Extensions',
+  });
+  try {
+    const result = await unwrap(getBridge().extensions.installFromGit({ url }));
+    dismissNotification(progress);
+    await installPreview(result);
+  } catch (error) {
+    dismissNotification(progress);
+    reportExtensionError(error, 'The extension could not be installed.');
+  }
+}
+
+export async function updateExtension(id: string): Promise<void> {
+  try {
+    const result = await unwrap(getBridge().extensions.update({ id }));
+    if (result.type === 'cancelled') {
+      notify({ severity: 'info', message: 'The extension is up to date.', source: 'Extensions' });
       return;
     }
-    setExtensionsSnapshot(
-      await unwrap(getBridge().extensions.confirmInstall({ previewId: preview.previewId })),
-    );
+    await installPreview(result);
+  } catch (error) {
+    reportExtensionError(error, 'The update failed.');
+  }
+}
+
+export async function checkExtensionUpdates(): Promise<void> {
+  try {
+    const { updates, errors } = await unwrap(getBridge().extensions.checkUpdates());
+    for (const error of errors)
+      notify({ severity: 'warning', message: error, source: 'Extensions' });
     notify({
       severity: 'info',
-      message: `Installed ${preview.extension.displayName} ${preview.extension.version}.`,
+      message:
+        updates === 0
+          ? 'All extensions are up to date.'
+          : `Updates are available for ${String(updates)} ${updates === 1 ? 'extension' : 'extensions'}: see the Extensions view.`,
       source: 'Extensions',
     });
   } catch (error) {
-    reportExtensionError(error, 'The extension could not be installed.');
+    reportExtensionError(error, 'The update check failed.');
   }
 }
 
@@ -153,6 +225,20 @@ export function registerExtensionCommands(): () => void {
       category: 'Extensions',
       icon: 'desktop-download',
       run: installFromFile,
+    }),
+    registerCommand({
+      id: 'extensions.installFromGit',
+      title: 'Install from Git URL…',
+      category: 'Extensions',
+      icon: 'repo-clone',
+      run: installFromGit,
+    }),
+    registerCommand({
+      id: 'extensions.checkUpdates',
+      title: 'Check for Extension Updates',
+      category: 'Extensions',
+      icon: 'sync',
+      run: checkExtensionUpdates,
     }),
     registerCommand({
       id: 'extensions.refresh',
