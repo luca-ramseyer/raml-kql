@@ -199,7 +199,7 @@ Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Con
 - F1 in the editor opens the workbench command palette, not Monaco's own.
 - The renderer bundle is not minified (electron-vite default). Minification is a release-polish item. It needs care because of Bridge.NET's reflection over names.
 
-**Consequences:** each monaco-kusto cached database is only rebuilt when its `majorVersion` increases, so every schema sent gets a new version. Its completion cache also can't be invalidated, so the editor waits (up to 5 s) for the first schema of the current targets before taking input. After a later change of targets, only the word being typed can show stale completions.
+**Consequences:** each monaco-kusto cached database is only rebuilt when its `majorVersion` increases, so every schema sent gets a new version. Its per-word completion cache has no invalidation. D-033 wraps its completion provider to reset that cache after each schema update, so the editor never waits for the schema.
 
 ## D-029 — Schema service (2026-09-25)
 
@@ -289,3 +289,13 @@ Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Con
 - Measured in the built app, key press to ready editor went from ~830 ms to ~130 ms, and to the first completion from ~885 ms to ~345 ms.
 - Memory for Monaco and the worker is used from start-up rather than from the first tab. For a KQL tool that is the expected state.
 - The renderer bundle is still unminified. Minifying would mostly shorten the idle-time preload, so it stays a release-polish item (D-028).
+
+**Follow-up (same day):** with real workspaces the tab still took well over a second, because the editor waited (up to 5 s) for the merged schema before taking input. In demo mode the schema is instant; for real workspaces it means one metadata request per workspace. That wait is gone:
+
+- The editor takes input as soon as Monaco is ready. The schema reaches the language service whenever it arrives.
+- The stale-completion problem it worked around is solved at the source. monaco-kusto's completion provider is wrapped (`monaco.languages.registerCompletionItemProvider` is intercepted before monaco-kusto registers). After every schema update, the wrapper first asks for completions at an empty word in a blank model, which resets monaco-kusto's per-word cache.
+- An e2e test changes the targets while the same word stays under the cursor. It fails without the reset.
+- `.query-monaco[data-schema]` tells tests when the schema is in the language service.
+- The idle preload now starts within 1.5 s of start-up (was 5 s).
+- Under `pnpm dev`, only the very first run after installing dependencies is slow (~1.3 s), while Vite pre-bundles Monaco. Later dev runs open the editor in ~60 ms.
+

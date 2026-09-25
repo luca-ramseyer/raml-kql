@@ -36,7 +36,7 @@ export function preloadQueryEditorWhenIdle(): () => void {
       });
   };
   if (typeof window.requestIdleCallback === 'function') {
-    const handle = window.requestIdleCallback(warmUp, { timeout: 5000 });
+    const handle = window.requestIdleCallback(warmUp, { timeout: 1500 });
     return () => {
       window.cancelIdleCallback(handle);
     };

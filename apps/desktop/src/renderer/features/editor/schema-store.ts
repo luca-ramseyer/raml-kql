@@ -17,8 +17,6 @@ interface SchemaState {
   loading: boolean;
   /** The Kusto schema for the language service, rebuilt when the schema or settings change. */
   kusto: KustoEngineSchema | undefined;
-  /** Targets key of the last completed load. */
-  loadedFor: string | undefined;
   /** The Kusto schema the language service has confirmed (after `setSchema` resolved). */
   applied: KustoEngineSchema | undefined;
 }
@@ -27,11 +25,8 @@ export const useSchema = create<SchemaState>(() => ({
   merged: undefined,
   loading: false,
   kusto: undefined,
-  loadedFor: undefined,
   applied: undefined,
 }));
-
-const targetsKey = (ids: Iterable<string>): string => [...ids].sort().join('\n');
 
 let sequence = 0;
 let schemaVersion = 0;
@@ -62,7 +57,6 @@ export async function loadSchema(refresh = false): Promise<void> {
       merged,
       kusto: kustoFor(merged),
       loading: false,
-      loadedFor: targetsKey(resourceIds),
     });
     if (refresh && merged.failed > 0) {
       notify({
@@ -73,7 +67,7 @@ export async function loadSchema(refresh = false): Promise<void> {
     }
   } catch (error) {
     if (current !== sequence) return;
-    useSchema.setState({ loading: false, loadedFor: targetsKey(resourceIds) });
+    useSchema.setState({ loading: false });
     notify({
       severity: 'error',
       message: error instanceof Error ? error.message : 'Could not load the schema.',
@@ -109,36 +103,6 @@ export function startSchemaSync(): void {
   void loadSchema();
 }
 
-/**
- * Resolves once the schema for the current targets has loaded (or failed), or after
- * `timeoutMs`. The query editor waits for this before taking input: monaco-kusto caches
- * completions per word without a way to invalidate them, so suggestions requested before the
- * schema arrives would stay stale while that word is typed.
- */
-export function whenSchemaSettled(timeoutMs: number): Promise<void> {
-  const settled = (): boolean => {
-    const { loading, loadedFor, kusto, applied } = useSchema.getState();
-    return (
-      !loading && loadedFor === targetsKey(useTargets.getState().selected) && applied === kusto
-    );
-  };
-  if (settled()) return Promise.resolve();
-  return new Promise((resolve) => {
-    const finish = (): void => {
-      clearTimeout(timer);
-      unsubscribeSchema();
-      unsubscribeTargets();
-      resolve();
-    };
-    const check = (): void => {
-      if (settled()) finish();
-    };
-    const timer = setTimeout(finish, timeoutMs);
-    const unsubscribeSchema = useSchema.subscribe(check);
-    const unsubscribeTargets = useTargets.subscribe(check);
-  });
-}
-
 /** The language service now has this schema. */
 export function markSchemaApplied(schema: KustoEngineSchema): void {
   useSchema.setState({ applied: schema });
@@ -165,7 +129,6 @@ export function resetSchemaStore(): void {
     merged: undefined,
     loading: false,
     kusto: undefined,
-    loadedFor: undefined,
     applied: undefined,
   });
 }

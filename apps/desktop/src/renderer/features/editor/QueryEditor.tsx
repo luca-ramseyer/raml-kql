@@ -14,7 +14,7 @@ import { setActiveCodeEditor } from './active-editor';
 import { loadMonaco, type LoadedMonaco } from './monaco-loader';
 import { MONACO_THEME_NAME, toMonacoTheme } from './monaco-theme';
 import { queryModelFor } from './query-models';
-import { startSchemaSync, useSchema, whenSchemaSettled } from './schema-store';
+import { startSchemaSync, useSchema } from './schema-store';
 import { filtersOnTimeGenerated, type Classification } from './time-filter';
 import { TimeRangePicker } from './TimeRangePicker';
 
@@ -99,6 +99,10 @@ export function QueryEditor({ editorId }: { editorId: string }): React.JSX.Eleme
   const run = useRuns((s) => s.byTab[editorId]);
   const running = run?.state === 'running';
   const schemaLoading = useSchema((s) => s.loading);
+  // Completions pick up the schema whenever it arrives; typing never waits for it.
+  const schemaReady = useSchema(
+    (s) => !s.loading && s.kusto !== undefined && s.applied === s.kusto,
+  );
   const runKey = useKeybindingLabel('query.run');
   const cancelKey = useKeybindingLabel('query.cancel');
 
@@ -108,20 +112,16 @@ export function QueryEditor({ editorId }: { editorId: string }): React.JSX.Eleme
     const isDisposed = (): boolean => disposed;
     const disposables: Monaco.IDisposable[] = [];
     let saveViewState: (() => void) | undefined;
+    startSchemaSync();
 
     loadMonaco()
-      .then(async (loaded) => {
-        if (isDisposed()) return;
-        startSchemaSync();
-        // The model comes first: a `kusto` model is what starts monaco-kusto's worker, and the
-        // schema can only reach the language service once that worker runs.
+      .then((loaded) => {
+        if (isDisposed() || container.current === null) return;
         const entry = queryModelFor(
           loaded,
           editorId,
           useQueryDocs.getState().docs[editorId]?.text ?? '',
         );
-        await whenSchemaSettled(5000);
-        if (isDisposed() || container.current === null) return;
         syncTheme(loaded);
         const editor = loaded.monaco.editor.create(container.current, {
           model: entry.model,
@@ -238,7 +238,12 @@ export function QueryEditor({ editorId }: { editorId: string }): React.JSX.Eleme
           </span>
         ) : null}
       </div>
-      <div className="query-monaco" ref={container} data-state={state}>
+      <div
+        className="query-monaco"
+        ref={container}
+        data-state={state}
+        data-schema={schemaReady ? 'ready' : 'loading'}
+      >
         {state === 'loading' ? <div className="query-editor-message">Loading editor…</div> : null}
         {state === 'failed' ? (
           <div className="query-editor-message" role="alert">

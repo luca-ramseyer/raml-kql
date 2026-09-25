@@ -20,6 +20,9 @@ export interface LoadedMonaco {
 
 let loading: Promise<LoadedMonaco> | undefined;
 
+/** A blank `kusto` model: starts the worker early and resets the completion cache (below). */
+const BLANK_URI = 'inmemory://internal/blank.kql';
+
 export function loadMonaco(): Promise<LoadedMonaco> {
   loading ??= (async () => {
     (self as unknown as { MonacoEnvironment: unknown }).MonacoEnvironment = {
@@ -41,21 +44,74 @@ export function loadMonaco(): Promise<LoadedMonaco> {
 
 /**
  * Load Monaco and start the Kusto worker ahead of time (the worker parses ~10 MB of language
- * service off the main thread). A throwaway `kusto` model is what starts the worker.
+ * service off the main thread). The blank `kusto` model is what starts the worker.
  */
 export async function warmUpMonaco(): Promise<void> {
   const { monaco, kusto } = await loadMonaco();
-  const uri = monaco.Uri.parse('inmemory://warmup/warmup.kql');
-  const model = monaco.editor.getModel(uri) ?? monaco.editor.createModel('', 'kusto', uri);
-  try {
-    const accessor = await kusto.getKustoWorker();
-    await accessor(uri);
-  } finally {
-    model.dispose();
-  }
+  const uri = monaco.Uri.parse(BLANK_URI);
+  if (monaco.editor.getModel(uri) === null) monaco.editor.createModel('', 'kusto', uri);
+  const accessor = await kusto.getKustoWorker();
+  await accessor(uri);
+}
+
+/**
+ * monaco-kusto caches completions per word (`completionCacheManager`) and never invalidates
+ * the cache when the schema changes, so suggestions requested before the schema arrived would
+ * stay stale while that word is typed. Its provider is wrapped: after every schema update, the
+ * next request first asks for completions at an empty word in a blank model, which resets the
+ * cache. Nothing has to wait for the schema.
+ */
+function wrapKustoCompletions(monaco: LoadedMonaco['monaco']): {
+  schemaApplied: () => void;
+  /** The original registration function, for our own (unwrapped) providers. */
+  register: LoadedMonaco['monaco']['languages']['registerCompletionItemProvider'];
+} {
+  type Provider = Parameters<typeof monaco.languages.registerCompletionItemProvider>[1];
+  let schemaVersion = 0;
+  const languages = monaco.languages;
+  const register = languages.registerCompletionItemProvider.bind(languages);
+  let wrapped = false;
+  languages.registerCompletionItemProvider = (selector, provider) => {
+    if (wrapped || selector !== 'kusto') return register(selector, provider);
+    wrapped = true; // the first kusto provider after this point is monaco-kusto's adapter
+    let seenVersion = schemaVersion;
+    const reset = async (
+      context: Parameters<Provider['provideCompletionItems']>[2],
+      token: Parameters<Provider['provideCompletionItems']>[3],
+    ): Promise<void> => {
+      const uri = monaco.Uri.parse(BLANK_URI);
+      const blank = monaco.editor.getModel(uri) ?? monaco.editor.createModel('', 'kusto', uri);
+      await provider.provideCompletionItems(blank, new monaco.Position(1, 1), context, token);
+    };
+    const proxy: Provider = {
+      triggerCharacters: provider.triggerCharacters,
+      async provideCompletionItems(model, position, context, token) {
+        if (seenVersion !== schemaVersion) {
+          seenVersion = schemaVersion;
+          await reset(context, token).catch(() => undefined);
+        }
+        return provider.provideCompletionItems(model, position, context, token);
+      },
+      ...(provider.resolveCompletionItem === undefined
+        ? {}
+        : { resolveCompletionItem: provider.resolveCompletionItem.bind(provider) }),
+    };
+    return register(selector, proxy);
+  };
+  return {
+    schemaApplied: () => {
+      schemaVersion += 1;
+    },
+    register,
+  };
 }
 
 function configure({ monaco, kusto }: LoadedMonaco): void {
+  // Must run before monaco-kusto registers its providers (on the first `kusto` model).
+  const completions = wrapKustoCompletions(monaco);
+  // Snippets register through the original function: only monaco-kusto's adapter is wrapped.
+  completions.register('kusto', snippetProvider(monaco));
+
   kusto.kustoDefaults.setLanguageSettings({
     ...kusto.kustoDefaults.languageSettings,
     includeControlCommands: false, // Log Analytics is read-only: no `.` management commands
@@ -78,7 +134,33 @@ function configure({ monaco, kusto }: LoadedMonaco): void {
     command: '-editor.action.quickCommand',
   });
 
-  monaco.languages.registerCompletionItemProvider('kusto', {
+  // Feed the merged schema of the selected targets to the language service.
+  const apply = (schema = useSchema.getState().kusto): void => {
+    if (schema === undefined) return;
+    void kusto
+      .getKustoWorker()
+      .then((accessor) => accessor(monaco.Uri.parse(BLANK_URI)))
+      .then((worker) =>
+        worker.setSchema(schema as unknown as Parameters<typeof worker.setSchema>[0]),
+      )
+      .then(() => {
+        completions.schemaApplied();
+        markSchemaApplied(schema);
+      })
+      .catch((error: unknown) => {
+        console.error('Could not set the Kusto schema', error);
+      });
+  };
+  useSchema.subscribe((state, previous) => {
+    if (state.kusto !== previous.kusto) apply(state.kusto);
+  });
+  apply();
+}
+
+function snippetProvider(
+  monaco: LoadedMonaco['monaco'],
+): Parameters<LoadedMonaco['monaco']['languages']['registerCompletionItemProvider']>[1] {
+  return {
     provideCompletionItems(model, position) {
       const word = model.getWordUntilPosition(position);
       const range = new monaco.Range(
@@ -100,26 +182,5 @@ function configure({ monaco, kusto }: LoadedMonaco): void {
         })),
       };
     },
-  });
-
-  // Feed the merged schema of the selected targets to the language service.
-  const apply = (schema = useSchema.getState().kusto): void => {
-    if (schema === undefined) return;
-    void kusto
-      .getKustoWorker()
-      .then((accessor) => accessor(monaco.Uri.parse('inmemory://query/schema')))
-      .then((worker) =>
-        worker.setSchema(schema as unknown as Parameters<typeof worker.setSchema>[0]),
-      )
-      .then(() => {
-        markSchemaApplied(schema);
-      })
-      .catch((error: unknown) => {
-        console.error('Could not set the Kusto schema', error);
-      });
   };
-  useSchema.subscribe((state, previous) => {
-    if (state.kusto !== previous.kusto) apply(state.kusto);
-  });
-  apply();
 }
