@@ -67,12 +67,14 @@ Version targets:
 
 ## Phase 4 — Editor and IntelliSense
 
-- [ ] Monaco with KQL via monaco-kusto, workers wired for electron-vite
-- [ ] Schema fetch per workspace, cached (metadata only), merged for the selected targets, with availability hints
-- [ ] Time range picker with "Set in query" detection
-- [ ] Format document, comment toggle, find/replace, multi-cursor (Monaco defaults), and KQL snippets
+- [x] Monaco with KQL via monaco-kusto, workers wired for electron-vite
+- [x] Schema fetch per workspace, cached (metadata only), merged for the selected targets, with availability hints
+- [x] Time range picker with "Set in query" detection
+- [x] Format document, comment toggle, find/replace, multi-cursor (Monaco defaults), and KQL snippets
 
 **Acceptance:** In demo mode, completions list tables and columns from the fake schema. Tables missing in some targets show "available in 3/5 workspaces".
+
+> Status: e2e (`apps/desktop/e2e/editor.spec.ts`) runs the built app under the production CSP. Completions list demo tables and columns, `DeviceProcessEvents` shows `3/10` in completions and "Available in 3/10 selected workspaces" on hover, the sample query shows "Set in query", and the time range picker works. The schema service, merge, cache, metadata parsing, "Set in query" detection, snippets and time range helpers are unit-tested. Details are in D-028 to D-030. The live schema test is in `docs/HUMAN-TODO.md`.
 
 ## Phase 5 — Query engine
 
