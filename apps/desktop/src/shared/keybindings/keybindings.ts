@@ -41,6 +41,13 @@ export const DEFAULT_KEYBINDINGS: readonly DefaultKeybinding[] = [
 
   // Query editor (spec 05)
   { command: 'query.new', key: 'ctrl+n', mac: 'cmd+n' },
+  { command: 'query.save', key: 'ctrl+s', mac: 'cmd+s', when: "editorLangId == 'kusto'" },
+  {
+    command: 'query.saveAs',
+    key: 'ctrl+shift+s',
+    mac: 'cmd+shift+s',
+    when: "editorLangId == 'kusto'",
+  },
   // Inside the editor, Monaco commands handle these (QueryEditor); these entries cover the
   // toolbar and show the shortcut in the palette. Shift+Enter is primary, like the portal.
   {
@@ -96,6 +103,15 @@ export const DEFAULT_KEYBINDINGS: readonly DefaultKeybinding[] = [
   // Editors
   { command: 'workbench.action.closeActiveEditor', key: 'ctrl+f4', mac: 'cmd+f4' },
   { command: 'workbench.action.closeActiveEditor', key: 'ctrl+w', mac: 'cmd+w' },
+  { command: 'workbench.action.splitEditor', key: 'ctrl+\\', mac: 'cmd+\\' },
+  { command: 'workbench.action.focusFirstEditorGroup', key: 'ctrl+1', mac: 'cmd+1' },
+  { command: 'workbench.action.focusSecondEditorGroup', key: 'ctrl+2', mac: 'cmd+2' },
+  { command: 'workbench.action.focusThirdEditorGroup', key: 'ctrl+3', mac: 'cmd+3' },
+  { command: 'workbench.action.focusFourthEditorGroup', key: 'ctrl+4', mac: 'cmd+4' },
+  // Ctrl+Tab on every platform, like VS Code.
+  { command: 'workbench.action.openPreviousRecentlyUsedEditorInGroup', key: 'ctrl+tab' },
+  { command: 'workbench.action.keepEditor', key: 'ctrl+k enter', mac: 'cmd+k enter' },
+  { command: 'workbench.action.pinEditor', key: 'ctrl+k shift+enter', mac: 'cmd+k shift+enter' },
 
   // Preferences
   { command: 'workbench.action.openSettings', key: 'ctrl+,', mac: 'cmd+,' },

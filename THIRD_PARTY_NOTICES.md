@@ -23,6 +23,8 @@ to date whenever a component that ends up in the packaged app is added or remove
   Foundation): charts. Apache ECharts includes software developed at The Apache Software
   Foundation (https://www.apache.org/).
 - **[ExcelJS](https://github.com/exceljs/exceljs)** (MIT): XLSX export.
+- **[yaml](https://github.com/eemeli/yaml)** (ISC, © Eemeli Aro): front-matter in My Queries
+  and query packs.
 - **[monaco-kusto](https://github.com/Azure/monaco-kusto)** (`@kusto/monaco-kusto`, MIT, ©
   Microsoft Corporation) and the Kusto language service (`@kusto/language-service`,
   `@kusto/language-service-next`, MIT, © Microsoft Corporation): KQL syntax, IntelliSense and

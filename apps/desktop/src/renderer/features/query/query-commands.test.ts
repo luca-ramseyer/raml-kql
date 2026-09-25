@@ -1,16 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { resetWorkbenchState } from '../../../../test/helpers/workbench-harness';
+import {
+  installWorkbenchHarness,
+  resetWorkbenchState,
+} from '../../../../test/helpers/workbench-harness';
 import { executeCommand, getCommand } from '../../platform/commands';
 import { closeEditor, useEditors } from '../../platform/editors';
+import { acceptQuickInput, hideQuickInput } from '../../platform/quickinput/quick-input';
 
-import { registerQueryCommands, resetQueryCommands } from './query-commands';
+import { resetOpenQuery } from './open-query';
+import { registerQueryCommands } from './query-commands';
 import { STARTER_QUERY, useQueryDocs } from './query-docs';
 
 describe('query commands', () => {
   let dispose: () => void = () => undefined;
   beforeEach(() => {
-    resetQueryCommands();
+    resetOpenQuery();
     useQueryDocs.setState({ docs: {} });
     dispose = registerQueryCommands();
   });
@@ -52,5 +57,20 @@ describe('query commands', () => {
   it('the sample query uses TimeGenerated', () => {
     expect(STARTER_QUERY).toContain('TimeGenerated');
     expect(STARTER_QUERY).not.toMatch(/\bTimestamp\b/);
+  });
+
+  it('asks before clearing the history', async () => {
+    const { deps } = installWorkbenchHarness();
+    const cancelled = executeCommand('history.clear');
+    await Promise.resolve();
+    hideQuickInput();
+    await cancelled;
+    expect(deps.history.clear).not.toHaveBeenCalled();
+
+    const cleared = executeCommand('history.clear');
+    await Promise.resolve();
+    acceptQuickInput({ id: 'clear', label: 'Clear History' });
+    await cleared;
+    expect(deps.history.clear).toHaveBeenCalledTimes(1);
   });
 });

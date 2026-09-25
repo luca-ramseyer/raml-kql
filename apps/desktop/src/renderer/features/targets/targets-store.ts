@@ -82,3 +82,89 @@ export function selectedWorkspaces(): Workspace[] {
     selected.has(w.resourceId),
   );
 }
+
+// --- Per-tab targets (spec 05: each tab has its own targets) -------------------------------
+
+interface TabSelection {
+  selected: ReadonlySet<string>;
+  groupId: string | undefined;
+}
+
+const tabSelections = new Map<string, TabSelection>();
+let currentTab: string | undefined;
+
+function snapshot(): TabSelection {
+  const { selected, groupId } = useTargets.getState();
+  return { selected, groupId };
+}
+
+/** Give a new tab (split, duplicate) the same targets as another tab. */
+export function copyTabTargets(fromTabId: string, toTabId: string): void {
+  const source = fromTabId === currentTab ? snapshot() : tabSelections.get(fromTabId);
+  if (source !== undefined)
+    tabSelections.set(toTabId, { ...source, selected: new Set(source.selected) });
+}
+
+/** A tab's targets (for persistence). */
+export function tabTargets(
+  tabId: string,
+): { selected: string[]; groupId: string | undefined } | undefined {
+  const selection = tabId === currentTab ? snapshot() : tabSelections.get(tabId);
+  return selection === undefined
+    ? undefined
+    : { selected: [...selection.selected], groupId: selection.groupId };
+}
+
+/** Restore a tab's targets (tabs.json). */
+export function setTabTargets(
+  tabId: string,
+  selected: readonly string[],
+  groupId: string | undefined,
+): void {
+  tabSelections.set(tabId, { selected: new Set(selected), groupId });
+  if (tabId === currentTab)
+    useTargets.setState({ selected: new Set(selected), groupId, initialized: true });
+}
+
+export function forgetTabTargets(tabId: string): void {
+  tabSelections.delete(tabId);
+  if (currentTab === tabId) currentTab = undefined;
+}
+
+/**
+ * Follow the active query tab: its selection is shown in Targets and used for runs and the
+ * schema. A tab without its own selection starts from the current one.
+ */
+export function startTabTargets(
+  activeQueryTab: () => string | undefined,
+  subscribe: (listener: () => void) => () => void,
+): () => void {
+  const onActiveChange = (): void => {
+    const next = activeQueryTab();
+    if (next === undefined || next === currentTab) return;
+    if (currentTab !== undefined) tabSelections.set(currentTab, snapshot());
+    currentTab = next;
+    const saved = tabSelections.get(next);
+    if (saved === undefined) {
+      tabSelections.set(next, snapshot());
+    } else {
+      useTargets.setState({ selected: saved.selected, groupId: saved.groupId, initialized: true });
+    }
+  };
+  const stopEditors = subscribe(onActiveChange);
+  const stopTargets = useTargets.subscribe((state) => {
+    if (currentTab !== undefined)
+      tabSelections.set(currentTab, { selected: state.selected, groupId: state.groupId });
+  });
+  onActiveChange();
+  return () => {
+    stopEditors();
+    stopTargets();
+  };
+}
+
+/** For tests. */
+export function resetTabTargets(): void {
+  tabSelections.clear();
+  currentTab = undefined;
+}

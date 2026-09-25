@@ -1,0 +1,78 @@
+.history-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.history-search {
+  margin: 4px 12px 6px 20px;
+}
+
+.history-list,
+.history-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-list {
+  flex: 1;
+  overflow: auto;
+}
+
+.history-day {
+  padding: 4px 20px 2px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.history-entry {
+  position: relative;
+  padding: 3px 12px 3px 20px;
+  cursor: pointer;
+}
+
+.history-entry:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.history-query {
+  overflow: hidden;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-meta {
+  overflow: hidden;
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-failed {
+  color: var(--vscode-errorForeground);
+}
+
+.history-actions {
+  position: absolute;
+  top: 2px;
+  right: 8px;
+  display: none;
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.history-entry:hover .history-actions,
+.history-entry:focus-within .history-actions {
+  display: flex;
+}
+
+.history-empty {
+  padding: 0 20px;
+  color: var(--vscode-descriptionForeground);
+}

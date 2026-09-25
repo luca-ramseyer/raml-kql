@@ -8,12 +8,16 @@ import {
   showDeviceCode,
 } from '../features/accounts/accounts-store';
 import { preloadQueryEditorWhenIdle } from '../features/editor/editor-preload';
+import { loadHistory } from '../features/history/history-store';
+import { loadMyQueries } from '../features/library/my-queries';
 import { currentNamer, startPrivacy } from '../features/privacy/privacy';
 import { registerQueryCommands } from '../features/query/query-commands';
 import { applyRunSnapshot, useRuns } from '../features/query/run-store';
+import { restoreTabs, startTabPersistence } from '../features/query/tab-persistence';
 import { registerResultCommands } from '../features/results/result-commands';
 import {
   selectedWorkspaces,
+  startTabTargets,
   syncTargetsWithInventory,
   useTargets,
 } from '../features/targets/targets-store';
@@ -103,6 +107,8 @@ export async function startWorkbench({
     }),
     bridge.events.on('groups.changed', applyGroups),
     bridge.events.on('query.runChanged', applyRunSnapshot),
+    bridge.events.on('history.changed', () => void loadHistory()),
+    bridge.events.on('queries.changed', () => void loadMyQueries()),
     useInventory.subscribe(() => {
       syncTargetsWithInventory();
     }),
@@ -118,10 +124,28 @@ export async function startWorkbench({
     tenant: (tenant) => currentNamer().tenant(tenant.tenantId, tenant),
     account: (account) => currentNamer().account(account.id, accountName(account)),
   });
+  disposers.push(
+    startTabTargets(
+      () => {
+        const { editors, activeId } = useEditors.getState();
+        return editors.find((e) => e.id === activeId)?.kind === 'query' ? activeId : undefined;
+      },
+      (listener) =>
+        useEditors.subscribe(() => {
+          listener();
+        }),
+    ),
+  );
   // Inventory first, so tenant aliases exist before account notifications are worded.
   await loadInventory();
   await loadAccounts();
   syncTargetsWithInventory();
+  // Tabs of the last session (text, targets, time range; never results).
+  const restored = await restoreTabs();
+  disposers.push(startTabPersistence());
+  // For quick open (Ctrl/Cmd+P): saved queries and recent runs.
+  void loadMyQueries();
+  void loadHistory();
 
   // Status bar: "$(server) 12 workspaces · 5 tenants" for the current selection (spec 03).
   const targetsItem = registerStatusBarItem({
@@ -256,7 +280,7 @@ export async function startWorkbench({
     );
   }
 
-  if (getSetting('workbench.startupEditor') === 'welcomePage') openEditor('welcome');
+  if (!restored && getSetting('workbench.startupEditor') === 'welcomePage') openEditor('welcome');
 
   // Load the query editor while idle so the first query tab opens instantly. Unit tests
   // (jsdom) can't run Monaco.

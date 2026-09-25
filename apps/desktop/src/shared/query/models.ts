@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { AppErrorCodeSchema } from '../errors';
 import { KqlTypeSchema } from '../schema/models';
 
+import { TimeRangeSchema } from './time-range';
+
 /**
  * Query runs (spec 04). Only metadata travels in run snapshots; result rows are fetched page
  * by page from the main-process result store and never persisted.
@@ -17,6 +19,10 @@ export const QueryRunRequestSchema = z
     /** ISO 8601 duration or `start/end`; omitted when the query sets its own time filter. */
     timespan: z.string().max(100).optional(),
     resourceIds: z.array(z.string().min(1).max(1000)).min(1).max(5000),
+    /** For history only: the Targets group and the time range picked. */
+    groupId: z.string().max(100).optional(),
+    timeRange: TimeRangeSchema.optional(),
+    tabTitle: z.string().max(300).optional(),
   })
   .strict();
 export type QueryRunRequest = z.infer<typeof QueryRunRequestSchema>;

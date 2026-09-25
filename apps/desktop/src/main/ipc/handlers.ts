@@ -15,7 +15,10 @@ import type {
 } from '../../shared/ipc/contracts';
 import type { LayoutState } from '../../shared/layout/layout-state';
 import type { MenuBarModel, MenuRole } from '../../shared/menus/menu-model';
+import type { QueryFile, QueryNode, SaveQueryRequest } from '../../shared/queries/models';
+import type { HistoryEntry } from '../../shared/query/history';
 import type { QueryRunRequest, RerunRequest, RunSnapshot } from '../../shared/query/models';
+import type { TabsState } from '../../shared/query/tabs';
 import type { ExportRequest, ExportResult } from '../../shared/results/export';
 import type {
   AggregateRequestSchema,
@@ -95,6 +98,18 @@ export interface HandlerDependencies {
   keybindings: { current: KeybindingsSnapshot };
   userThemes: () => UserThemesSnapshot;
   layout: { read(): Promise<LayoutState>; write(state: LayoutState): Promise<void> };
+  tabs: { read(): Promise<TabsState | undefined>; write(state: TabsState): Promise<void> };
+  history: { list(): Promise<HistoryEntry[]>; clear(): Promise<void> };
+  queries: {
+    list(): Promise<QueryNode[]>;
+    read(path: string): Promise<QueryFile>;
+    save(request: SaveQueryRequest): Promise<QueryFile>;
+    rename(path: string, name: string): Promise<QueryFile>;
+    move(path: string, folder: string): Promise<string>;
+    createFolder(path: string): Promise<void>;
+    delete(path: string): Promise<void>;
+    reveal(path: string | undefined): void;
+  };
   window: WindowOperations;
   shell: {
     openConfigFile(file: 'settings' | 'keybindings'): Promise<void>;
@@ -181,6 +196,39 @@ export function createIpcHandlers(deps: HandlerDependencies): IpcHandlers {
     },
     themes: {
       listUser: () => deps.userThemes(),
+    },
+    queries: {
+      list: async () => ({ nodes: await deps.queries.list() }),
+      read: ({ path }) => deps.queries.read(path),
+      save: (request) => deps.queries.save(request),
+      rename: ({ path, name }) => deps.queries.rename(path, name),
+      move: async ({ path, folder }) => ({ path: await deps.queries.move(path, folder) }),
+      createFolder: async ({ path }) => {
+        await deps.queries.createFolder(path);
+        return undefined;
+      },
+      delete: async ({ path }) => {
+        await deps.queries.delete(path);
+        return undefined;
+      },
+      reveal: ({ path }) => {
+        deps.queries.reveal(path);
+        return undefined;
+      },
+    },
+    history: {
+      list: async () => ({ entries: await deps.history.list() }),
+      clear: async () => {
+        await deps.history.clear();
+        return undefined;
+      },
+    },
+    tabs: {
+      get: async () => (await deps.tabs.read()) ?? null,
+      set: async (state) => {
+        await deps.tabs.write(state);
+        return undefined;
+      },
     },
     layout: {
       get: () => deps.layout.read(),

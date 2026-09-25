@@ -123,6 +123,11 @@ function insert(
   };
 }
 
+/** A fresh query tab id (to prepare a tab's document and targets before opening it). */
+export function newQueryEditorId(): string {
+  return `query-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export interface OpenQueryOptions {
   title?: string | undefined;
   /** Reuse an id (restoring tabs). */
@@ -139,7 +144,7 @@ export function openQueryEditor(titleOrOptions?: string | OpenQueryOptions): str
     typeof titleOrOptions === 'string' ? { title: titleOrOptions } : (titleOrOptions ?? {});
   queryCounter += 1;
   const editor: EditorInput = {
-    id: options.id ?? `query-${String(queryCounter)}-${Date.now().toString(36)}`,
+    id: options.id ?? newQueryEditorId(),
     kind: 'query',
     title: options.title ?? `Query ${String(queryCounter)}`,
     icon: 'file-code',

@@ -2,7 +2,8 @@
  * Main-process entry point. Keep this file thin: it only wires Electron to the testable
  * modules next to it. Anything with logic belongs in its own module with a unit test.
  */
-import { writeFile } from 'node:fs/promises';
+import { watch } from 'node:fs';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -22,6 +23,7 @@ import {
   shell,
 } from 'electron';
 
+import type { QueryRunRequest, RerunRequest } from '../shared/query/models';
 import { buildWorkbenchCsp } from '../shared/security/csp';
 import {
   defaultSettingValues,
@@ -66,12 +68,14 @@ import { DiscoveryService } from './discovery/discovery-service';
 import { GroupsService } from './discovery/groups-service';
 import { FileInventoryCache, MemoryInventoryCache } from './discovery/inventory-cache';
 import { ExportService } from './export/export-service';
+import { HistoryService } from './history/history-service';
 import { createEventSender } from './ipc/events';
 import { createIpcHandlers, type WindowOperations } from './ipc/handlers';
 import { registerIpcRouter } from './ipc/router';
 import { KeybindingsService, NEW_KEYBINDINGS_FILE } from './keybindings/keybindings-service';
 import { portalQueryUrl } from './links/portal';
 import { APP_ENTRY_URL, APP_ORIGIN, APP_SCHEME, resolveAppFile } from './protocol/app-protocol';
+import { QueriesService } from './queries/queries-service';
 import { ENGINE_DEFAULTS } from './query/limits';
 import { QueryEngine } from './query/query-engine';
 import { Scheduler } from './query/scheduler';
@@ -84,6 +88,7 @@ import { denyAllPermissions } from './security/permissions';
 import { secureWebPreferences } from './security/web-preferences';
 import { NEW_SETTINGS_FILE, SettingsService } from './settings/settings-service';
 import { LayoutStore } from './state/layout-store';
+import { TabsStore } from './state/tabs-store';
 import { UserThemesService } from './themes/user-themes';
 import { buildMacMenuTemplate } from './window/menu';
 import { titleBarOptions } from './window/title-bar';
@@ -118,6 +123,7 @@ const azureHttp = new AzureHttp({
 const keybindings = new KeybindingsService(paths.keybindingsFile);
 const userThemes = new UserThemesService(paths.themesDir);
 const layoutStore = new LayoutStore(paths.layoutStateFile);
+const tabsStore = new TabsStore(paths.tabsStateFile);
 
 let mainWindow: BrowserWindow | undefined;
 const emit = createEventSender(() => (mainWindow === undefined ? [] : [mainWindow.webContents]));
@@ -195,6 +201,17 @@ if (!app.requestSingleInstanceLock()) {
       },
     );
     const schema = createSchemaService(auth, discovery);
+    const myQueries = new QueriesService({
+      root: paths.queriesDir,
+      trash: (target) => shell.trashItem(target),
+      reveal: (target) => {
+        shell.showItemInFolder(target);
+      },
+    });
+    await mkdir(paths.queriesDir, { recursive: true }).catch(() => undefined);
+    watchQueries(paths.queriesDir, () => {
+      emit('queries.changed', {});
+    });
     const queries = createQueryServices(auth, discovery);
     await Promise.all([discovery.init(), groups.reload()]);
     void auth.init().then(() => {
@@ -231,7 +248,7 @@ if (!app.requestSingleInstanceLock()) {
         accounts: auth,
         inventory: discovery,
         schema,
-        query: queries.engine,
+        query: queries.query,
         results: {
           view: (request) => queries.views.page(request),
           aggregate: async (request) => {
@@ -249,6 +266,9 @@ if (!app.requestSingleInstanceLock()) {
         keybindings,
         userThemes: () => userThemes.current,
         layout: layoutStore,
+        tabs: tabsStore,
+        history: queries.history,
+        queries: myQueries,
         window: windowOperations(),
         shell: {
           openConfigFile: async (file) => {
@@ -460,6 +480,15 @@ function createQueryServices(auth: AuthService, discovery: DiscoveryService) {
     includeQueryText: () => effective('audit.includeQueryText'),
     retentionMonths: () => effective('audit.retentionMonths'),
   });
+  const history = new HistoryService({
+    file: paths.historyFile,
+    maxEntries: () => effective('history.maxEntries'),
+    tenantOf: (resourceId) =>
+      discovery.snapshot().workspaces.find((w) => w.resourceId === resourceId)?.tenantId,
+    onChange: () => {
+      emit('history.changed', {});
+    },
+  });
   const accountName = (accountId: string): string =>
     auth.snapshot().accounts.find((a) => a.id === accountId)?.username ?? accountId;
   const engine = new QueryEngine({
@@ -502,9 +531,24 @@ function createQueryServices(auth: AuthService, discovery: DiscoveryService) {
     }),
     demo: mode.demo,
     onChange: (snapshot) => {
+      history.observe(snapshot);
       emit('query.runChanged', snapshot);
     },
   });
+  /** The engine as the IPC handlers see it: runs are also recorded in the history. */
+  const query = {
+    run: async (request: QueryRunRequest) => {
+      const snapshot = await engine.run(request);
+      if (effective('history.maxEntries') > 0) history.started(snapshot.runId, request);
+      history.observe(engine.get(snapshot.runId) ?? snapshot); // may have finished already
+      return snapshot;
+    },
+    cancel: (runId: string) => engine.cancel(runId),
+    rerun: (request: RerunRequest) => engine.rerun(request),
+    get: (runId: string) => engine.get(runId),
+    deleteRun: (runId: string) => engine.deleteRun(runId),
+    deleteAll: () => engine.deleteAll(),
+  };
 
   const views = new ResultViews(store);
   let lastExportFolder: string | undefined;
@@ -551,7 +595,7 @@ function createQueryServices(auth: AuthService, discovery: DiscoveryService) {
     });
   };
 
-  return { engine, store, views, exports, audit, trackSignIns };
+  return { query, store, views, exports, audit, history, trackSignIns };
 }
 
 function createAuthService(): AuthService {
@@ -614,6 +658,20 @@ function createAuthService(): AuthService {
       emit('accounts.deviceCode', prompt);
     },
   });
+}
+
+/** Report changes anywhere under My Queries (debounced), e.g. after a `git pull`. */
+function watchQueries(dir: string, onChange: () => void): void {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    const watcher = watch(dir, { recursive: true, persistent: false }, () => {
+      clearTimeout(timer);
+      timer = setTimeout(onChange, 200);
+    });
+    watcher.on('error', () => undefined);
+  } catch {
+    // Not watchable: the Library still refreshes after changes made in the app.
+  }
 }
 
 async function createIfMissing(file: string, content: string): Promise<void> {
