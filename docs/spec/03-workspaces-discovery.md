@@ -4,7 +4,7 @@
 
 Run discovery per account (and per tenant token where required) using **Azure Resource Graph**. Resource Graph automatically includes Lighthouse-delegated subscriptions.
 
-Endpoint: `POST https://management.azure.com/providers/Microsoft.ResourceGraph/resources?api-version=2022-10-01` (verify the current API version). Page with `$skipToken`.
+Endpoint: `POST https://management.azure.com/providers/Microsoft.ResourceGraph/resources?api-version=2024-04-01` (verified 2026-09; see D-024). Page with `options.$skipToken`, `$top` ≤ 1000.
 
 Queries (run per account's home tenant token, then per additional tenant token for guest tenants):
 
@@ -32,7 +32,7 @@ resources
 | project workspaceResourceId = tolower(tostring(properties.workspaceResourceId))
 ```
 
-- If the solution check yields nothing for a workspace, lazily check `GET {workspaceId}/providers/Microsoft.SecurityInsights/onboardingStates/default?api-version=<current>` (200 means Sentinel is enabled).
+- If the solution check yields nothing for a workspace, check `GET {workspaceId}/providers/Microsoft.SecurityInsights/onboardingStates/default?api-version=2025-09-01` (200 means Sentinel is enabled; verified 2026-09).
 - **The Sentinel flag is a badge only. All Log Analytics workspaces are listed.**
 - Tenant display names: use `/tenants` (spec 02) when available. Otherwise show the tenant ID until the user sets a name. Names are always overridable (see Aliasing).
 

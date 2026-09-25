@@ -40,3 +40,11 @@ Claude Code appends items here when blocked, and keeps working. Tick them off wh
   5. Optional: Azure CLI (`az login`, then Add Account → Azure CLI).
      Lighthouse workspaces show up with discovery in Phase 3.
 - [ ] **GitHub secret `RAML_KQL_CLIENT_ID`** so CI and release builds include the built-in sign-in (Settings → Secrets and variables → Actions). Without it, CI builds work but offer only custom client ID and Azure CLI sign-in.
+
+## Added during Phase 3
+
+- [ ] **Live discovery test.** After signing in (Phase 2 steps), open Targets: your Log Analytics workspaces should appear, including Lighthouse-delegated ones, with Sentinel shields on Sentinel workspaces. Check that:
+  1. names are aliased on startup ("Customer 01 …") and ⌘⌥P / Ctrl+Alt+P reveals them after confirmation;
+  2. Workspaces settings (gear icon in Targets) lets you disable a workspace and it disappears from Targets;
+  3. a workspace reachable through two accounts shows one row with an access-path dropdown;
+  4. `~/.raml-kql/workspaces.jsonc` contains only resource IDs, enabled flags, aliases and tags (nothing secret).
