@@ -299,3 +299,25 @@ Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Con
 - The idle preload now starts within 1.5 s of start-up (was 5 s).
 - Under `pnpm dev`, only the very first run after installing dependencies is slow (~1.3 s), while Vite pre-bundles Monaco. Later dev runs open the editor in ~60 ms.
 
+## D-034 — Results architecture (2026-09-25)
+
+**Context:** spec 06 asks for a grid smooth at 1M rows, group-by in a renderer Web Worker over columnar data, charts, exports and deep links. Results are never persisted (spec 04) and live in the main-process result store.
+
+**Decision:**
+
+- **Rows stay in the main process.** The grid uses AG Grid Community's infinite row model. Sorting, filters (AG Grid's text, number and date models, validated with zod) and quick search are computed in the main process, in one pass next to the data. The resulting row order is cached by table version, and the grid fetches 200-row blocks.
+  - This deviates from spec 06's renderer-side columnar data. Shipping 1M rows to the renderer would duplicate them outside the encrypted store and cost hundreds of MB of IPC.
+  - Measured in e2e: 500,000 demo rows scroll to the last row in well under a second.
+- **Aliasing applies to filtering, search, sort and export too.** The renderer sends the display names on screen with every view request, and the main process maps the attribution columns before evaluating. Searching for a customer's real name therefore finds nothing while names are aliased. Clipboard copies always match the screen. Files follow `privacy.aliasing.applyToExports` (`ask` offers what's on screen first).
+- **Group-by runs in the main process too** (streaming aggregator in `shared/results/aggregate.ts`, isolated as the spec asks), over the current view. It is capped at 100,000 groups and sorted largest first. The grouped view is a small client-side grid; it can be charted and exported inline.
+- **"Filter to / Exclude this value"** are grid-only `valueFilters` on top of column filters (default `results.cellFilterMode: "grid"`). In `"query"` mode they append a `| where` line built from typed KQL literals.
+- **Charts:** ECharts core with only the charts and components used (line, bar, pie, scatter; tooltip, legend, title, data zoom, mark point). Render kinds map per spec. Kusto defaults apply when `render` names no columns: x is the first datetime column (time charts) or the first column; y is the numeric columns; series is the first string column. "Split by tenant" defaults on when there is more than one tenant and no explicit series. Several rows at the same x are summed unless an aggregation is chosen. Line series over 50,000 points are downsampled with LTTB. A query with `render` switches the panel to Chart when its results arrive. Exports: PNG via the canvas, SVG via a server-side-rendered SVG instance, and copy as image through `clipboard.write` (Electron 44 replaced `writeImage` with the async `ClipboardItem` API).
+- **Exports** are written in the main process:
+  - CSV follows RFC 4180, with BOM and delimiter settings.
+  - JSON parses `dynamic` columns into objects.
+  - Markdown truncates cells at 200 characters.
+  - The KQL `datatable` uses typed literals and is capped at 10,000 rows.
+  - XLSX (exceljs) writes one sheet per result table for "all rows", with typed cells and a frozen header.
+  - Scope can be all, filtered or selected rows, with visible or all columns. Files go through the native save dialog; the last folder is remembered for the session.
+- **Deep links:** the portal Logs URL format was verified against a share link published on Microsoft Learn. The query is gzip, then base64, then URL-encoded twice; `#@tenant` is the access path's tenant. Row links are a small registry (`IncidentUrl`, `AlertLink`/`AlertUrl`, `DeviceId` → Defender device page with `?tid=`), and only allowlisted hosts pass.
+- **Not done yet:** the Targets view's context menu entry for portal links (the Run panel and cell menu have it). The last export folder isn't persisted across restarts.
