@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+
 import type { AccountsSnapshot, AddAccountRequest } from '../../shared/auth/models';
 import type {
   KeybindingsSnapshot,
@@ -13,17 +15,24 @@ import type {
 } from '../../shared/ipc/contracts';
 import type { LayoutState } from '../../shared/layout/layout-state';
 import type { MenuBarModel, MenuRole } from '../../shared/menus/menu-model';
+import type { QueryRunRequest, RerunRequest, RunSnapshot } from '../../shared/query/models';
+import type { ExportRequest, ExportResult } from '../../shared/results/export';
 import type {
-  QueryRunRequest,
-  RerunRequest,
-  ResultPage,
-  ResultPageRequest,
-  RunSnapshot,
-} from '../../shared/query/models';
+  AggregateRequestSchema,
+  ChartData,
+  ChartDataRequestSchema,
+  GroupResultSchema,
+  PortalQueryRequest,
+  ViewPageRequestSchema,
+} from '../../shared/results/requests';
+import type { ViewPage } from '../../shared/results/view';
 import type { MergedSchema, SchemaRequest } from '../../shared/schema/models';
 import type { Group, GroupsSnapshot } from '../../shared/workspaces/groups';
 import type { Inventory, TenantUpdate, WorkspaceUpdate } from '../../shared/workspaces/models';
 import { isAllowedExternalUrl } from '../security/navigation';
+
+type ViewPageRequestParsed = z.output<typeof ViewPageRequestSchema>;
+type GroupResultData = z.output<typeof GroupResultSchema>;
 
 /** Operations on the main window, provided by index.ts (keeps handlers free of Electron). */
 export interface WindowOperations {
@@ -65,7 +74,14 @@ export interface HandlerDependencies {
     deleteRun(runId: string): Promise<void>;
     deleteAll(): Promise<void>;
   };
-  results: { page(request: ResultPageRequest): Promise<ResultPage> };
+  results: {
+    view(request: ViewPageRequestParsed): Promise<ViewPage>;
+    aggregate(request: z.output<typeof AggregateRequestSchema>): Promise<GroupResultData>;
+    chartData(request: z.output<typeof ChartDataRequestSchema>): Promise<ChartData>;
+    export(request: ExportRequest): Promise<ExportResult>;
+    saveImage(format: 'png' | 'svg', data: string): Promise<ExportResult>;
+  };
+  links: { portalQuery(request: PortalQueryRequest): { url: string } };
   audit: { verify(): Promise<AuditVerification> };
   groups: {
     snapshot(): GroupsSnapshot;
@@ -85,6 +101,7 @@ export interface HandlerDependencies {
     openConfigFolder(): Promise<void>;
     openExternal(url: string): Promise<void>;
     writeClipboard(text: string): Promise<void>;
+    writeClipboardImage(dataUrl: string): Promise<void>;
   };
 }
 
@@ -134,7 +151,18 @@ export function createIpcHandlers(deps: HandlerDependencies): IpcHandlers {
       },
     },
     results: {
-      page: (request) => deps.results.page(request),
+      view: (request) => deps.results.view(request),
+      aggregate: (request) => deps.results.aggregate(request),
+      chartData: (request) => deps.results.chartData(request),
+      export: (request) => deps.results.export(request),
+      saveImage: ({ format, data }) => deps.results.saveImage(format, data),
+    },
+    links: {
+      portalQuery: (request) => {
+        const { url } = deps.links.portalQuery(request);
+        if (!isAllowedExternalUrl(url)) throw new Error('Unexpected portal URL');
+        return { url };
+      },
     },
     audit: {
       verify: () => deps.audit.verify(),
@@ -190,6 +218,9 @@ export function createIpcHandlers(deps: HandlerDependencies): IpcHandlers {
       },
       writeClipboard: async ({ text }) => {
         await deps.shell.writeClipboard(text);
+      },
+      writeClipboardImage: async ({ dataUrl }) => {
+        await deps.shell.writeClipboardImage(dataUrl);
       },
       openExternal: async ({ url }) => {
         if (!isAllowedExternalUrl(url)) {

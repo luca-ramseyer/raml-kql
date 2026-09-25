@@ -11,6 +11,7 @@ import {
   app,
   BrowserWindow,
   clipboard,
+  ClipboardItem,
   dialog,
   ipcMain,
   Menu,
@@ -64,15 +65,18 @@ import { demoFetchSchema } from './demo/demo-schema';
 import { DiscoveryService } from './discovery/discovery-service';
 import { GroupsService } from './discovery/groups-service';
 import { FileInventoryCache, MemoryInventoryCache } from './discovery/inventory-cache';
+import { ExportService } from './export/export-service';
 import { createEventSender } from './ipc/events';
 import { createIpcHandlers, type WindowOperations } from './ipc/handlers';
 import { registerIpcRouter } from './ipc/router';
 import { KeybindingsService, NEW_KEYBINDINGS_FILE } from './keybindings/keybindings-service';
+import { portalQueryUrl } from './links/portal';
 import { APP_ENTRY_URL, APP_ORIGIN, APP_SCHEME, resolveAppFile } from './protocol/app-protocol';
 import { ENGINE_DEFAULTS } from './query/limits';
 import { QueryEngine } from './query/query-engine';
 import { Scheduler } from './query/scheduler';
 import { ResultStore } from './results/result-store';
+import { ResultViews } from './results/result-views';
 import { FileSchemaCache, MemorySchemaCache } from './schema/schema-cache';
 import { SchemaService } from './schema/schema-service';
 import { installNavigationGuards, isTrustedOrigin, originKey } from './security/navigation';
@@ -229,9 +233,16 @@ if (!app.requestSingleInstanceLock()) {
         schema,
         query: queries.engine,
         results: {
-          page: ({ runId, tableIndex, offset, limit }) =>
-            queries.store.page(runId, tableIndex, offset, limit),
+          view: (request) => queries.views.page(request),
+          aggregate: async (request) => {
+            const result = await queries.views.aggregate(request);
+            return { ...result, rows: result.rows as GroupRows };
+          },
+          chartData: (request) => queries.views.chartData(request),
+          export: (request) => queries.exports.export(request),
+          saveImage: (format, data) => queries.exports.saveImage(format, data),
         },
+        links: { portalQuery: (request) => ({ url: portalQueryUrl(request) }) },
         audit: queries.audit,
         groups,
         settings,
@@ -256,6 +267,12 @@ if (!app.requestSingleInstanceLock()) {
           },
           openExternal: (url) => shell.openExternal(url),
           writeClipboard: (text) => clipboard.writeText(text),
+          writeClipboardImage: async (dataUrl) => {
+            const png = Buffer.from(dataUrl.slice(dataUrl.indexOf(',') + 1), 'base64');
+            await clipboard.write([
+              new ClipboardItem({ 'image/png': new Blob([png], { type: 'image/png' }) }),
+            ]);
+          },
         },
       }),
       isTrustedSender: (url) => isTrustedOrigin(url, trustedOrigins),
@@ -414,6 +431,9 @@ function createSchemaService(auth: AuthService, discovery: DiscoveryService): Sc
 }
 
 /** A setting's effective value (the user's valid value, else the default). */
+/** Aggregated cells are copies of result cells, which are JSON values. */
+type GroupRows = import('../shared/results/requests').ChartData['rows'];
+
 function effective<K extends SettingKey>(key: K): SettingValue<K> {
   const parsed = getSettingDefinition(key)?.schema.safeParse(settings.current.values[key]);
   return parsed?.success === true ? (parsed.data as SettingValue<K>) : defaultSettingValues()[key];
@@ -486,6 +506,30 @@ function createQueryServices(auth: AuthService, discovery: DiscoveryService) {
     },
   });
 
+  const views = new ResultViews(store);
+  let lastExportFolder: string | undefined;
+  const exports = new ExportService({
+    store,
+    views,
+    csv: () => ({ delimiter: effective('export.csv.delimiter'), bom: effective('export.csv.bom') }),
+    saveDialog: async ({ defaultPath, filters }) => {
+      const options = { defaultPath, filters };
+      const result =
+        mainWindow === undefined
+          ? await dialog.showSaveDialog(options)
+          : await dialog.showSaveDialog(mainWindow, options);
+      return result.canceled ? undefined : result.filePath;
+    },
+    writeClipboard: (text) => clipboard.writeText(text),
+    lastFolder: {
+      get: () => lastExportFolder,
+      set: (folder) => {
+        lastExportFolder = folder;
+      },
+    },
+    defaultFolder: () => app.getPath('downloads'),
+  });
+
   /** Audit sign-ins and sign-outs (not the accounts restored at startup). */
   const trackSignIns = (): void => {
     let known = new Set(auth.snapshot().accounts.map((a) => a.id));
@@ -507,7 +551,7 @@ function createQueryServices(auth: AuthService, discovery: DiscoveryService) {
     });
   };
 
-  return { engine, store, audit, trackSignIns };
+  return { engine, store, views, exports, audit, trackSignIns };
 }
 
 function createAuthService(): AuthService {

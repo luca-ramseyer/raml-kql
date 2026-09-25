@@ -21,6 +21,8 @@ import { demoSchemaFor } from './demo-schema';
  */
 
 const DEFAULT_ROWS = 25;
+/** Enough for a 500k-row merged result over the demo targets (spec 06 acceptance). */
+const MAX_ROWS_PER_WORKSPACE = 100_000;
 const SLOW_MS = 2500;
 
 /** mulberry32 seeded from a string hash: the same query gives the same data. */
@@ -153,6 +155,28 @@ export interface DemoQueryPlan {
   limit: number | undefined;
   count: boolean;
   signInSummary: boolean;
+  /** `summarize count() by …`: column names, or `{ binMs }` for `bin(TimeGenerated, …)`. */
+  summarizeBy: (string | { binMs: number })[] | undefined;
+  /** `| render <visualization>`. */
+  render: string | undefined;
+}
+
+const UNIT_MS: Record<string, number> = { m: 60_000, h: 3_600_000, d: 86_400_000 };
+
+function parseSummarize(text: string): DemoQueryPlan['summarizeBy'] {
+  const match = /\|\s*summarize\s+(?:\w+\s*=\s*)?count\(\)\s+by\s+([^|]+)/i.exec(text);
+  if (match === null) return undefined;
+  const keys = (match[1] ?? '')
+    .split(/,(?![^(]*\))/)
+    .map((k) => k.trim())
+    .filter((k) => k !== '');
+  const parsed = keys.map((key) => {
+    const bin = /^bin\s*\(\s*TimeGenerated\s*,\s*(\d+)\s*([mhd])\s*\)$/i.exec(key);
+    if (bin !== null)
+      return { binMs: Number(bin[1]) * (UNIT_MS[(bin[2] ?? 'h').toLowerCase()] ?? 3_600_000) };
+    return /^[A-Za-z_]\w*$/.test(key) ? key : undefined;
+  });
+  return parsed.every((k) => k !== undefined) ? parsed : undefined;
 }
 
 /** What the demo understands of a query (exported for tests). */
@@ -168,6 +192,8 @@ export function planDemoQuery(query: string, knownTables: readonly string[]): De
     count: /\|\s*count\s*($|\|)/im.test(text),
     signInSummary:
       table === 'SigninLogs' && /summarize[\s\S]*countif\s*\(\s*ResultType/i.test(text),
+    summarizeBy: parseSummarize(text),
+    render: /\|\s*render\s+(\w+)/i.exec(text)?.[1]?.toLowerCase(),
   };
 }
 
@@ -244,16 +270,60 @@ export class DemoDataSource implements DataSource {
         ],
       };
     }
-    const rows = Math.min(plan.limit ?? DEFAULT_ROWS, 5000);
+    const rows = Math.min(plan.limit ?? DEFAULT_ROWS, MAX_ROWS_PER_WORKSPACE);
+    const result = plan.signInSummary
+      ? signInSummary(demo, rows, request.query)
+      : plan.summarizeBy !== undefined
+        ? summarizeCount(sampleTable(table, demo, 400, request.query, this.now()), plan.summarizeBy)
+        : sampleTable(table, demo, rows, request.query, this.now());
     return {
-      tables: [
-        plan.signInSummary
-          ? signInSummary(demo, rows, request.query)
-          : sampleTable(table, demo, rows, request.query, this.now()),
-      ],
+      tables: [result],
+      ...(plan.render === undefined ? {} : { render: { visualization: plan.render } }),
       statistics: { cpuMs: 12 + (demo.name.length % 7) * 5, dataScannedMb: 1.5 },
     };
   }
+}
+
+/** `summarize count() by …` over a demo sample (unknown columns make the query fail). */
+function summarizeCount(sample: RawTable, keys: (string | { binMs: number })[]): RawTable {
+  const time = sample.columns.findIndex((c) => c.name === 'TimeGenerated');
+  const indexes = keys.map((key) => {
+    if (typeof key !== 'string') return time;
+    const index = sample.columns.findIndex((c) => c.name === key);
+    if (index < 0) {
+      throw new QueryFailure(
+        'badRequest',
+        `SemanticError: 'summarize' operator: Failed to resolve scalar expression named '${key}'`,
+        { status: 400, code: 'SemanticError' },
+      );
+    }
+    return index;
+  });
+  const counts = new Map<string, { keys: unknown[]; count: number }>();
+  for (const row of sample.rows) {
+    const values = keys.map((key, i) => {
+      const value = row[indexes[i] ?? 0];
+      if (typeof key === 'string') return value;
+      const ms = Date.parse(String(value));
+      return new Date(Math.floor(ms / key.binMs) * key.binMs).toISOString();
+    });
+    const id = JSON.stringify(values);
+    const entry = counts.get(id) ?? { keys: values, count: 0 };
+    entry.count += 1;
+    counts.set(id, entry);
+  }
+  return {
+    name: 'PrimaryResult',
+    columns: [
+      ...keys.map((key, i) =>
+        typeof key === 'string'
+          ? { name: key, type: sample.columns[indexes[i] ?? 0]?.type ?? ('string' as const) }
+          : { name: 'TimeGenerated', type: 'datetime' as const },
+      ),
+      { name: 'count_', type: 'long' as const },
+    ],
+    rows: [...counts.values()].map((e) => [...e.keys, e.count]),
+  };
 }
 
 async function abortable(ms: number, signal: AbortSignal): Promise<void> {

@@ -82,9 +82,14 @@ export function fakeHandlerDependencies(
       deleteAll: vi.fn(() => Promise.resolve()),
     },
     results: {
-      page: vi.fn((request: { runId: string; tableIndex: number; offset: number }) =>
-        Promise.resolve({ ...request, columns: [], rows: [] }),
-      ),
+      view: vi.fn(() => Promise.resolve({ rows: [], positions: [], rowCount: 0, totalRows: 0 })),
+      aggregate: vi.fn(() => Promise.resolve({ columns: [], rows: [], truncated: false })),
+      chartData: vi.fn(() => Promise.resolve({ columns: [], rows: [], truncated: false })),
+      export: vi.fn(() => Promise.resolve({ status: 'cancelled' as const, rows: 0 })),
+      saveImage: vi.fn(() => Promise.resolve({ status: 'cancelled' as const, rows: 0 })),
+    },
+    links: {
+      portalQuery: vi.fn(() => ({ url: 'https://portal.azure.com/#view' })),
     },
     audit: {
       verify: vi.fn(() => Promise.resolve({ ok: true, entries: 0, files: 0 })),
@@ -118,6 +123,7 @@ export function fakeHandlerDependencies(
       openConfigFolder: vi.fn(() => Promise.resolve()),
       openExternal: vi.fn(() => Promise.resolve()),
       writeClipboard: vi.fn(() => Promise.resolve()),
+      writeClipboardImage: vi.fn(() => Promise.resolve()),
     },
     ...overrides,
   };

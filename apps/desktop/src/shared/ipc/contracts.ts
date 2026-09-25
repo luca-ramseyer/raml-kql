@@ -8,13 +8,17 @@ import {
 } from '../config/config-snapshots';
 import { LayoutStateSchema } from '../layout/layout-state';
 import { MenuBarModelSchema, MenuRoleSchema } from '../menus/menu-model';
+import { QueryRunRequestSchema, RerunRequestSchema, RunSnapshotSchema } from '../query/models';
+import { ExportRequestSchema, ExportResultSchema } from '../results/export';
 import {
-  QueryRunRequestSchema,
-  RerunRequestSchema,
-  ResultPageRequestSchema,
-  ResultPageSchema,
-  RunSnapshotSchema,
-} from '../query/models';
+  AggregateRequestSchema,
+  ChartDataRequestSchema,
+  ChartDataSchema,
+  GroupResultSchema,
+  PortalQueryRequestSchema,
+  ViewPageRequestSchema,
+} from '../results/requests';
+import { ViewPageSchema } from '../results/view';
 import { MergedSchemaSchema, SchemaRequestSchema } from '../schema/models';
 import { GroupSchema, GroupsSnapshotSchema } from '../workspaces/groups';
 import { InventorySchema, TenantUpdateSchema, WorkspaceUpdateSchema } from '../workspaces/models';
@@ -133,7 +137,41 @@ export const ipcContracts = {
     deleteAll: defineChannel('query:deleteAll', z.undefined(), z.undefined()),
   },
   results: {
-    page: defineChannel('results:page', ResultPageRequestSchema, ResultPageSchema),
+    /** A page of a sorted/filtered/searched view (spec 06); rows never leave main otherwise. */
+    view: defineChannel('results:view', ViewPageRequestSchema, ViewPageSchema),
+    /** Group-by over a view ("Grouped view"). */
+    aggregate: defineChannel('results:aggregate', AggregateRequestSchema, GroupResultSchema),
+    /** Selected columns of a view, for charts. */
+    chartData: defineChannel('results:chartData', ChartDataRequestSchema, ChartDataSchema),
+    /** Export to a file (native save dialog) or the clipboard. */
+    export: defineChannel('results:export', ExportRequestSchema, ExportResultSchema),
+    /** Save a chart as PNG or SVG (native save dialog). */
+    saveImage: defineChannel(
+      'results:saveImage',
+      z.discriminatedUnion('format', [
+        z
+          .object({
+            format: z.literal('png'),
+            data: z
+              .string()
+              .max(30_000_000)
+              .regex(/^data:image\/png;base64,[A-Za-z0-9+/=]+$/),
+          })
+          .strict(),
+        z
+          .object({ format: z.literal('svg'), data: z.string().max(30_000_000).startsWith('<svg') })
+          .strict(),
+      ]),
+      ExportResultSchema,
+    ),
+  },
+  links: {
+    /** "Open query in Azure Portal Logs" URL for a workspace. */
+    portalQuery: defineChannel(
+      'links:portalQuery',
+      PortalQueryRequestSchema,
+      z.object({ url: z.url().max(200_000) }),
+    ),
   },
   audit: {
     /** "Audit: Verify Log Integrity". */
@@ -203,7 +241,20 @@ export const ipcContracts = {
     /** Copy text to the clipboard (the renderer's web clipboard permission is denied). */
     writeClipboard: defineChannel(
       'shell:writeClipboard',
-      z.object({ text: z.string().max(100_000) }).strict(),
+      z.object({ text: z.string().max(20_000_000) }).strict(),
+      z.undefined(),
+    ),
+    /** Copy a chart as an image (PNG data URL from ECharts). */
+    writeClipboardImage: defineChannel(
+      'shell:writeClipboardImage',
+      z
+        .object({
+          dataUrl: z
+            .string()
+            .max(30_000_000)
+            .regex(/^data:image\/png;base64,[A-Za-z0-9+/=]+$/),
+        })
+        .strict(),
       z.undefined(),
     ),
     /** Open an allowlisted https URL in the OS browser. */
