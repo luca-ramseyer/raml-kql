@@ -13,7 +13,7 @@
 
 1. **`builtin`** (default): MSAL public client using the Raml KQL multi-tenant app registration. The client ID is injected at build time from `RAML_KQL_CLIENT_ID`. Until Luca provides it, fall back to `custom` mode and add a HUMAN-TODO item. See `docs/guides/entra-app-registration.md`.
 2. **`custom`**: same MSAL flow with a user-supplied client ID (and optional authority host for sovereign clouds). This is for organisations that won't consent to a third-party app and register their own.
-3. **`azureCli`**: tokens via `az account get-access-token --tenant <id> --resource <res>`. This requires Azure CLI installed and `az login` done. Accounts then mirror `az account list`. It is useful where app consent is impossible.
+3. **`azureCli`**: tokens via `az account get-access-token --tenant <id> --resource <res>`. This requires Azure CLI installed and `az login` done. Accounts then mirror `az account list`. It is useful where app consent is impossible. "Sign in" for a tenant that needs it runs `az login --tenant <id>`, which opens the system browser (D-035).
 
 The provider is chosen per account, so a user can mix a `builtin` account and an `azureCli` account.
 

@@ -31,6 +31,14 @@ export class NoAccessError extends Error {
   }
 }
 
+/** A sign-in failure whose message is written for the user (shown as is, not as details). */
+export class SignInError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SignInError';
+  }
+}
+
 export interface SignInOptions {
   flow: 'browser' | 'deviceCode';
   /** Device code flow: show the code to the user. */

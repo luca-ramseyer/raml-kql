@@ -105,3 +105,59 @@ describe('AzureCliAuthProvider', () => {
     ).rejects.toBeInstanceOf(NoAccessError);
   });
 });
+
+describe('AzureCliAuthProvider sign-in for a tenant', () => {
+  it('runs `az login --tenant` without the subscription prompt, then gets a token', async () => {
+    const run = vi.fn<CommandRunner>((_command, args) =>
+      Promise.resolve(
+        args[0] === 'login'
+          ? ''
+          : JSON.stringify({ accessToken: 'fresh', expires_on: 1_800_000_000 }),
+      ),
+    );
+    const provider = new AzureCliAuthProvider(PUBLIC_CLOUD, run);
+    const token = await provider.acquireTokenInteractive(
+      'azcli:x',
+      T1,
+      'https://management.azure.com/user_impersonation',
+    );
+    expect(token.token).toBe('fresh');
+    expect(run).toHaveBeenNthCalledWith(1, 'az', ['login', '--tenant', T1, '--output', 'none'], {
+      timeoutMs: 300_000,
+      env: { AZURE_CORE_LOGIN_EXPERIENCE_V2: 'off' },
+    });
+    expect(run.mock.calls[1]?.[1]).toEqual([
+      'account',
+      'get-access-token',
+      '--tenant',
+      T1,
+      '--resource',
+      'https://management.azure.com/',
+      '--output',
+      'json',
+    ]);
+  });
+
+  it('explains why sign-in failed', async () => {
+    const failing = (error: object) =>
+      new AzureCliAuthProvider(PUBLIC_CLOUD, () =>
+        Promise.reject(Object.assign(new Error('x'), error)),
+      );
+    await expect(failing({ code: 'ENOENT' }).acquireTokenInteractive('a', T1, 's')).rejects.toThrow(
+      'Azure CLI was not found',
+    );
+    await expect(failing({ killed: true }).acquireTokenInteractive('a', T1, 's')).rejects.toThrow(
+      'timed out',
+    );
+    await expect(
+      failing({
+        stderr: 'WARNING: A web browser has been opened\nERROR: User canceled authentication',
+      }).acquireTokenInteractive('a', T1, 's'),
+    ).rejects.toThrow(
+      "Azure CLI sign-in didn't complete: WARNING: A web browser has been opened ERROR: User canceled authentication",
+    );
+    await expect(failing({}).acquireTokenInteractive('a', 'not-a-guid', 's')).rejects.toThrow(
+      'Invalid tenant ID',
+    );
+  });
+});

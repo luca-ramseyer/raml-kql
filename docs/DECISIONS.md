@@ -321,3 +321,15 @@ Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Con
   - Scope can be all, filtered or selected rows, with visible or all columns. Files go through the native save dialog; the last folder is remembered for the session.
 - **Deep links:** the portal Logs URL format was verified against a share link published on Microsoft Learn. The query is gzip, then base64, then URL-encoded twice; `#@tenant` is the access path's tenant. Row links are a small registry (`IncidentUrl`, `AlertLink`/`AlertUrl`, `DeviceId` → Defender device page with `?tid=`), and only allowlisted hosts pass.
 - **Not done yet:** the Targets view's context menu entry for portal links (the Run panel and cell menu have it). The last export folder isn't persisted across restarts.
+
+## D-035 — Azure CLI "Sign in" runs `az login` (2026-09-25)
+
+**Context:** for Azure CLI accounts, "Sign in" on a tenant that needs it (MFA, Conditional Access, an expired session) always failed. The provider only told the user to run `az login` in a terminal, and that message was hidden behind a generic "Sign-in failed."
+
+**Decision:**
+
+- The Azure CLI provider's interactive sign-in runs `az login --tenant <tenant> --output none` (no shell; the tenant is a validated GUID). The CLI opens the system browser, like the built-in sign-in, and the app waits up to 5 minutes before getting a token for the tenant as usual.
+- `AZURE_CORE_LOGIN_EXPERIENCE_V2=off` is set for that call. Azure CLI 2.61+ otherwise asks in the terminal which subscription to use, and nobody can answer that from the app.
+- Azure CLI is looked up with the common install folders appended to `PATH` (`/opt/homebrew/bin`, `/usr/local/bin` on macOS; `/usr/local/bin`, `/snap/bin` on Linux). Apps started from Finder or the Dock get a minimal `PATH` without them.
+- Providers throw `SignInError` for failures written for the user. The auth service shows that message itself instead of "Sign-in failed." with the reason hidden in the details.
+
