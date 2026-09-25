@@ -273,3 +273,19 @@ Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Con
   - `audit.includeQueryText: false` stores only `queryHash`.
 - **MSAL through AzureHttp:** MSAL's `system.networkClient` is `AzureHttp.msalNetworkModule()`, so sign-in and token refresh now follow the OS proxy too. This completes D-023.
 - **`RAML_KQL_USER_DATA_DIR`** (absolute path) moves the machine-local data (MSAL cache, session result cache), like VS Code's `--user-data-dir`. e2e uses it, so test runs never touch the real profile.
+
+## D-033 — Faster first query tab (2026-09-25)
+
+**Context:** opening a query tab took ~830 ms to a usable editor in the built app. A CPU profile showed the main thread idle for ~650 ms of that. The biggest part (~300 ms) was React 19 throttling the reveal of a resolved `Suspense` boundary (`React.lazy`). The rest was loading Monaco (~105 ms) and starting the Kusto worker with the schema (~150 ms).
+
+**Decision:**
+
+- The query editor chunk is loaded without `Suspense`: a small host component renders it as soon as the module has loaded.
+- While the app is idle after start-up (`requestIdleCallback`, 5 s cap), the editor chunk and Monaco are preloaded, and the Kusto worker is started with a throwaway `kusto` model. The worker parses its ~10 MB off the main thread.
+- Only code is warmed up. The schema sync still starts with the first query tab, so start-up makes no metadata requests (D-029 unchanged).
+
+**Consequences:**
+
+- Measured in the built app, key press to ready editor went from ~830 ms to ~130 ms, and to the first completion from ~885 ms to ~345 ms.
+- Memory for Monaco and the worker is used from start-up rather than from the first tab. For a KQL tool that is the expected state.
+- The renderer bundle is still unminified. Minifying would mostly shorten the idle-time preload, so it stays a release-polish item (D-028).

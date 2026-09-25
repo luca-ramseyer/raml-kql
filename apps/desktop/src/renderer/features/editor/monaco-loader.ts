@@ -8,7 +8,7 @@ import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker.js?worker';
 
 import { KQL_SNIPPETS, snippetPreview } from './kql-snippets';
 import KustoWorker from './kusto.worker?worker';
-import { completionSuffix, markSchemaApplied, startSchemaSync, useSchema } from './schema-store';
+import { completionSuffix, markSchemaApplied, useSchema } from './schema-store';
 
 type MonacoModule = typeof import('monaco-editor/esm/vs/editor/editor.api.js');
 type KustoModule = typeof import('@kusto/monaco-kusto');
@@ -37,6 +37,22 @@ export function loadMonaco(): Promise<LoadedMonaco> {
     return loaded;
   })();
   return loading;
+}
+
+/**
+ * Load Monaco and start the Kusto worker ahead of time (the worker parses ~10 MB of language
+ * service off the main thread). A throwaway `kusto` model is what starts the worker.
+ */
+export async function warmUpMonaco(): Promise<void> {
+  const { monaco, kusto } = await loadMonaco();
+  const uri = monaco.Uri.parse('inmemory://warmup/warmup.kql');
+  const model = monaco.editor.getModel(uri) ?? monaco.editor.createModel('', 'kusto', uri);
+  try {
+    const accessor = await kusto.getKustoWorker();
+    await accessor(uri);
+  } finally {
+    model.dispose();
+  }
 }
 
 function configure({ monaco, kusto }: LoadedMonaco): void {
@@ -105,6 +121,5 @@ function configure({ monaco, kusto }: LoadedMonaco): void {
   useSchema.subscribe((state, previous) => {
     if (state.kusto !== previous.kusto) apply(state.kusto);
   });
-  startSchemaSync();
   apply();
 }

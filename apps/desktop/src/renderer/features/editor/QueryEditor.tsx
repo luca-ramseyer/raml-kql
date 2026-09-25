@@ -14,7 +14,7 @@ import { setActiveCodeEditor } from './active-editor';
 import { loadMonaco, type LoadedMonaco } from './monaco-loader';
 import { MONACO_THEME_NAME, toMonacoTheme } from './monaco-theme';
 import { queryModelFor } from './query-models';
-import { useSchema, whenSchemaSettled } from './schema-store';
+import { startSchemaSync, useSchema, whenSchemaSettled } from './schema-store';
 import { filtersOnTimeGenerated, type Classification } from './time-filter';
 import { TimeRangePicker } from './TimeRangePicker';
 
@@ -112,6 +112,7 @@ export function QueryEditor({ editorId }: { editorId: string }): React.JSX.Eleme
     loadMonaco()
       .then(async (loaded) => {
         if (isDisposed()) return;
+        startSchemaSync();
         // The model comes first: a `kusto` model is what starts monaco-kusto's worker, and the
         // schema can only reach the language service once that worker runs.
         const entry = queryModelFor(

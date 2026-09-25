@@ -140,3 +140,9 @@
   cursor: pointer;
   font: inherit;
 }
+
+/* Shown until the query editor chunk has loaded (usually preloaded; see editor-preload.ts). */
+.editor-content > .query-editor-message {
+  padding: 12px 20px;
+  color: var(--vscode-descriptionForeground);
+}
