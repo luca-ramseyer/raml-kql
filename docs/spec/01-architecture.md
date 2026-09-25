@@ -83,7 +83,7 @@ interface DataSource {
 }
 ```
 
-The built-in Log Analytics source implements this. Extension data sources implement the same interface through the extension API (spec 07). Targets carry the `dataSourceId`.
+The built-in Log Analytics source implements this, registered in a `DataSourceRegistry` like any other (D-049). Extension data sources implement the same interface through the extension API (spec 07). Targets carry the `dataSourceId`.
 
 ## Renderer architecture
 
