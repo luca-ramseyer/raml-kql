@@ -187,6 +187,8 @@ Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Con
 
 **Decision:** until query tabs arrive (Phase 4/7), the Targets selection is one session-wide selection. The first inventory selects every enabled workspace; disabled or missing workspaces drop out of the selection automatically. Choosing a group filters the tree to that group and selects exactly its (enabled) workspaces. "Save Selection as Group…" creates a static group. The selection becomes per-tab state in Phase 7.
 
+**Update (Phase 7):** each query tab now has its own selection and group (D-037). The Targets view shows the active tab's selection. A new tab starts from the current one; tabs opened from History get the targets of that run.
+
 ## D-028 — Monaco and monaco-kusto integration (2026-09-25)
 
 **Context:** spec 05 asks for Monaco with `@kusto/monaco-kusto`, bundled, with workers wired for electron-vite, under the strict CSP (no `unsafe-eval`).
@@ -349,3 +351,60 @@ Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Con
   - a status bar test covers duplicate ids;
   - a column-defs test checks the tooltip option;
   - a manual dev-mode console sweep found no remaining warnings or errors.
+
+## D-037 — Editor groups, tab persistence and per-tab targets (2026-09-25)
+
+**Context:** spec 05 asks for VS Code-style tabs with split groups, and tabs that survive restarts with their text, targets, time range and name. Result data must never be persisted (spec 04).
+
+**Decision:**
+
+- **Groups model:** the editor store holds groups. Each group has its editors, active editor, MRU order and size. `editors` and `activeId` are derived for existing callers.
+  - Split Right (`Ctrl/Cmd+\`) duplicates the active query tab into a new group, with a copy of its text, time range and targets.
+  - Tabs move between groups by drag and drop.
+  - `Ctrl/Cmd+1..4` focuses a group, and `Ctrl+Tab` switches to the previous tab in MRU order.
+  - Preview tabs (italic, replaced by the next preview) come from single clicks in History and Library. Editing or double-clicking a tab keeps it.
+  - Pinned tabs are supported.
+- **Dirty dot:** only for tabs linked to a My Queries file whose text differs from the saved text. Unsaved drafts are normal in this app (spec 05: "they persist as drafts"), so marking every new tab dirty would be noise.
+- **Persistence:** the renderer builds the state; main validates it with zod and writes `state/tabs.json` (0600, atomic, serialized).
+  - Saved: groups, tabs (id, kind, title, pinned), query text, time range, cursor, targets and group, and the linked file with its saved text.
+  - Saves are debounced by 500 ms, with one more when the window closes.
+  - Restored tabs show "Results from the previous session were cleared" until they run again.
+  - Welcome opens only when nothing was restored.
+- **Per-tab targets:** the Targets store stays the single source for the view and for runs. A tracker swaps its selection in and out when the active query tab changes, so the existing Targets UI and the schema loader didn't change.
+- **Module layout:** `open-query.ts` (opening tabs) and `run-query.ts` (Shift+Enter) are split out of `query-commands.ts`. History, Library and persistence use them without an import cycle.
+
+**Consequences:**
+
+- `state/` is machine-local (the config `.gitignore` excludes it). Unsaved query text sits there in plain text, like VS Code's hot exit. Query text is not result data, and spec 04 keeps it out of the encrypted cache on purpose.
+- Deferred to later phases:
+  - the Ctrl/Cmd+P `@` (targets) and `#` (tables) prefixes;
+  - pack queries in quick open (Phase 8);
+  - the Targets view's "Open in Azure Portal" context menu.
+
+## D-038 — Query history (2026-09-25)
+
+**Decision:**
+
+- Main records history, not the renderer. The query service wraps `engine.run`: `started(runId, request)` remembers the request (group, time range, tab title), and the first finished snapshot for that run appends one line to `state/history.jsonl` (0600).
+- Each entry holds the query text, target resource IDs, tenant IDs, counts per outcome, row count and duration. It never holds result data.
+- "Re-run Failed" updates the same run and adds no entry.
+- The cap is `history.maxEntries` (default 5000). The file is appended and rewritten only when it grows past 110 % of the cap. Damaged lines (a crash mid-write) are skipped.
+- Search runs in the renderer over query text, table names in the text, and tenant names. Tenant names go through the aliasing namer, so presentation mode doesn't leak real names through search.
+- The view groups runs by day (Today, Yesterday, date). An entry opens as a preview on single click and as a normal tab on double click or Enter. Other actions: Open in New Tab, Run Again, Copy Query, and Clear History (with confirmation).
+
+## D-039 — My Queries files (2026-09-25)
+
+**Decision:**
+
+- `.kql` files in `<config>/queries/`, subfolders allowed (spec 08). Front-matter is YAML in `// ` comment lines between `// ---` markers, so the file is still valid KQL. It's parsed with [`yaml`](https://github.com/eemeli/yaml) 2.9 (ISC, no dependencies, the maintained YAML 1.2 parser). Unknown keys are kept on save.
+- Main owns all file IO:
+  - Every path is resolved inside the folder, and anything else is refused.
+  - New files get a slug of the name (`failed-sign-ins.kql`, then `-2`, …).
+  - Rename changes both the front-matter name and the file name.
+  - Delete moves the file to the OS trash (`shell.trashItem`), never a hard delete.
+  - A recursive `fs.watch` emits `queries.changed`, so edits made outside the app (git pull, an editor) show up live.
+- Ctrl/Cmd+S saves a linked tab in place, and otherwise asks for a name (Save As). Ctrl/Cmd+Shift+S always asks.
+- The Library view shows a My Queries tree (the Explorer look):
+  - search, folders and drag and drop moves;
+  - F2 renames, Delete deletes, and there is a context menu.
+  - Installed packs join the view in Phase 8.
