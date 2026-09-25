@@ -47,6 +47,9 @@ export interface ConfigPaths {
   readonly settingsFile: string;
   readonly keybindingsFile: string;
   readonly accountsFile: string;
+  readonly workspacesFile: string;
+  readonly groupsFile: string;
+  readonly inventoryFile: string;
   readonly themesDir: string;
   readonly stateDir: string;
   readonly layoutStateFile: string;
@@ -58,6 +61,9 @@ export function configPaths(root: string): ConfigPaths {
     settingsFile: path.join(root, 'settings.jsonc'),
     keybindingsFile: path.join(root, 'keybindings.jsonc'),
     accountsFile: path.join(root, 'accounts.jsonc'),
+    workspacesFile: path.join(root, 'workspaces.jsonc'),
+    groupsFile: path.join(root, 'groups.jsonc'),
+    inventoryFile: path.join(root, 'state', 'inventory.json'),
     themesDir: path.join(root, 'themes'),
     stateDir: path.join(root, 'state'),
     layoutStateFile: path.join(root, 'state', 'ui-layout.json'),
@@ -81,6 +87,8 @@ Shareable (no secrets, no machine paths):
 - settings.jsonc      all settings
 - keybindings.jsonc   keyboard shortcuts (VS Code format)
 - accounts.jsonc      account labels and order (never tokens)
+- workspaces.jsonc    which workspaces are enabled, aliases, tags
+- groups.jsonc        tenant and workspace groups
 - themes/             colour themes (VS Code colour theme JSON), listed automatically
 
 Machine-local (ignored by the .gitignore next to this file):

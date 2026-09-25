@@ -18,6 +18,13 @@ export interface FakeAzureOptions {
   tenantsByToken: Record<string, FakeTenant[]>;
   /** Split `/tenants` into pages of this size (tests `nextLink`). */
   pageSize?: number;
+  /** Resource Graph rows per bearer token, by which discovery query was sent. */
+  resourceGraphByToken?: Record<
+    string,
+    { workspaces?: unknown[]; subscriptions?: unknown[]; sentinel?: unknown[] }
+  >;
+  /** Page size for Resource Graph responses (tests `$skipToken`). */
+  resourceGraphPageSize?: number;
   /** Fault injection: status to return for the next N requests. */
   failNext?: { status: number; count: number };
 }
@@ -74,6 +81,39 @@ export async function startFakeAzure(options: FakeAzureOptions): Promise<FakeAzu
           : {
               nextLink: `http://127.0.0.1:${String(address.port)}/tenants?api-version=2022-12-01&$skiptoken=${String(next)}`,
             }),
+      });
+      return;
+    }
+
+    if (url.pathname === '/providers/Microsoft.ResourceGraph/resources' && req.method === 'POST') {
+      if (url.searchParams.get('api-version') !== '2024-04-01') {
+        send(400, { error: { code: 'InvalidApiVersion', message: 'Bad api-version' } });
+        return;
+      }
+      let body = '';
+      req.on('data', (chunk: Buffer) => (body += chunk.toString()));
+      req.on('end', () => {
+        const request = JSON.parse(body) as {
+          query: string;
+          options?: { $skipToken?: string; $top?: number };
+        };
+        const data = options.resourceGraphByToken?.[token] ?? {};
+        const kind = request.query.includes('operationalinsights/workspaces')
+          ? 'workspaces'
+          : request.query.includes('resources/subscriptions')
+            ? 'subscriptions'
+            : 'sentinel';
+        const all = data[kind] ?? [];
+        const size = options.resourceGraphPageSize ?? request.options?.$top ?? 1000;
+        const skip = Number(request.options?.$skipToken ?? '0');
+        const page = all.slice(skip, skip + size);
+        send(200, {
+          totalRecords: all.length,
+          count: page.length,
+          data: page,
+          resultTruncated: 'false',
+          ...(skip + size < all.length ? { $skipToken: String(skip + size) } : {}),
+        });
       });
       return;
     }

@@ -66,6 +66,7 @@ export class AuthService {
   private readonly tokens: TokenCache;
   private readonly customProviders = new Map<string, AuthProvider>();
   private signInInProgress = false;
+  private readonly listeners = new Set<(snapshot: AccountsSnapshot) => void>();
 
   constructor(private readonly options: AuthServiceOptions) {
     this.tokens = options.tokenCache ?? new TokenCache();
@@ -148,8 +149,17 @@ export class AuthService {
     };
   }
 
+  /** Main-process subscribers (e.g. discovery re-runs when signed-in tenants change). */
+  onDidChange(listener: (snapshot: AccountsSnapshot) => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
   private emit(): void {
-    this.options.onChange(this.snapshot());
+    const snapshot = this.snapshot();
+    // Main-process listeners first (discovery adds tenant aliases before the UI sees them).
+    for (const listener of this.listeners) listener(snapshot);
+    this.options.onChange(snapshot);
   }
 
   // --- Accounts ---------------------------------------------------------------------------
