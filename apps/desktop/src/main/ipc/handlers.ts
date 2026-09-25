@@ -8,6 +8,7 @@ import { AppError } from '../../shared/errors';
 import type { AppInfo, IpcHandlers, SettingsUpdateRequest } from '../../shared/ipc/contracts';
 import type { LayoutState } from '../../shared/layout/layout-state';
 import type { MenuBarModel, MenuRole } from '../../shared/menus/menu-model';
+import type { MergedSchema, SchemaRequest } from '../../shared/schema/models';
 import type { Group, GroupsSnapshot } from '../../shared/workspaces/groups';
 import type { Inventory, TenantUpdate, WorkspaceUpdate } from '../../shared/workspaces/models';
 import { isAllowedExternalUrl } from '../security/navigation';
@@ -43,6 +44,7 @@ export interface HandlerDependencies {
     updateWorkspaces(update: WorkspaceUpdate): Promise<Inventory>;
     updateTenant(update: TenantUpdate): Promise<Inventory>;
   };
+  schema: { get(request: SchemaRequest): Promise<MergedSchema> };
   groups: {
     snapshot(): GroupsSnapshot;
     save(group: Group): Promise<GroupsSnapshot>;
@@ -91,6 +93,9 @@ export function createIpcHandlers(deps: HandlerDependencies): IpcHandlers {
       refresh: () => deps.inventory.refresh(),
       updateWorkspaces: (update) => deps.inventory.updateWorkspaces(update),
       updateTenant: (update) => deps.inventory.updateTenant(update),
+    },
+    schema: {
+      get: (request) => deps.schema.get(request),
     },
     groups: {
       get: () => deps.groups.snapshot(),
