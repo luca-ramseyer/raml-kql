@@ -17,6 +17,12 @@ to date whenever a component that ends up in the packaged app is added or remove
   Corporation): reading and editing the `*.jsonc` config files.
 - **[Monaco Editor](https://github.com/microsoft/monaco-editor)** (`monaco-editor`, MIT, ©
   Microsoft Corporation): the query editor.
+- **[AG Grid Community](https://github.com/ag-grid/ag-grid)** (`ag-grid-community`,
+  `ag-grid-react`, MIT, © AG Grid Ltd.): the results grid.
+- **[Apache ECharts](https://github.com/apache/echarts)** (Apache-2.0, © The Apache Software
+  Foundation): charts. Apache ECharts includes software developed at The Apache Software
+  Foundation (https://www.apache.org/).
+- **[ExcelJS](https://github.com/exceljs/exceljs)** (MIT): XLSX export.
 - **[monaco-kusto](https://github.com/Azure/monaco-kusto)** (`@kusto/monaco-kusto`, MIT, ©
   Microsoft Corporation) and the Kusto language service (`@kusto/language-service`,
   `@kusto/language-service-next`, MIT, © Microsoft Corporation): KQL syntax, IntelliSense and

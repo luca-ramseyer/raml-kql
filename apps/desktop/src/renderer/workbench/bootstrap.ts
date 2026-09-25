@@ -11,6 +11,7 @@ import { preloadQueryEditorWhenIdle } from '../features/editor/editor-preload';
 import { currentNamer, startPrivacy } from '../features/privacy/privacy';
 import { registerQueryCommands } from '../features/query/query-commands';
 import { applyRunSnapshot, useRuns } from '../features/query/run-store';
+import { registerResultCommands } from '../features/results/result-commands';
 import {
   selectedWorkspaces,
   syncTargetsWithInventory,
@@ -102,6 +103,7 @@ export async function startWorkbench({
     registerAccountCommands(),
     registerWorkspaceCommands(),
     registerQueryCommands(),
+    registerResultCommands(),
     registerQuickAccess(),
     startPrivacy(),
   );

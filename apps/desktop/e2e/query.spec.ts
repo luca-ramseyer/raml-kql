@@ -12,7 +12,7 @@ import { expect, MOD, test, writeSettings } from './fixtures';
  */
 
 const editor = (window: Page) => window.locator('.query-monaco .monaco-editor');
-const resultsTable = (window: Page) => window.getByRole('table', { name: 'Results' });
+const resultsTable = (window: Page) => window.locator('.results-grid').getByRole('grid');
 const runTable = (window: Page) => window.getByRole('table', { name: 'Workspace status' });
 
 async function openQuery(window: Page, text?: string): Promise<void> {
@@ -43,7 +43,7 @@ test('runs across all targets and merges results with attribution', async ({
   await expect(pill).toContainText('1 failed');
   await expect(window.getByText('Demo data')).toBeVisible();
   await expect(window.getByText('30 rows')).toBeVisible();
-  await expect(resultsTable(window).locator('th').first()).toHaveText('_TenantName');
+  await expect(resultsTable(window).getByRole('columnheader').first()).toHaveText(/_TenantName/);
   await expect(resultsTable(window)).toContainText('Contoso');
   await expect(resultsTable(window)).toContainText('la-contoso-soc');
 

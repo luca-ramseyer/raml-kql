@@ -1,0 +1,39 @@
+.results-grid {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.results-grid .ag-root-wrapper {
+  height: 100%;
+}
+
+.results-grid .cell-numeric {
+  text-align: right;
+}
+
+.results-grid .cell-dynamic {
+  color: var(--vscode-debugTokenExpression-string, var(--vscode-foreground));
+}
+
+.results-grid .cell-attribution {
+  color: var(--vscode-descriptionForeground);
+}
+
+/* Attribution columns stand out from query columns (spec 06). */
+.results-grid .attribution-header {
+  background-color: var(--vscode-editorGroupHeader-tabsBackground, transparent);
+  color: var(--vscode-textLink-foreground);
+}
+
+.results-grid .column-type-icon {
+  margin-right: 4px;
+  color: var(--vscode-symbolIcon-variableForeground, var(--vscode-descriptionForeground));
+  font-size: 12px;
+}
+
+.results-grid .column-widened {
+  margin-left: 4px;
+  color: var(--vscode-editorInfo-foreground, var(--vscode-descriptionForeground));
+  font-size: 12px;
+}
