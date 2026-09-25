@@ -9,6 +9,7 @@ import {
 } from '../features/accounts/accounts-store';
 import { currentNamer, startPrivacy } from '../features/privacy/privacy';
 import { registerQueryCommands } from '../features/query/query-commands';
+import { applyRunSnapshot, useRuns } from '../features/query/run-store';
 import {
   selectedWorkspaces,
   syncTargetsWithInventory,
@@ -94,6 +95,7 @@ export async function startWorkbench({
       notifyNewWorkspaces(count);
     }),
     bridge.events.on('groups.changed', applyGroups),
+    bridge.events.on('query.runChanged', applyRunSnapshot),
     useInventory.subscribe(syncTargetsWithInventory),
     registerBuiltinCommands(),
     registerAccountCommands(),
@@ -148,6 +150,10 @@ export async function startWorkbench({
     setContextKey('panelMaximized', panel.visible && panel.maximized);
     const { editors, activeId } = useEditors.getState();
     setContextKey('activeEditor', activeId);
+    setContextKey(
+      'queryRunning',
+      activeId !== undefined && useRuns.getState().byTab[activeId]?.state === 'running',
+    );
     // Like VS Code's `editorLangId`: set while a query tab is active.
     setContextKey(
       'editorLangId',
@@ -160,6 +166,7 @@ export async function startWorkbench({
   disposers.push(
     useLayout.subscribe(syncContext),
     useEditors.subscribe(syncContext),
+    useRuns.subscribe(syncContext),
     useNotifications.subscribe(syncContext),
   );
 

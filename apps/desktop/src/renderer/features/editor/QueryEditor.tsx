@@ -1,11 +1,14 @@
 import type * as Monaco from 'monaco-editor/esm/vs/editor/editor.api.js';
 import { useEffect, useRef, useState } from 'react';
 
-import { executeCommand, useCommands } from '../../platform/commands';
+import { executeCommand } from '../../platform/commands';
+import { setContextKey } from '../../platform/context-keys';
+import { useKeybindingLabel } from '../../platform/keybindings/keybinding-service';
 import { useSetting } from '../../platform/settings';
 import { useTheme } from '../../platform/theme/theme-service';
 import { Codicon } from '../../workbench/common/Codicon';
 import { updateQueryDoc, useQueryDocs } from '../query/query-docs';
+import { useRuns } from '../query/run-store';
 
 import { setActiveCodeEditor } from './active-editor';
 import { loadMonaco, type LoadedMonaco } from './monaco-loader';
@@ -93,8 +96,11 @@ export function QueryEditor({ editorId }: { editorId: string }): React.JSX.Eleme
   const wordWrap = useSetting('editor.wordWrap');
   const fontFamily = useSetting('editor.fontFamily');
   const fontSize = useSetting('editor.fontSize');
-  const canRun = useCommands((s) => s.commands.has('query.run'));
+  const run = useRuns((s) => s.byTab[editorId]);
+  const running = run?.state === 'running';
   const schemaLoading = useSchema((s) => s.loading);
+  const runKey = useKeybindingLabel('query.run');
+  const cancelKey = useKeybindingLabel('query.cancel');
 
   useEffect(() => {
     let disposed = false;
@@ -134,7 +140,34 @@ export function QueryEditor({ editorId }: { editorId: string }): React.JSX.Eleme
         saveViewState = () => {
           entry.viewState = editor.saveViewState();
         };
-        disposables.push(watchTimeFilter(loaded, editorId, entry.model));
+        disposables.push(
+          watchTimeFilter(loaded, editorId, entry.model),
+          editor.onDidFocusEditorText(() => {
+            setContextKey('editorTextFocus', true);
+          }),
+          editor.onDidBlurEditorText(() => {
+            setContextKey('editorTextFocus', false);
+          }),
+        );
+        // Run from inside the editor (Monaco would otherwise take Ctrl/Cmd+Enter itself).
+        const { KeyCode, KeyMod } = loaded.monaco;
+        for (const keybinding of [KeyMod.Shift | KeyCode.Enter, KeyMod.CtrlCmd | KeyCode.Enter]) {
+          editor.addCommand(keybinding, () => void executeCommand('query.run'));
+        }
+        // Escape cancels a running query, unless an editor widget wants it first.
+        const runningKey = editor.createContextKey(
+          'ramlQueryRunning',
+          useRuns.getState().byTab[editorId]?.state === 'running',
+        );
+        const unsubscribeRuns = useRuns.subscribe((state) => {
+          runningKey.set(state.byTab[editorId]?.state === 'running');
+        });
+        disposables.push({ dispose: unsubscribeRuns });
+        editor.addCommand(
+          KeyCode.Escape,
+          () => void executeCommand('query.cancel'),
+          'ramlQueryRunning && !suggestWidgetVisible && !findWidgetVisible && !parameterHintsVisible',
+        );
         editor.focus();
         setState('ready');
       })
@@ -148,6 +181,7 @@ export function QueryEditor({ editorId }: { editorId: string }): React.JSX.Eleme
       saveViewState?.();
       for (const disposable of disposables) disposable.dispose();
       setActiveCodeEditor(editorId, undefined);
+      setContextKey('editorTextFocus', false);
       editorRef.current?.dispose(); // the model stays; it belongs to the tab
       editorRef.current = undefined;
     };
@@ -167,16 +201,27 @@ export function QueryEditor({ editorId }: { editorId: string }): React.JSX.Eleme
   return (
     <div className="query-editor">
       <div className="query-toolbar" role="toolbar" aria-label="Query">
-        <button
-          type="button"
-          className="button button-primary query-run"
-          disabled={!canRun}
-          title={canRun ? 'Run Query' : 'Running queries arrives with the query engine'}
-          onClick={() => void executeCommand('query.run')}
-        >
-          <Codicon name="play" />
-          <span>Run</span>
-        </button>
+        {running ? (
+          <button
+            type="button"
+            className="button button-secondary query-run"
+            title={`Cancel (${cancelKey ?? 'Escape'})`}
+            onClick={() => void executeCommand('query.cancel')}
+          >
+            <Codicon name="debug-stop" />
+            <span>Cancel</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="button button-primary query-run"
+            title={runKey === undefined ? 'Run' : `Run (${runKey})`}
+            onClick={() => void executeCommand('query.run')}
+          >
+            <Codicon name="play" />
+            <span>Run</span>
+          </button>
+        )}
         {doc === undefined ? null : (
           <TimeRangePicker
             value={doc.timeRange}

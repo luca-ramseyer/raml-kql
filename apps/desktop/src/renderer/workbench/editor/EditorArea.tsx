@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 
+import { useRuns } from '../../features/query/run-store';
 import { SettingsEditor } from '../../features/settings/SettingsEditor';
 import { WelcomePage } from '../../features/welcome/WelcomePage';
 import { WorkspacesEditor } from '../../features/workspaces/WorkspacesEditor';
@@ -17,6 +18,8 @@ const QueryEditor = lazy(() =>
 );
 
 function Tab({ editor, active }: { editor: EditorInput; active: boolean }): React.JSX.Element {
+  // A running query tab shows a spinner, like VS Code's `$(loading~spin)` (spec 05).
+  const running = useRuns((s) => s.byTab[editor.id]?.state === 'running');
   return (
     <div
       role="tab"
@@ -35,7 +38,10 @@ function Tab({ editor, active }: { editor: EditorInput; active: boolean }): Reac
         if (event.key === 'Enter' || event.key === ' ') activateEditor(editor.id);
       }}
     >
-      <Codicon name={editor.icon} className="tab-icon" />
+      <Codicon
+        name={running ? 'loading' : editor.icon}
+        className={running ? 'tab-icon codicon-modifier-spin' : 'tab-icon'}
+      />
       <span className="tab-label">{editor.title}</span>
       <button
         type="button"

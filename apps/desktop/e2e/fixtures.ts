@@ -39,7 +39,13 @@ export const test = base.extend<AppFixtures>({
       }
       const app = await electron.launch({
         args: [appDir, '--demo'],
-        env: { ...env, RAML_KQL_CONFIG_DIR: configDir, NODE_ENV: 'production' },
+        env: {
+          ...env,
+          RAML_KQL_CONFIG_DIR: configDir,
+          // Machine-local data (session result cache, MSAL cache) stays in the temp dir too.
+          RAML_KQL_USER_DATA_DIR: path.join(configDir, '.user-data'),
+          NODE_ENV: 'production',
+        },
       });
       launched.push(app);
       const window = await app.firstWindow();
