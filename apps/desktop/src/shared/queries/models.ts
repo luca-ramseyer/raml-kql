@@ -1,3 +1,4 @@
+import { PackQueryMetaSchema, ParameterSchema } from '@raml-kql/pack-schema/schemas';
 import { z } from 'zod';
 
 import { QUERY_TEXT_MAX } from '../query/models';
@@ -29,6 +30,10 @@ export const QueryFileSchema = z.object({
   name: z.string(),
   /** The query without front-matter (what the editor shows). */
   body: z.string().max(QUERY_TEXT_MAX),
+  /** Valid `parameters` from the front-matter (shown in the parameter bar). */
+  parameters: z.array(ParameterSchema).optional(),
+  /** ISO 8601 duration from the front-matter. */
+  timespan: z.string().optional(),
 });
 export type QueryFile = z.infer<typeof QueryFileSchema>;
 
@@ -39,6 +44,8 @@ export const SaveQueryRequestSchema = z
     name: z.string().min(1).max(300).optional(),
     folder: z.union([QueryPathSchema, z.literal('')]).optional(),
     body: z.string().max(QUERY_TEXT_MAX),
+    /** Front-matter for a new file (Duplicate to My Queries keeps a pack query's metadata). */
+    meta: PackQueryMetaSchema.partial().optional(),
   })
   .strict();
 export type SaveQueryRequest = z.infer<typeof SaveQueryRequestSchema>;

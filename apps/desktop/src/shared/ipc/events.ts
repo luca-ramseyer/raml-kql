@@ -35,6 +35,8 @@ export const ipcEvents = {
   'history.changed': z.object({}),
   /** Files in My Queries changed (in the app or on disk). */
   'queries.changed': z.object({}),
+  /** Pack sources, installed packs or available updates changed. */
+  'packs.changed': z.object({}),
 } as const satisfies Record<string, z.ZodType>;
 
 export type IpcEvents = typeof ipcEvents;

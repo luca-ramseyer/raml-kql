@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import { AppError } from '../../../shared/errors';
 import type { QueryNode } from '../../../shared/queries/models';
+import { timeRangeForDuration } from '../../../shared/query/time-range';
 import { activateEditor, updateEditor, useEditors } from '../../platform/editors';
 import { notify } from '../../platform/notifications';
 import { showInputBox, showQuickPick } from '../../platform/quickinput/quick-input';
@@ -55,12 +56,15 @@ export async function openMyQuery(path: string, preview: boolean): Promise<void>
   }
   try {
     const file = await unwrap(getBridge().queries.read({ path }));
+    const timeRange = timeRangeForDuration(file.timespan);
     openQueryTab({
       text: file.body,
       title: file.name,
       preview,
       file: { path: file.path, savedText: file.body },
       description: folderOf(file.path) || undefined,
+      ...(timeRange === undefined ? {} : { timeRange }),
+      ...(file.parameters === undefined ? {} : { parameters: file.parameters }),
     });
   } catch (error) {
     report(error, 'The query could not be opened.');

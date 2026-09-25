@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+import type { QueryParameters } from './parameters';
+
 /**
  * Query tab documents: the text and time range of each query editor (spec 05). Result data is
  * never kept here. Persistence of tabs arrives in Phase 7.
@@ -43,6 +45,8 @@ export interface QueryDoc {
   file?: { path: string; savedText: string } | undefined;
   /** Restored from the last session: its results were cleared (spec 04). */
   restored?: boolean | undefined;
+  /** Query parameters (pack queries, or My Queries with `parameters` in front-matter). */
+  parameters?: QueryParameters | undefined;
 }
 
 export const STARTER_QUERY = `SigninLogs

@@ -1,0 +1,28 @@
+// ---
+// id: ingestion-drop
+// name: Tables with an ingestion drop in the last 24h
+// description: Tables whose ingested volume in the last 24 hours fell well below their daily average of the previous week. A drop often means a broken connector or agent, and a blind spot.
+// category: health
+// severity: medium
+// tables: [Usage]
+// tags: [health, ingestion]
+// timespan: P8D
+// parameters:
+//   - name: DropPercent
+//     type: real
+//     default: 50
+//     description: Minimum drop against the weekly daily average, in percent
+// ---
+let DropPercent = 50.0;
+let Baseline = Usage
+    | where TimeGenerated between (ago(8d) .. ago(1d))
+    | summarize BaselineMBPerDay = sum(Quantity) / 7.0 by DataType;
+Usage
+| where TimeGenerated > ago(1d)
+| summarize LastDayMB = sum(Quantity) by DataType
+| join kind=rightouter Baseline on DataType
+| extend DataType = coalesce(DataType, DataType1), LastDayMB = coalesce(LastDayMB, 0.0)
+| extend DropPercentActual = round(100.0 * (BaselineMBPerDay - LastDayMB) / BaselineMBPerDay, 1)
+| where BaselineMBPerDay > 0 and DropPercentActual >= DropPercent
+| project DataType, BaselineMBPerDay = round(BaselineMBPerDay, 2), LastDayMB = round(LastDayMB, 2), DropPercentActual
+| order by DropPercentActual desc

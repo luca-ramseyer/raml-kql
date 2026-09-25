@@ -1,0 +1,29 @@
+// ---
+// id: mfa-fatigue
+// name: Repeated MFA denials (MFA fatigue)
+// description: Users who denied or ignored many MFA prompts in a short window, a sign that an attacker with the password is pushing prompts until the user gives in.
+// category: hunting
+// severity: high
+// tables: [SigninLogs]
+// mitre: [T1621]
+// tags: [identity, mfa]
+// timespan: P1D
+// parameters:
+//   - name: Threshold
+//     type: long
+//     default: 5
+//     description: Denied or unanswered prompts per user within the window
+//   - name: Window
+//     type: timespan
+//     default: 1h
+//     description: Size of the time window
+// ---
+let Threshold = 5;
+let Window = 1h;
+SigninLogs
+| where TimeGenerated > ago(1d)
+// 500121: strong authentication failed (denied, timed out or reported as fraud)
+| where ResultType == "500121"
+| summarize Denials = count(), IPAddresses = make_set(IPAddress, 5) by UserPrincipalName, bin(TimeGenerated, Window)
+| where Denials >= Threshold
+| order by Denials desc

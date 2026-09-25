@@ -15,6 +15,14 @@ import type {
 } from '../../shared/ipc/contracts';
 import type { LayoutState } from '../../shared/layout/layout-state';
 import type { MenuBarModel, MenuRole } from '../../shared/menus/menu-model';
+import type {
+  ImportResult,
+  PackQueryData,
+  PackQueryRef,
+  PacksSnapshot,
+  SourcePreview,
+  UpdatePreview,
+} from '../../shared/packs/models';
 import type { QueryFile, QueryNode, SaveQueryRequest } from '../../shared/queries/models';
 import type { HistoryEntry } from '../../shared/query/history';
 import type { QueryRunRequest, RerunRequest, RunSnapshot } from '../../shared/query/models';
@@ -110,6 +118,7 @@ export interface HandlerDependencies {
     delete(path: string): Promise<void>;
     reveal(path: string | undefined): void;
   };
+  packs: PacksOperations;
   window: WindowOperations;
   shell: {
     openConfigFile(file: 'settings' | 'keybindings'): Promise<void>;
@@ -118,6 +127,28 @@ export interface HandlerDependencies {
     writeClipboard(text: string): Promise<void>;
     writeClipboardImage(dataUrl: string): Promise<void>;
   };
+}
+
+/** Query packs and their sources (spec 08). */
+export interface PacksOperations {
+  snapshot(): Promise<PacksSnapshot>;
+  readQuery(ref: PackQueryRef): PackQueryData;
+  previewGit(request: {
+    url: string;
+    ref?: string | undefined;
+    token?: string | undefined;
+  }): Promise<SourcePreview>;
+  importFile(kind: 'file' | 'folder'): Promise<ImportResult>;
+  add(previewId: string): Promise<PacksSnapshot>;
+  cancelPreview(previewId: string): Promise<void>;
+  remove(sourceId: string): Promise<PacksSnapshot>;
+  checkUpdates(options: { sourceId?: string; force: boolean }): Promise<{
+    checked: number;
+    updates: number;
+    errors: { label: string; message: string }[];
+  }>;
+  updatePreview(sourceId: string): Promise<UpdatePreview>;
+  applyUpdate(sourceId: string, sha: string): Promise<PacksSnapshot>;
 }
 
 /** Builds the main-process implementation of every IPC contract. */
@@ -196,6 +227,21 @@ export function createIpcHandlers(deps: HandlerDependencies): IpcHandlers {
     },
     themes: {
       listUser: () => deps.userThemes(),
+    },
+    packs: {
+      list: () => deps.packs.snapshot(),
+      readQuery: (ref) => deps.packs.readQuery(ref),
+      previewGit: (request) => deps.packs.previewGit(request),
+      importFile: ({ kind }) => deps.packs.importFile(kind),
+      add: ({ previewId }) => deps.packs.add(previewId),
+      cancelPreview: async ({ previewId }) => {
+        await deps.packs.cancelPreview(previewId);
+      },
+      remove: ({ sourceId }) => deps.packs.remove(sourceId),
+      checkUpdates: ({ sourceId, force }) =>
+        deps.packs.checkUpdates({ ...(sourceId === undefined ? {} : { sourceId }), force }),
+      updatePreview: ({ sourceId }) => deps.packs.updatePreview(sourceId),
+      applyUpdate: ({ sourceId, sha }) => deps.packs.applyUpdate(sourceId, sha),
     },
     queries: {
       list: async () => ({ nodes: await deps.queries.list() }),

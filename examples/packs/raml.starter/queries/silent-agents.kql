@@ -1,0 +1,22 @@
+// ---
+// id: silent-agents
+// name: Agents that stopped reporting
+// description: Computers that sent heartbeats in the last week but none recently. Silent agents leave gaps in detection coverage.
+// category: health
+// severity: low
+// tables: [Heartbeat]
+// tags: [health, agents]
+// timespan: P7D
+// parameters:
+//   - name: SilentFor
+//     type: timespan
+//     default: 4h
+//     description: How long without a heartbeat before a computer is listed
+// ---
+let SilentFor = 4h;
+Heartbeat
+| where TimeGenerated > ago(7d)
+| summarize LastHeartbeat = max(TimeGenerated) by Computer, OSType, Category
+| where LastHeartbeat < ago(SilentFor)
+| extend SilentHours = round((now() - LastHeartbeat) / 1h, 1)
+| order by LastHeartbeat asc

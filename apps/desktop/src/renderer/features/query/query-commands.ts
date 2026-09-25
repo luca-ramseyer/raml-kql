@@ -34,6 +34,7 @@ import {
   saveTab,
   saveTabAs,
 } from '../library/my-queries';
+import { openPackQuery, packKey, usePacks } from '../packs/packs-store';
 import { forgetTabResults } from '../results/results-ui';
 import { copyTabTargets, forgetTabTargets } from '../targets/targets-store';
 
@@ -90,6 +91,11 @@ export function splitActiveEditor(): void {
     updateQueryDoc(id, { timeRange: doc.timeRange, timeSetInQuery: doc.timeSetInQuery });
   }
   copyTabTargets(active.id, id);
+}
+
+/** Label the first item of a filtered group (filtering keeps items in any order). */
+function withGroup<T extends { group?: string | undefined }>(items: T[], group: string): T[] {
+  return items.map((item, i) => ({ ...item, group: i === 0 ? group : undefined }));
 }
 
 const IN_QUERY = "editorLangId == 'kusto'";
@@ -155,9 +161,9 @@ export function registerQueryCommands(): () => void {
     // Ctrl/Cmd+P (spec 05): open editors, My Queries and recent runs.
     registerQuickAccessProvider({
       prefix: '',
-      helpText: 'Go to Query (open editors, My Queries, history)',
+      helpText: 'Go to Query (open editors, My Queries, query packs, history)',
       placeholder:
-        'Search open editors, My Queries and history (append > to run commands, ? for help)',
+        'Search open editors, My Queries, query packs and history (> for commands, ? for help)',
       noResultsText: 'Nothing matches. Type > to search commands.',
       getItems: (filter) => {
         const editors = useEditors.getState().editors.map((editor, i) => ({
@@ -177,6 +183,17 @@ export function registerQueryCommands(): () => void {
             description: folderOf(node.path) || 'My Queries',
             ...(i === 0 ? { group: 'my queries' } : {}),
           }));
+        const packs = usePacks.getState().snapshot.packs.flatMap((pack) =>
+          pack.queries.map((query) => ({
+            id: `pack:${packKey(pack)}:${query.id}`,
+            label: query.name,
+            icon: 'package',
+            description: pack.name,
+          })),
+        );
+        const packItems = packs.map((item, i) =>
+          i === 0 ? { ...item, group: 'query packs' } : item,
+        );
         const history = useHistory
           .getState()
           .entries.slice(0, 200)
@@ -192,6 +209,10 @@ export function registerQueryCommands(): () => void {
         return [
           ...filterQuickPickItems(editors, filter, { sort: true }),
           ...filterQuickPickItems(queries, filter, { sort: true, matchDescription: true }),
+          ...withGroup(
+            filterQuickPickItems(packItems, filter, { sort: true, matchDescription: true }),
+            'query packs',
+          ),
           ...filterQuickPickItems(history, filter, { sort: true }),
         ];
       },
@@ -199,7 +220,12 @@ export function registerQueryCommands(): () => void {
         const id = item?.id ?? '';
         if (id.startsWith('editor:')) activateEditor(id.slice('editor:'.length));
         else if (id.startsWith('query:')) void openMyQuery(id.slice('query:'.length), false);
-        else if (id.startsWith('history:')) {
+        else if (id.startsWith('pack:')) {
+          for (const pack of usePacks.getState().snapshot.packs) {
+            const query = pack.queries.find((q) => id === `pack:${packKey(pack)}:${q.id}`);
+            if (query !== undefined) void openPackQuery(pack, query, false);
+          }
+        } else if (id.startsWith('history:')) {
           const entry = useHistory.getState().entries.find((e) => `history:${e.id}` === id);
           if (entry !== undefined) openHistoryEntry(entry, false);
         }

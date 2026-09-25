@@ -1,3 +1,8 @@
+import {
+  KQL_IDENTIFIER,
+  PARAMETER_TYPES,
+  ParameterValueSchema,
+} from '@raml-kql/pack-schema/schemas';
 import { z } from 'zod';
 
 import { AppErrorCodeSchema } from '../errors';
@@ -12,6 +17,17 @@ import { TimeRangeSchema } from './time-range';
 
 export const QUERY_TEXT_MAX = 100_000;
 
+/** A parameter with the value to run with. */
+export const BoundParameterSchema = z
+  .object({
+    name: z.string().regex(KQL_IDENTIFIER).max(100),
+    type: z.enum(PARAMETER_TYPES),
+    values: z.array(z.string().max(1000)).max(500).optional(),
+    value: ParameterValueSchema,
+  })
+  .strict();
+export type BoundParameter = z.infer<typeof BoundParameterSchema>;
+
 export const QueryRunRequestSchema = z
   .object({
     tabId: z.string().min(1).max(200),
@@ -23,6 +39,11 @@ export const QueryRunRequestSchema = z
     groupId: z.string().max(100).optional(),
     timeRange: TimeRangeSchema.optional(),
     tabTitle: z.string().max(300).optional(),
+    /**
+     * Query parameters (spec 08): main prepends typed `let` statements, or replaces the
+     * query's own `let` of the same name. Values are checked against their type there.
+     */
+    parameters: z.array(BoundParameterSchema).max(50).optional(),
   })
   .strict();
 export type QueryRunRequest = z.infer<typeof QueryRunRequestSchema>;

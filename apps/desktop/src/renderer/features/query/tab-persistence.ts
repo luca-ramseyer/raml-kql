@@ -19,6 +19,12 @@ import { createQueryDoc, isDirty, useQueryDocs } from './query-docs';
  */
 const SAVE_DELAY_MS = 500;
 
+type PersistedInput = EditorInput & { kind: Exclude<EditorInput['kind'], 'packUpdate'> };
+
+function isPersisted(editor: EditorInput): editor is PersistedInput {
+  return editor.kind !== 'packUpdate';
+}
+
 export function buildTabsState(): TabsState {
   const snapshot = editorsSnapshot();
   const { docs } = useQueryDocs.getState();
@@ -29,8 +35,12 @@ export function buildTabsState(): TabsState {
     groups: snapshot.groups.map((group) => ({
       id: group.id,
       size: group.size,
-      ...(group.activeId === undefined ? {} : { activeId: group.activeId }),
-      editors: group.editors.map((editor) => {
+      ...(group.activeId === undefined ||
+      !group.editors.some((e) => e.id === group.activeId && e.kind !== 'packUpdate')
+        ? {}
+        : { activeId: group.activeId }),
+      // Reviews of pack updates are not restored: they would be stale.
+      editors: group.editors.filter(isPersisted).map((editor) => {
         const doc = editor.kind === 'query' ? docs[editor.id] : undefined;
         const targets = editor.kind === 'query' ? tabTargets(editor.id) : undefined;
         return {
@@ -55,6 +65,7 @@ export function buildTabsState(): TabsState {
                           : { targetGroupId: targets.groupId }),
                       }),
                   ...(doc.file === undefined ? {} : { file: doc.file }),
+                  ...(doc.parameters === undefined ? {} : { parameters: doc.parameters }),
                 },
               }),
         };
@@ -85,6 +96,7 @@ export async function restoreTabs(): Promise<boolean> {
         timeRange: query.timeRange,
         cursor: query.cursor,
         file: query.file,
+        parameters: query.parameters,
         restored: true,
       });
       if (query.targets !== undefined) setTabTargets(editor.id, query.targets, query.targetGroupId);

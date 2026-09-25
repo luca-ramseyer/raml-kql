@@ -1,6 +1,9 @@
+import type { Parameter } from '@raml-kql/pack-schema/schemas';
+
 import { newQueryEditorId, openQueryEditor, useEditors } from '../../platform/editors';
 import { copyTabTargets, setTabTargets } from '../targets/targets-store';
 
+import { initialParameters } from './parameters';
 import { createQueryDoc, STARTER_QUERY, type QueryDoc } from './query-docs';
 
 /** Opening query tabs: new ones, and ones with their own text, targets and time range. */
@@ -26,11 +29,16 @@ export function openQueryTab(options: {
   targets?: { selected: readonly string[]; groupId: string | undefined } | undefined;
   file?: QueryDoc['file'] | undefined;
   description?: string | undefined;
+  /** Parameter definitions; inputs start from the defaults. */
+  parameters?: readonly Parameter[] | undefined;
 }): string {
   const id = newQueryEditorId();
   createQueryDoc(id, options.text, {
     ...(options.timeRange === undefined ? {} : { timeRange: options.timeRange }),
     ...(options.file === undefined ? {} : { file: options.file }),
+    ...(options.parameters === undefined || options.parameters.length === 0
+      ? {}
+      : { parameters: initialParameters(options.parameters) }),
   });
   if (options.targets !== undefined) {
     setTabTargets(id, options.targets.selected, options.targets.groupId);

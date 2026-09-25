@@ -5,6 +5,7 @@ import {
   loadQueryEditor,
   type QueryEditorComponent,
 } from '../../features/editor/editor-preload';
+import { PackUpdateEditor } from '../../features/packs/PackUpdateEditor';
 import { useRuns } from '../../features/query/run-store';
 import { SettingsEditor } from '../../features/settings/SettingsEditor';
 import { WelcomePage } from '../../features/welcome/WelcomePage';
@@ -323,6 +324,13 @@ function GroupView({
             {editor?.kind === 'welcome' ? <WelcomePage /> : null}
             {editor?.kind === 'settings' ? <SettingsEditor /> : null}
             {editor?.kind === 'workspaces' ? <WorkspacesEditor /> : null}
+            {editor?.kind === 'packUpdate' ? (
+              <PackUpdateEditor
+                key={editor.id}
+                editorId={editor.id}
+                sourceId={editor.id.slice('pack-update:'.length)}
+              />
+            ) : null}
             {editor?.kind === 'query' ? (
               <QueryEditorHost key={editor.id} editorId={editor.id} />
             ) : null}

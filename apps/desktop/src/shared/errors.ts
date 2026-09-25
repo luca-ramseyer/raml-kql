@@ -30,6 +30,14 @@ export const AppErrorCodeSchema = z.enum([
   'NET_OFFLINE',
   /** Azure Resource Manager returned an error. */
   'ARM_ERROR',
+  /** A file operation the user asked for failed (My Queries, import); the message says why. */
+  'FILE_OPERATION_FAILED',
+  /** A query parameter value doesn't fit its type. */
+  'PARAMETER_INVALID',
+  /** A pack source couldn't be reached, read or validated. */
+  'SOURCE_ERROR',
+  /** A git source needs a token (private repository) or the token was refused. */
+  'SOURCE_AUTH_REQUIRED',
 ]);
 export type AppErrorCode = z.infer<typeof AppErrorCodeSchema>;
 

@@ -55,6 +55,11 @@ export function WelcomePage(): React.JSX.Element {
             <h2 id="welcome-start">Start</h2>
             <ul className="welcome-list">
               <StartLink icon="new-file" label="New Query" command="query.new" />
+              <StartLink
+                icon="repo-clone"
+                label="Add Query Pack Source…"
+                command="library.addPackSource"
+              />
               {demo ? (
                 <StartLink
                   icon="beaker"

@@ -86,7 +86,7 @@ export function QuickInput(): React.JSX.Element | null {
         <input
           ref={inputRef}
           className="quick-input-box"
-          type="text"
+          type={provider?.password === true ? 'password' : 'text'}
           role="combobox"
           aria-expanded="true"
           aria-controls="quick-input-list"

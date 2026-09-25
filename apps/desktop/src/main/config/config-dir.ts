@@ -58,6 +58,9 @@ export interface ConfigPaths {
   readonly tabsStateFile: string;
   readonly historyFile: string;
   readonly queriesDir: string;
+  readonly sourcesFile: string;
+  readonly sourcesDir: string;
+  readonly packSourcesStateFile: string;
 }
 
 export function configPaths(root: string): ConfigPaths {
@@ -77,6 +80,9 @@ export function configPaths(root: string): ConfigPaths {
     tabsStateFile: path.join(root, 'state', 'tabs.json'),
     historyFile: path.join(root, 'state', 'history.jsonl'),
     queriesDir: path.join(root, 'queries'),
+    sourcesFile: path.join(root, 'sources.jsonc'),
+    sourcesDir: path.join(root, 'sources'),
+    packSourcesStateFile: path.join(root, 'state', 'pack-sources.json'),
   };
 }
 

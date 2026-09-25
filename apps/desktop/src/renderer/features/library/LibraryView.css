@@ -5,7 +5,13 @@
   min-height: 0;
 }
 
-.library-view.drop-target {
+.library-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.library-section-body.drop-target {
   background-color: var(--vscode-list-dropBackground, rgba(83, 89, 93, 0.3));
 }
 
@@ -22,11 +28,46 @@
 }
 
 .library-tree {
-  flex: 1;
-  margin: 0;
+  margin: 0 0 8px;
   padding: 0;
-  overflow: auto;
   list-style: none;
+}
+
+.library-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 8px;
+}
+
+.library-section-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.library-hint {
+  margin: 2px 20px 8px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+}
+
+.library-toggle[aria-pressed='true'] {
+  background-color: var(--vscode-inputOption-activeBackground, rgba(36, 137, 219, 0.51));
+  outline: 1px solid var(--vscode-inputOption-activeBorder, #2488db);
+}
+
+.library-badge {
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: 8px;
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.library-row.problem .library-label {
+  color: var(--vscode-list-warningForeground, #cca700);
 }
 
 .library-row {

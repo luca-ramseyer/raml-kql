@@ -6,14 +6,15 @@ import { setContextKey } from '../../platform/context-keys';
 import { activateEditor, updateEditor, useEditors } from '../../platform/editors';
 import { useKeybindingLabel } from '../../platform/keybindings/keybinding-service';
 import { useSetting } from '../../platform/settings';
-import { useTheme } from '../../platform/theme/theme-service';
 import { Codicon } from '../../workbench/common/Codicon';
+import { ParameterBar } from '../query/ParameterBar';
 import { updateQueryDoc, useQueryDocs } from '../query/query-docs';
 import { useRuns } from '../query/run-store';
 
 import { setActiveCodeEditor } from './active-editor';
 import { loadMonaco, type LoadedMonaco } from './monaco-loader';
-import { MONACO_THEME_NAME, toMonacoTheme } from './monaco-theme';
+import { MONACO_THEME_NAME } from './monaco-theme';
+import { syncTheme } from './monaco-theme-sync';
 import { queryModelFor } from './query-models';
 import { startSchemaSync, useSchema } from './schema-store';
 import { filtersOnTimeGenerated, type Classification } from './time-filter';
@@ -27,21 +28,6 @@ function defaultFont(): { family: string; size: number } {
   if (agent.includes('Mac')) return { family: 'Menlo, Monaco, "Courier New", monospace', size: 12 };
   if (agent.includes('Windows')) return { family: 'Consolas, "Courier New", monospace', size: 14 };
   return { family: '"Droid Sans Mono", "monospace", monospace', size: 14 };
-}
-
-let themeSynced = false;
-/** Keep Monaco's theme in step with the workbench theme (tokenColors → Monaco rules). */
-function syncTheme({ monaco }: LoadedMonaco): void {
-  const apply = (): void => {
-    monaco.editor.defineTheme(MONACO_THEME_NAME, toMonacoTheme(useTheme.getState().active));
-    monaco.editor.setTheme(MONACO_THEME_NAME);
-  };
-  apply();
-  if (themeSynced) return;
-  themeSynced = true;
-  useTheme.subscribe((state, previous) => {
-    if (state.active !== previous.active) apply();
-  });
 }
 
 interface ClassifyingWorker {
@@ -259,6 +245,9 @@ export function QueryEditor({ editorId }: { editorId: string }): React.JSX.Eleme
           </span>
         ) : null}
       </div>
+      {doc?.parameters === undefined ? null : (
+        <ParameterBar editorId={editorId} parameters={doc.parameters} />
+      )}
       <div
         className="query-monaco"
         ref={container}

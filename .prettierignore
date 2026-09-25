@@ -11,3 +11,4 @@ docs/spec/
 CLAUDE.md
 # Scanner output (e.g. gitleaks in CI)
 *.sarif
+packages/pack-schema/schemas/

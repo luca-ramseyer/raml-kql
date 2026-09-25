@@ -1,0 +1,29 @@
+// ---
+// id: signins-from-new-countries
+// name: Successful sign-ins from new countries
+// description: Successful sign-ins from a country the user has not signed in from during the look-back period. Useful to spot stolen credentials used from abroad.
+// category: hunting
+// severity: medium
+// tables: [SigninLogs]
+// mitre: [T1078, T1078.004]
+// tags: [identity, anomaly]
+// timespan: P14D
+// parameters:
+//   - name: LookbackDays
+//     type: int
+//     default: 14
+//     description: Days of history that define "known" countries
+// ---
+let LookbackDays = 14;
+let Known = SigninLogs
+    | where TimeGenerated between (ago(1d * LookbackDays) .. ago(1d))
+    | where ResultType == "0"
+    | summarize by UserPrincipalName, Country = tostring(LocationDetails.countryOrRegion);
+SigninLogs
+| where TimeGenerated > ago(1d)
+| where ResultType == "0"
+| extend Country = tostring(LocationDetails.countryOrRegion)
+| where isnotempty(Country)
+| join kind=leftanti Known on UserPrincipalName, Country
+| summarize FirstSeen = min(TimeGenerated), SignIns = count(), Apps = make_set(AppDisplayName, 5), IPAddresses = make_set(IPAddress, 5) by UserPrincipalName, Country
+| order by FirstSeen desc

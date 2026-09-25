@@ -39,6 +39,8 @@ export interface QuickInputProvider {
   message?(filter: string): string | undefined;
   /** Input boxes: return an error to refuse Enter. */
   validate?(filter: string): string | undefined;
+  /** Input boxes: mask the text (tokens). */
+  password?: boolean;
 }
 
 export interface QuickAccessProvider extends QuickInputProvider {
@@ -166,6 +168,8 @@ export interface InputBoxOptions {
   prompt: string;
   value?: string;
   validate?: (value: string) => string | undefined;
+  /** Mask the text (tokens, like VS Code's `password` option). */
+  password?: boolean;
   onAccept: (value: string) => void;
   onCancel?: () => void;
 }
@@ -180,6 +184,7 @@ export function showInputBox(options: InputBoxOptions): void {
         options.validate?.(value) ??
         `${options.prompt} (Press 'Enter' to confirm or 'Escape' to cancel)`,
       validate: (value) => options.validate?.(value),
+      ...(options.password === true ? { password: true } : {}),
       onAccept: (_item, value) => {
         options.onAccept(value);
       },

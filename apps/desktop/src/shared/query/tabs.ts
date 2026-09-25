@@ -1,3 +1,4 @@
+import { ParameterSchema } from '@raml-kql/pack-schema/schemas';
 import { z } from 'zod';
 
 import { QUERY_TEXT_MAX } from './models';
@@ -20,6 +21,13 @@ export const PersistedQuerySchema = z.object({
   /** Linked My Queries file (path relative to `<config>/queries/`) and its saved text. */
   file: z
     .object({ path: z.string().max(1000), savedText: z.string().max(QUERY_TEXT_MAX) })
+    .optional(),
+  /** Parameter definitions and what was typed into the parameter bar. */
+  parameters: z
+    .object({
+      definitions: z.array(ParameterSchema).max(50),
+      inputs: z.record(z.string().max(100), z.string().max(100_000)),
+    })
     .optional(),
 });
 export type PersistedQuery = z.infer<typeof PersistedQuerySchema>;

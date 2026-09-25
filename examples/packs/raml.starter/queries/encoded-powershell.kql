@@ -1,0 +1,19 @@
+// ---
+// id: encoded-powershell
+// name: Encoded PowerShell commands
+// description: PowerShell started with an encoded command, a common way to hide what a script does. The Base64 payload is decoded where possible.
+// category: hunting
+// severity: medium
+// tables: [DeviceProcessEvents]
+// mitre: [T1059.001, T1027]
+// tags: [endpoint, defender, powershell]
+// timespan: P1D
+// ---
+DeviceProcessEvents
+| where TimeGenerated > ago(1d)
+| where FileName in~ ("powershell.exe", "pwsh.exe")
+| where ProcessCommandLine matches regex @"(?i)\s-e(nc|ncodedcommand)?\s+[A-Za-z0-9+/=]{20,}"
+| extend Encoded = extract(@"(?i)\s-e(?:nc|ncodedcommand)?\s+([A-Za-z0-9+/=]{20,})", 1, ProcessCommandLine)
+| extend Decoded = replace_string(base64_decode_tostring(Encoded), "\u0000", "")
+| project TimeGenerated, DeviceName, AccountName, InitiatingProcessFileName, Decoded, ProcessCommandLine
+| order by TimeGenerated desc

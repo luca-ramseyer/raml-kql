@@ -1,0 +1,116 @@
+.pack-update {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background-color: var(--vscode-editor-background);
+}
+
+.pack-update-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--vscode-editorGroup-border, transparent);
+  gap: 16px;
+}
+
+.pack-update-header h1 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.pack-update-shas,
+.pack-update-meta {
+  margin: 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+}
+
+.pack-update-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.pack-update-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.pack-update-side {
+  flex: 0 0 300px;
+  overflow: auto;
+  padding: 8px 0;
+  border-right: 1px solid var(--vscode-editorGroup-border, transparent);
+}
+
+.pack-update-side h2 {
+  margin: 8px 16px 4px;
+  color: var(--vscode-sideBarSectionHeader-foreground, var(--vscode-foreground));
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.pack-update-side ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pack-update-commits li,
+.pack-update-problems li {
+  display: flex;
+  flex-direction: column;
+  padding: 3px 16px;
+}
+
+.pack-update-change {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 16px;
+  cursor: pointer;
+  gap: 6px;
+}
+
+.pack-update-change:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.pack-update-change.selected {
+  background-color: var(--vscode-list-inactiveSelectionBackground);
+}
+
+.pack-update-change.added .codicon {
+  color: var(--vscode-gitDecoration-addedResourceForeground, #81b88b);
+}
+
+.pack-update-change.removed .codicon {
+  color: var(--vscode-gitDecoration-deletedResourceForeground, #c74e39);
+}
+
+.pack-update-change.changed .codicon {
+  color: var(--vscode-gitDecoration-modifiedResourceForeground, #e2c08d);
+}
+
+.pack-update-change-name {
+  overflow: hidden;
+  flex: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pack-update-diff {
+  flex: 1;
+  min-width: 0;
+}
+
+.pack-update-message {
+  padding: 20px;
+  color: var(--vscode-descriptionForeground);
+}
