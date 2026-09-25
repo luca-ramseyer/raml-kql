@@ -174,6 +174,10 @@ describe('MsalAuthProvider', () => {
       scopes: ['https://api.loganalytics.io/Data.Read'],
       authority: `https://login.microsoftonline.com/${TENANT}`,
     });
+    await provider.acquireTokenSilent(account.homeAccountId, TENANT, 's', { forceRefresh: true });
+    expect(client.acquireTokenSilent).toHaveBeenLastCalledWith(
+      expect.objectContaining({ forceRefresh: true }),
+    );
   });
 
   it('treats accounts missing from the cache as needing sign-in', async () => {

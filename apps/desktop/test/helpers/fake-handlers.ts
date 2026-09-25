@@ -73,6 +73,22 @@ export function fakeHandlerDependencies(
     schema: {
       get: vi.fn(() => Promise.resolve(EMPTY_SCHEMA)),
     },
+    query: {
+      run: vi.fn(() => Promise.reject(new Error('not faked'))),
+      cancel: vi.fn(() => undefined),
+      rerun: vi.fn(() => Promise.resolve(undefined)),
+      get: vi.fn(() => undefined),
+      deleteRun: vi.fn(() => Promise.resolve()),
+      deleteAll: vi.fn(() => Promise.resolve()),
+    },
+    results: {
+      page: vi.fn((request: { runId: string; tableIndex: number; offset: number }) =>
+        Promise.resolve({ ...request, columns: [], rows: [] }),
+      ),
+    },
+    audit: {
+      verify: vi.fn(() => Promise.resolve({ ok: true, entries: 0, files: 0 })),
+    },
     groups: {
       snapshot: () => ({ groups: [], problems: [] }),
       save: vi.fn(() => Promise.resolve({ groups: [], problems: [] })),

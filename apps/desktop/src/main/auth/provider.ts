@@ -49,7 +49,12 @@ export interface AuthProvider {
   signIn(options: SignInOptions): Promise<ProviderAccount>;
   signOut(accountId: string): Promise<void>;
   /** Throws {@link InteractionRequiredError} or {@link NoAccessError} when appropriate. */
-  acquireTokenSilent(accountId: string, tenantId: string, scope: string): Promise<AccessToken>;
+  acquireTokenSilent(
+    accountId: string,
+    tenantId: string,
+    scope: string,
+    options?: { forceRefresh?: boolean },
+  ): Promise<AccessToken>;
   /** Interactive re-authentication for one tenant (system browser). */
   acquireTokenInteractive(accountId: string, tenantId: string, scope: string): Promise<AccessToken>;
 }

@@ -5,9 +5,21 @@ import type {
   UserThemesSnapshot,
 } from '../../shared/config/config-snapshots';
 import { AppError } from '../../shared/errors';
-import type { AppInfo, IpcHandlers, SettingsUpdateRequest } from '../../shared/ipc/contracts';
+import type {
+  AppInfo,
+  AuditVerification,
+  IpcHandlers,
+  SettingsUpdateRequest,
+} from '../../shared/ipc/contracts';
 import type { LayoutState } from '../../shared/layout/layout-state';
 import type { MenuBarModel, MenuRole } from '../../shared/menus/menu-model';
+import type {
+  QueryRunRequest,
+  RerunRequest,
+  ResultPage,
+  ResultPageRequest,
+  RunSnapshot,
+} from '../../shared/query/models';
 import type { MergedSchema, SchemaRequest } from '../../shared/schema/models';
 import type { Group, GroupsSnapshot } from '../../shared/workspaces/groups';
 import type { Inventory, TenantUpdate, WorkspaceUpdate } from '../../shared/workspaces/models';
@@ -45,6 +57,16 @@ export interface HandlerDependencies {
     updateTenant(update: TenantUpdate): Promise<Inventory>;
   };
   schema: { get(request: SchemaRequest): Promise<MergedSchema> };
+  query: {
+    run(request: QueryRunRequest): Promise<RunSnapshot>;
+    cancel(runId: string): RunSnapshot | undefined;
+    rerun(request: RerunRequest): Promise<RunSnapshot | undefined>;
+    get(runId: string): RunSnapshot | undefined;
+    deleteRun(runId: string): Promise<void>;
+    deleteAll(): Promise<void>;
+  };
+  results: { page(request: ResultPageRequest): Promise<ResultPage> };
+  audit: { verify(): Promise<AuditVerification> };
   groups: {
     snapshot(): GroupsSnapshot;
     save(group: Group): Promise<GroupsSnapshot>;
@@ -96,6 +118,26 @@ export function createIpcHandlers(deps: HandlerDependencies): IpcHandlers {
     },
     schema: {
       get: (request) => deps.schema.get(request),
+    },
+    query: {
+      run: (request) => deps.query.run(request),
+      cancel: ({ runId }) => deps.query.cancel(runId) ?? null,
+      rerun: async (request) => (await deps.query.rerun(request)) ?? null,
+      get: ({ runId }) => deps.query.get(runId) ?? null,
+      delete: async ({ runId }) => {
+        await deps.query.deleteRun(runId);
+        return undefined;
+      },
+      deleteAll: async () => {
+        await deps.query.deleteAll();
+        return undefined;
+      },
+    },
+    results: {
+      page: (request) => deps.results.page(request),
+    },
+    audit: {
+      verify: () => deps.audit.verify(),
     },
     groups: {
       get: () => deps.groups.snapshot(),

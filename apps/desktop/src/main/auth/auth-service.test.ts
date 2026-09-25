@@ -102,7 +102,21 @@ describe('AuthService token routing (spec 02)', () => {
     // The ARM token for this tenant was already fetched (and cached) by the tenant probe.
     await auth.getToken({ accountId: ACCOUNT.id, tenantId: GUEST, resource: 'arm' });
     expect(provider.acquireTokenSilent.mock.calls).toEqual([
-      [ACCOUNT.id, GUEST, 'https://api.loganalytics.io/Data.Read'],
+      [ACCOUNT.id, GUEST, 'https://api.loganalytics.io/Data.Read', { forceRefresh: false }],
+    ]);
+
+    // After a 401 the engine forces a refresh past every cache.
+    await auth.getToken({
+      accountId: ACCOUNT.id,
+      tenantId: GUEST,
+      resource: 'logAnalytics',
+      forceRefresh: true,
+    });
+    expect(provider.acquireTokenSilent.mock.calls.at(-1)).toEqual([
+      ACCOUNT.id,
+      GUEST,
+      'https://api.loganalytics.io/Data.Read',
+      { forceRefresh: true },
     ]);
   });
 

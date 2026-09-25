@@ -22,9 +22,16 @@ import {
 } from 'electron';
 
 import { buildWorkbenchCsp } from '../shared/security/csp';
+import {
+  defaultSettingValues,
+  getSettingDefinition,
+  type SettingKey,
+  type SettingValue,
+} from '../shared/settings/registry';
 import { accessPathKey } from '../shared/workspaces/models';
 
 import { resolveAppMode } from './app-mode';
+import { AuditLog } from './audit/audit-log';
 import { JsoncAccountsConfig, MemoryAccountsConfig } from './auth/accounts-config';
 import { AuthService, type AuthProviders } from './auth/auth-service';
 import { AzureCliAuthProvider } from './auth/azure-cli-provider';
@@ -33,7 +40,9 @@ import { DemoAuthProvider } from './auth/demo-provider';
 import { EncryptedFileCachePlugin, resolveTokenPersistence } from './auth/encrypted-cache-plugin';
 import { MsalAuthProvider } from './auth/msal-provider';
 import { listTenants } from './azure/arm-tenants';
+import { AzureHttp } from './azure/azure-http';
 import { fetchWorkspaceMetadata } from './azure/log-analytics-metadata';
+import { executeLogAnalyticsQuery } from './azure/log-analytics-query';
 import {
   DISCOVERY_QUERIES,
   hasSentinelOnboarding,
@@ -43,6 +52,7 @@ import { configPaths, ensureConfigDir, resolveConfigDir } from './config/config-
 import { watchDirectory } from './config/config-watcher';
 import { JsoncGroupsStore, MemoryGroupsStore } from './config/groups-config';
 import { JsoncWorkspacesConfig, MemoryWorkspacesConfig } from './config/workspaces-config';
+import { DemoDataSource } from './demo/demo-data-source';
 import {
   DEMO_EXTRA_TENANTS,
   DEMO_TENANT_NAMES,
@@ -59,6 +69,10 @@ import { createIpcHandlers, type WindowOperations } from './ipc/handlers';
 import { registerIpcRouter } from './ipc/router';
 import { KeybindingsService, NEW_KEYBINDINGS_FILE } from './keybindings/keybindings-service';
 import { APP_ENTRY_URL, APP_ORIGIN, APP_SCHEME, resolveAppFile } from './protocol/app-protocol';
+import { ENGINE_DEFAULTS } from './query/limits';
+import { QueryEngine } from './query/query-engine';
+import { Scheduler } from './query/scheduler';
+import { ResultStore } from './results/result-store';
 import { FileSchemaCache, MemorySchemaCache } from './schema/schema-cache';
 import { SchemaService } from './schema/schema-service';
 import { installNavigationGuards, isTrustedOrigin, originKey } from './security/navigation';
@@ -88,12 +102,32 @@ const paths = configPaths(
 );
 
 const settings = new SettingsService(paths.settingsFile);
+/**
+ * Every Azure request (ARM, Resource Graph, Log Analytics, MSAL) goes through Chromium's
+ * network stack, so the OS proxy configuration applies (D-023).
+ */
+const azureHttp = new AzureHttp({
+  fetch: (url, init) => net.fetch(url, init),
+  appName: 'RamlKQL',
+  appVersion: app.getVersion(),
+});
 const keybindings = new KeybindingsService(paths.keybindingsFile);
 const userThemes = new UserThemesService(paths.themesDir);
 const layoutStore = new LayoutStore(paths.layoutStateFile);
 
 let mainWindow: BrowserWindow | undefined;
 const emit = createEventSender(() => (mainWindow === undefined ? [] : [mainWindow.webContents]));
+
+// Machine-local data (MSAL cache, session result cache). Overridable like VS Code's
+// --user-data-dir, so tests and portable setups never touch the real profile. Before `ready`.
+const userDataOverride = process.env['RAML_KQL_USER_DATA_DIR']?.trim();
+if (
+  userDataOverride !== undefined &&
+  userDataOverride !== '' &&
+  path.isAbsolute(userDataOverride)
+) {
+  app.setPath('userData', userDataOverride);
+}
 
 // Must run before `ready`.
 protocol.registerSchemesAsPrivileged([
@@ -157,8 +191,12 @@ if (!app.requestSingleInstanceLock()) {
       },
     );
     const schema = createSchemaService(auth, discovery);
+    const queries = createQueryServices(auth, discovery);
     await Promise.all([discovery.init(), groups.reload()]);
-    void auth.init();
+    void auth.init().then(() => {
+      queries.trackSignIns();
+    });
+    void queries.audit.prune().catch(() => undefined);
     watchDirectory(paths.root, (file) => {
       if (file === undefined || file === 'workspaces.jsonc') void discovery.reloadConfig();
       if (file === undefined || file === 'groups.jsonc') void groups.reload();
@@ -189,6 +227,12 @@ if (!app.requestSingleInstanceLock()) {
         accounts: auth,
         inventory: discovery,
         schema,
+        query: queries.engine,
+        results: {
+          page: ({ runId, tableIndex, offset, limit }) =>
+            queries.store.page(runId, tableIndex, offset, limit),
+        },
+        audit: queries.audit,
         groups,
         settings,
         keybindings,
@@ -281,14 +325,14 @@ function createDiscoveryService(auth: AuthService): DiscoveryService {
               cloud,
               token,
               query: DISCOVERY_QUERIES[kind],
-              fetch: (url, init) => net.fetch(url, init),
+              fetch: azureHttp.fetch,
             }),
           hasSentinel: (workspaceResourceId, token) =>
             hasSentinelOnboarding({
               cloud,
               token,
               workspaceResourceId,
-              fetch: (url, init) => net.fetch(url, init),
+              fetch: azureHttp.fetch,
             }),
         },
     config: mode.demo
@@ -358,7 +402,7 @@ function createSchemaService(auth: AuthService, discovery: DiscoveryService): Sc
                 cloud,
                 token: token.token,
                 customerId: workspace.customerId,
-                fetch: (url, init) => net.fetch(url, init),
+                fetch: azureHttp.fetch,
               });
             } catch (error) {
               lastError = error;
@@ -367,6 +411,103 @@ function createSchemaService(auth: AuthService, discovery: DiscoveryService): Sc
           throw lastError;
         },
   });
+}
+
+/** A setting's effective value (the user's valid value, else the default). */
+function effective<K extends SettingKey>(key: K): SettingValue<K> {
+  const parsed = getSettingDefinition(key)?.schema.safeParse(settings.current.values[key]);
+  return parsed?.success === true ? (parsed.data as SettingValue<K>) : defaultSettingValues()[key];
+}
+
+/**
+ * The query engine (spec 04): fan-out through AzureHttp to the Log Analytics Query API (or the
+ * demo data source), the encrypted session result store and the audit log.
+ */
+function createQueryServices(auth: AuthService, discovery: DiscoveryService) {
+  const cloud = PUBLIC_CLOUD;
+  const store = ResultStore.create(path.join(app.getPath('userData'), 'session-cache'), {
+    memoryBudgetBytes: () => effective('results.memoryBudgetMB') * 1024 * 1024,
+    maxMergedRows: () => effective('results.maxMergedRows'),
+  });
+  // Crypto-shred on quit: delete the spill files and zero the session key (spec 04).
+  app.on('will-quit', () => {
+    store.dispose();
+  });
+  const audit = new AuditLog({
+    dir: paths.auditDir,
+    appVersion: app.getVersion(),
+    enabled: () => effective('audit.enabled'),
+    includeQueryText: () => effective('audit.includeQueryText'),
+    retentionMonths: () => effective('audit.retentionMonths'),
+  });
+  const accountName = (accountId: string): string =>
+    auth.snapshot().accounts.find((a) => a.id === accountId)?.username ?? accountId;
+  const engine = new QueryEngine({
+    workspace: (resourceId) =>
+      discovery.snapshot().workspaces.find((w) => w.resourceId === resourceId),
+    tenantName: (tenantId) => {
+      const tenant = discovery.snapshot().tenants.find((t) => t.tenantId === tenantId);
+      return tenant?.displayName ?? tenant?.defaultDomain ?? tenantId;
+    },
+    accountName,
+    getToken: (request) => auth.getToken(request),
+    source: mode.demo
+      ? new DemoDataSource()
+      : {
+          execute: (request) =>
+            executeLogAnalyticsQuery({
+              cloud,
+              fetch: azureHttp.fetch,
+              token: request.token,
+              customerId: request.workspace.customerId,
+              query: request.query,
+              timespan: request.timespan,
+              timeoutSeconds: request.timeoutSeconds,
+              requestId: request.requestId,
+              signal: request.signal,
+            }),
+        },
+    scheduler: new Scheduler({
+      perPrincipal: () => effective('query.maxConcurrentPerAccount'),
+      total: () => effective('query.maxConcurrentTotal'),
+      bucketCapacity: ENGINE_DEFAULTS.bucketCapacity,
+      bucketWindowMs: ENGINE_DEFAULTS.bucketWindowMs,
+    }),
+    store,
+    audit,
+    settings: () => ({
+      timeoutSeconds: effective('query.timeoutSeconds'),
+      failFastOnSemanticError: effective('query.failFastOnSemanticError'),
+      fallbackAccessPaths: effective('query.fallbackAccessPaths'),
+    }),
+    demo: mode.demo,
+    onChange: (snapshot) => {
+      emit('query.runChanged', snapshot);
+    },
+  });
+
+  /** Audit sign-ins and sign-outs (not the accounts restored at startup). */
+  const trackSignIns = (): void => {
+    let known = new Set(auth.snapshot().accounts.map((a) => a.id));
+    const names = new Map(auth.snapshot().accounts.map((a) => [a.id, a.username]));
+    auth.onDidChange((snapshot) => {
+      const current = new Set(snapshot.accounts.map((a) => a.id));
+      for (const account of snapshot.accounts) {
+        names.set(account.id, account.username);
+        if (!known.has(account.id)) {
+          void audit.append({ kind: 'auth', event: 'signIn', account: account.username });
+        }
+      }
+      for (const id of known) {
+        if (!current.has(id)) {
+          void audit.append({ kind: 'auth', event: 'signOut', account: names.get(id) ?? id });
+        }
+      }
+      known = current;
+    });
+  };
+
+  return { engine, store, audit, trackSignIns };
 }
 
 function createAuthService(): AuthService {
@@ -384,6 +525,7 @@ function createAuthService(): AuthService {
       clientId,
       cloud,
       openBrowser: openSignInPage,
+      networkClient: azureHttp.msalNetworkModule(),
       // Kept in userData (machine-local), never in the shareable config dir.
       ...(persistence === 'encrypted'
         ? {
@@ -415,12 +557,11 @@ function createAuthService(): AuthService {
     listTenants: (account, token) =>
       demo !== undefined
         ? Promise.resolve(demo.tenantsFor(account.id))
-        : // net.fetch uses Chromium's network stack, so system proxy settings apply.
-          listTenants({
+        : listTenants({
             cloud,
             token,
             homeTenantId: account.homeTenantId,
-            fetch: (url, init) => net.fetch(url, init),
+            fetch: azureHttp.fetch,
           }),
     onChange: (snapshot) => {
       emit('accounts.changed', snapshot);
