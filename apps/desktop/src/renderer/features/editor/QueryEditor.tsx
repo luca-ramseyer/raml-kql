@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { executeCommand } from '../../platform/commands';
 import { setContextKey } from '../../platform/context-keys';
+import { activateEditor, useEditors } from '../../platform/editors';
 import { useKeybindingLabel } from '../../platform/keybindings/keybinding-service';
 import { useSetting } from '../../platform/settings';
 import { useTheme } from '../../platform/theme/theme-service';
@@ -145,6 +146,8 @@ export function QueryEditor({ editorId }: { editorId: string }): React.JSX.Eleme
           watchTimeFilter(loaded, editorId, entry.model),
           editor.onDidFocusEditorText(() => {
             setContextKey('editorTextFocus', true);
+            // Focusing an editor makes its group (and tab) the active one.
+            if (useEditors.getState().activeId !== editorId) activateEditor(editorId);
           }),
           editor.onDidBlurEditorText(() => {
             setContextKey('editorTextFocus', false);
@@ -169,7 +172,7 @@ export function QueryEditor({ editorId }: { editorId: string }): React.JSX.Eleme
           () => void executeCommand('query.cancel'),
           'ramlQueryRunning && !suggestWidgetVisible && !findWidgetVisible && !parameterHintsVisible',
         );
-        editor.focus();
+        if (useEditors.getState().activeId === editorId) editor.focus();
         setState('ready');
       })
       .catch((error: unknown) => {
