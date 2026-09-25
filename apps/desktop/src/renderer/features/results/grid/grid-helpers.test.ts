@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { ResultColumn } from '../../../../shared/query/models';
 
 import { formatCell, formatDateTimeCell, prettyJson, toTsv } from './cell-format';
-import { buildColumnDefs, viewFromGrid } from './column-defs';
+import { buildColumnDefs, cellTooltip, viewFromGrid } from './column-defs';
 
 describe('cell formatting', () => {
   it('formats datetimes ISO-like with milliseconds in the display zone', () => {
@@ -61,6 +61,18 @@ describe('grid columns', () => {
     const template = (defs[3]?.headerComponentParams as { template: string }).template;
     expect(template).toContain('codicon-symbol-numeric');
     expect(template).toContain('widened to long');
+  });
+
+  it('shows tooltips for datetimes and long values only', () => {
+    expect(cellTooltip('2026-09-24T09:12:03.123Z', 'datetime', 'utc')).toMatch(
+      /^UTC: 2026-09-24 09:12:03\.123\nLocal: /,
+    );
+    expect(cellTooltip('short', 'string', 'utc')).toBeUndefined();
+    expect(cellTooltip('x'.repeat(3000), 'string', 'utc')).toHaveLength(2000);
+    const defs = buildColumnDefs(columns, { zone: 'utc', shownAttribution: [], hidden: new Set() });
+    expect(defs.every((d) => typeof d.tooltip === 'function' && !('tooltipValueGetter' in d))).toBe(
+      true,
+    );
   });
 
   it('turns the grid models into a view', () => {

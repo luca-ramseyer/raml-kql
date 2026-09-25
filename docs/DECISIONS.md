@@ -333,3 +333,19 @@ Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Con
 - Azure CLI is looked up with the common install folders appended to `PATH` (`/opt/homebrew/bin`, `/usr/local/bin` on macOS; `/usr/local/bin`, `/snap/bin` on Linux). Apps started from Finder or the Dock get a minimal `PATH` without them.
 - Providers throw `SignInError` for failures written for the user. The auth service shows that message itself instead of "Sign-in failed." with the reason hidden in the details.
 
+## D-036 — Dev-mode robustness: StrictMode and the Kusto worker (2026-09-25)
+
+**Context:** under `pnpm dev`, a query tab showed no IntelliSense and Targets started with nothing selected. AG Grid also reported a deprecated option. Production builds were fine, so e2e (which runs the built app) didn't catch any of this.
+
+**Decision:**
+
+- **Kusto worker:** the language service (Bridge.NET output) refers to Node's `global`. Rollup rewrites it in production builds; Vite's dev server doesn't. The worker entry now imports a tiny shim (`worker-globals.ts`) first. Previously Monaco silently fell back to a worker without the language service.
+- **React StrictMode starts the workbench twice** in dev and stops the first start. Two registries shared state across the starts:
+  - Zustand keeps listeners in a `Set`, so subscribing the same module function twice leaves one entry. The first start's unsubscribe then removed the second start's subscription: the Targets selection never followed the inventory, and the theme stopped following settings. Subscriptions now use a fresh closure per start.
+  - Status bar items are keyed by id. Dispose and update now only touch an item while it's still the registration's own, as commands already did.
+- **AG Grid 36.2** deprecates `tooltipValueGetter`; the grid uses `tooltip` with a callback. AG Grid only reports deprecations through its validation module, which the app loads in dev.
+- **Regression tests:**
+  - a Targets test renders the workbench under `<StrictMode>`;
+  - a status bar test covers duplicate ids;
+  - a column-defs test checks the tooltip option;
+  - a manual dev-mode console sweep found no remaining warnings or errors.

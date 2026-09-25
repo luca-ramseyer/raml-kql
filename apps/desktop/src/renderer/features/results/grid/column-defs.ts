@@ -55,6 +55,16 @@ function headerTemplate(column: ResultColumn): string {
 </div>`;
 }
 
+/**
+ * Cell tooltip: UTC and local time for datetimes, the full text for long values (cut at 2000
+ * characters), nothing otherwise.
+ */
+export function cellTooltip(value: unknown, type: KqlType, zone: DisplayZone): string | undefined {
+  if (type === 'datetime') return dateTimeTooltip(value);
+  const text = formatCell(value, type, zone);
+  return text.length > 80 ? text.slice(0, 2000) : undefined;
+}
+
 export function buildColumnDefs(
   columns: readonly ResultColumn[],
   options: { zone: DisplayZone; shownAttribution: readonly string[]; hidden: ReadonlySet<string> },
@@ -84,13 +94,7 @@ export function buildColumnDefs(
       filter: filterFor(column.type),
       filterParams: { maxNumConditions: 2, buttons: ['reset'], debounceMs: 300 },
       valueFormatter: (params) => formatCell(params.value, column.type, options.zone),
-      tooltipValueGetter: (params) =>
-        column.type === 'datetime'
-          ? dateTimeTooltip(params.value)
-          : (() => {
-              const text = formatCell(params.value, column.type, options.zone);
-              return text.length > 80 ? text.slice(0, 2000) : undefined;
-            })(),
+      tooltip: (params) => cellTooltip(params.value, column.type, options.zone),
       minWidth: 60,
       width: attribution ? 150 : column.type === 'datetime' ? 190 : numeric ? 100 : 160,
     } satisfies ColDef<GridRow>;

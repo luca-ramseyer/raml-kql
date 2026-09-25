@@ -89,7 +89,12 @@ export async function startWorkbench({
       onFullScreenChange(fullScreen);
     }),
     watchOsAppearance(),
-    useSettings.subscribe(refreshTheme),
+    // Subscribe fresh closures, never shared functions: zustand keeps listeners in a Set, so
+    // two workbench starts (React StrictMode in dev) would share one entry, and the first
+    // start's teardown would unsubscribe the second.
+    useSettings.subscribe(() => {
+      refreshTheme();
+    }),
     bridge.events.on('accounts.changed', applyAccountsSnapshot),
     bridge.events.on('accounts.deviceCode', showDeviceCode),
     bridge.events.on('inventory.changed', applyInventory),
@@ -98,7 +103,9 @@ export async function startWorkbench({
     }),
     bridge.events.on('groups.changed', applyGroups),
     bridge.events.on('query.runChanged', applyRunSnapshot),
-    useInventory.subscribe(syncTargetsWithInventory),
+    useInventory.subscribe(() => {
+      syncTargetsWithInventory();
+    }),
     registerBuiltinCommands(),
     registerAccountCommands(),
     registerWorkspaceCommands(),

@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { StrictMode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -56,7 +57,11 @@ afterEach(() => {
   useTargets.setState({ selected: new Set(), groupId: undefined, initialized: false });
 });
 
-async function renderApp(inventory: Inventory = INVENTORY, settings: Record<string, unknown> = {}) {
+async function renderApp(
+  inventory: Inventory = INVENTORY,
+  settings: Record<string, unknown> = {},
+  options: { strict?: boolean } = {},
+) {
   let current = inventory;
   const harness = installWorkbenchHarness(
     {
@@ -84,8 +89,18 @@ async function renderApp(inventory: Inventory = INVENTORY, settings: Record<stri
     },
     settings as never,
   );
-  render(<App />);
-  await screen.findByRole('tree', { name: 'Targets' });
+  render(
+    options.strict === true ? (
+      <StrictMode>
+        <App />
+      </StrictMode>
+    ) : (
+      <App />
+    ),
+  );
+  await (inventory.workspaces.length === 0
+    ? screen.findByTestId('workbench')
+    : screen.findByRole('tree', { name: 'Targets' }));
   return {
     harness,
     setInventory(next: Inventory) {
@@ -104,6 +119,21 @@ describe('Targets view', () => {
     expect(within(tree).queryByText('Contoso')).not.toBeInTheDocument();
     expect(within(tree).getByText('Customer 01')).toBeInTheDocument();
     expect(screen.getByText('3 of 3 selected')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /3 workspaces · 2 tenants/ })).toBeInTheDocument();
+  });
+
+  it('selects workspaces that arrive after start-up, also when the workbench mounts twice', async () => {
+    // React StrictMode (dev) starts the workbench twice and stops the first start. Its
+    // teardown must not remove the second start's inventory subscription.
+    const { setInventory } = await renderApp(
+      { ...INVENTORY, workspaces: [] },
+      {},
+      { strict: true },
+    );
+    setInventory(INVENTORY);
+    await waitFor(() => {
+      expect(screen.getByText('3 of 3 selected')).toBeInTheDocument();
+    });
     expect(screen.getByRole('button', { name: /3 workspaces · 2 tenants/ })).toBeInTheDocument();
   });
 
