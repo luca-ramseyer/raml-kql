@@ -39,6 +39,35 @@ export const DEFAULT_KEYBINDINGS: readonly DefaultKeybinding[] = [
   { command: 'workbench.action.quickOpen', key: 'ctrl+e', mac: 'cmd+e' },
   { command: 'workbench.action.quickOpen', key: 'ctrl+p', mac: 'cmd+p' },
 
+  // Query editor (spec 05)
+  { command: 'query.new', key: 'ctrl+n', mac: 'cmd+n' },
+  // Monaco handles these itself while it has focus; the entries show the shortcuts in the
+  // palette and work from the query toolbar.
+  {
+    command: 'editor.action.formatDocument',
+    key: 'shift+alt+f',
+    linux: 'ctrl+shift+i',
+    when: "editorLangId == 'kusto' && !inputFocus",
+  },
+  {
+    command: 'editor.action.commentLine',
+    key: 'ctrl+/',
+    mac: 'cmd+/',
+    when: "editorLangId == 'kusto' && !inputFocus",
+  },
+  {
+    command: 'actions.find',
+    key: 'ctrl+f',
+    mac: 'cmd+f',
+    when: "editorLangId == 'kusto' && !inputFocus",
+  },
+  {
+    command: 'editor.action.startFindReplaceAction',
+    key: 'ctrl+h',
+    mac: 'alt+cmd+f',
+    when: "editorLangId == 'kusto' && !inputFocus",
+  },
+
   // Layout
   { command: 'workbench.action.toggleSidebarVisibility', key: 'ctrl+b', mac: 'cmd+b' },
   { command: 'workbench.action.togglePanel', key: 'ctrl+j', mac: 'cmd+j' },

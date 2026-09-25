@@ -15,6 +15,12 @@ to date whenever a component that ends up in the packaged app is added or remove
   (`@azure/msal-node`, MIT, © Microsoft Corporation): Microsoft Entra sign-in.
 - **[jsonc-parser](https://github.com/microsoft/node-jsonc-parser)** (MIT, © Microsoft
   Corporation): reading and editing the `*.jsonc` config files.
+- **[Monaco Editor](https://github.com/microsoft/monaco-editor)** (`monaco-editor`, MIT, ©
+  Microsoft Corporation): the query editor.
+- **[monaco-kusto](https://github.com/Azure/monaco-kusto)** (`@kusto/monaco-kusto`, MIT, ©
+  Microsoft Corporation) and the Kusto language service (`@kusto/language-service`,
+  `@kusto/language-service-next`, MIT, © Microsoft Corporation): KQL syntax, IntelliSense and
+  formatting.
 
 ## Icons
 

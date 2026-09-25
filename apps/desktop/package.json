@@ -21,6 +21,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@kusto/monaco-kusto": "15.0.1",
     "@playwright/test": "^1.63.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
@@ -33,6 +34,7 @@
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "jsdom": "^30.1.1",
+    "monaco-editor": "0.55.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "vite": "^7.3.6",

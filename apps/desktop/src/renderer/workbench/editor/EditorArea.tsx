@@ -1,3 +1,5 @@
+import { lazy, Suspense } from 'react';
+
 import { SettingsEditor } from '../../features/settings/SettingsEditor';
 import { WelcomePage } from '../../features/welcome/WelcomePage';
 import { WorkspacesEditor } from '../../features/workspaces/WorkspacesEditor';
@@ -8,6 +10,11 @@ import { Codicon } from '../common/Codicon';
 import { KeybindingLabel } from '../common/KeybindingLabel';
 
 import './EditorArea.css';
+
+// Monaco and the Kusto language service are large: load them with the first query tab.
+const QueryEditor = lazy(() =>
+  import('../../features/editor/QueryEditor').then((m) => ({ default: m.QueryEditor })),
+);
 
 function Tab({ editor, active }: { editor: EditorInput; active: boolean }): React.JSX.Element {
   return (
@@ -62,6 +69,7 @@ function Watermark(): React.JSX.Element {
     <div className="editor-watermark">
       <div className="watermark-box">
         <WatermarkEntry label="Show All Commands" command="workbench.action.showCommands" />
+        <WatermarkEntry label="New Query" command="query.new" />
         <WatermarkEntry label="Go to Query" command="workbench.action.quickOpen" />
         <WatermarkEntry label="Toggle Panel" command="workbench.action.togglePanel" />
         <WatermarkEntry label="Open Settings" command="workbench.action.openSettings" />
@@ -96,6 +104,11 @@ export function EditorArea(): React.JSX.Element {
             {active?.kind === 'welcome' ? <WelcomePage /> : null}
             {active?.kind === 'settings' ? <SettingsEditor /> : null}
             {active?.kind === 'workspaces' ? <WorkspacesEditor /> : null}
+            {active?.kind === 'query' ? (
+              <Suspense fallback={null}>
+                <QueryEditor key={active.id} editorId={active.id} />
+              </Suspense>
+            ) : null}
           </div>
         </>
       )}

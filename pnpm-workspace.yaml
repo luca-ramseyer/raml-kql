@@ -13,3 +13,5 @@ allowBuilds:
   unrs-resolver: false
   # Squirrel.Windows installer helper pulled in by electron-builder; we build NSIS only.
   electron-winstaller: false
+  # Pulled in by @kusto/monaco-kusto; its install script only prints a banner.
+  core-js-pure: false
