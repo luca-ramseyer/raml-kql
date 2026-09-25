@@ -91,6 +91,7 @@ Settings referenced in the specs (non-exhaustive):
 | `extensions.autoUpdate` | `false` |
 | `extensions.permissions.defaultScope` | `"run"` |
 | `sources.autoUpdate` | `false` |
+| `sources.checkForUpdates` | `true` (startup check, at most once a day per source) |
 | `update.channel` | `"stable"` |
 | `update.checkAutomatically` | `true` |
 | `crashReporting.mode` | `"ask"` (spec 10) |

@@ -136,13 +136,28 @@ Version targets:
 
 ## Phase 8 — Query packs and git sources
 
-- [ ] Pack format + zod schema + JSON Schema (spec 08)
-- [ ] Add a source by git URL (clone with isomorphic-git, pinned to commit), update check, and update with diff
-- [ ] Import from file (`.rkqlpack` zip, folder, single `.kql`)
-- [ ] Query Library view: browse, search, filter by tag/MITRE/table, open query in new tab, parameter form
-- [ ] Parameters injected as typed `let` statements (never string-concatenated into the body)
+- [x] Pack format + zod schema + JSON Schema (spec 08)
+- [x] Add a source by git URL (clone with isomorphic-git, pinned to commit), update check, and update with diff
+- [x] Import from file (`.rkqlpack` zip, folder, single `.kql`)
+- [x] Query Library view: browse, search, filter by tag/MITRE/table, open query in new tab, parameter form
+- [x] Parameters injected as typed `let` statements (never string-concatenated into the body)
 
 **Acceptance:** The example pack installs from a local bare git repo in tests, updates, and runs with parameters.
+
+> Status:
+> - `e2e/packs.spec.ts` runs two tests.
+>   - The first serves `examples/packs/raml.starter` from a bare repository over local smart HTTP. It adds the source from the preview, runs a query with changed parameters (History shows the typed `let` statements that replaced the portable defaults), then pushes 1.1.0, checks for updates, reviews the commit and changed queries, and applies the update.
+>   - The second imports a `.rkqlpack` through a stubbed file dialog.
+> - Unit tests cover:
+>   - the pack schemas and loader;
+>   - the literal encoder, round-tripped through the real Kusto parser, hostile strings included;
+>   - injection that replaces top-level `let`s only;
+>   - git sources against a local server: pinning, updates and diffs, private repositories with tokens, the 24-hour throttle and removal;
+>   - zip safety and the URL policy;
+>   - every example query parsing with and without injected defaults;
+>   - the Library UI and parameter bar;
+>   - `raml-kql-ext pack validate`.
+> - Decisions: D-040 to D-044. The live checks are in `docs/HUMAN-TODO.md`.
 
 ## Phase 9 — Extensions
 
