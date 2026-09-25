@@ -4,6 +4,7 @@ import { createIpcHandlers, type HandlerDependencies } from '../../src/main/ipc/
 import { registerIpcRouter } from '../../src/main/ipc/router';
 import { createRamlKqlApi } from '../../src/preload/api';
 import { useAccounts } from '../../src/renderer/features/accounts/accounts-store';
+import { setAliased } from '../../src/renderer/features/privacy/privacy';
 import { useCommands } from '../../src/renderer/platform/commands';
 import { useContextKeys } from '../../src/renderer/platform/context-keys';
 import { useEditors } from '../../src/renderer/platform/editors';
@@ -24,9 +25,12 @@ import { FakeIpcBus } from './fake-ipc';
  * main-process services replaced by fakes. The settings fake behaves like the real service
  * closely enough for UI tests (set/reset update the snapshot and emit `settings.changed`).
  */
-export function installWorkbenchHarness(overrides: Partial<HandlerDependencies> = {}) {
+export function installWorkbenchHarness(
+  overrides: Partial<HandlerDependencies> = {},
+  initialSettings: SettingsSnapshot['values'] = {},
+) {
   const bus = new FakeIpcBus();
-  let settings: SettingsSnapshot = { values: {}, problems: [] };
+  let settings: SettingsSnapshot = { values: initialSettings, problems: [] };
   const emit = <E extends IpcEventName>(name: E, payload: IpcEventPayload<E>): void => {
     bus.send(eventChannel(name), payload);
   };
@@ -78,6 +82,7 @@ export function resetWorkbenchState(): void {
   useCommands.setState({ recent: [] });
   useContextKeys.setState({ values: {} });
   applySettingsSnapshot({ values: {}, problems: [] });
+  setAliased(true);
   useAccounts.setState({
     snapshot: { accounts: [], builtinAvailable: false, persistence: 'encrypted' },
     signingIn: false,
@@ -90,4 +95,16 @@ export function setMediaMatch(query: string, value: boolean): void {
     query,
     value,
   );
+}
+
+/** The quick input's text box (the palette, quick open and pickers all use it). */
+export async function findQuickInputBox(): Promise<HTMLInputElement> {
+  const { screen, within } = await import('@testing-library/react');
+  const dialog = await screen.findByRole('dialog', { name: 'Quick input' });
+  return within(dialog).getByRole<HTMLInputElement>('combobox');
+}
+
+export async function queryQuickInputBox(): Promise<HTMLElement | null> {
+  const { screen } = await import('@testing-library/react');
+  return screen.queryByRole('dialog', { name: 'Quick input' });
 }

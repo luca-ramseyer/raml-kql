@@ -8,6 +8,8 @@ import {
 } from '../config/config-snapshots';
 import { LayoutStateSchema } from '../layout/layout-state';
 import { MenuBarModelSchema, MenuRoleSchema } from '../menus/menu-model';
+import { GroupSchema, GroupsSnapshotSchema } from '../workspaces/groups';
+import { InventorySchema, TenantUpdateSchema, WorkspaceUpdateSchema } from '../workspaces/models';
 
 import { defineChannel, type AnyChannel, type IpcResult } from './channel';
 import type { RamlKqlEventsApi } from './events';
@@ -87,6 +89,27 @@ export const ipcContracts = {
         .object({ accountId: z.string().min(1).max(300), label: z.string().max(200).nullable() })
         .strict(),
       AccountsSnapshotSchema,
+    ),
+  },
+  inventory: {
+    /** Discovered workspaces and tenants with the user's preferences applied. Metadata only. */
+    get: defineChannel('inventory:get', z.undefined(), InventorySchema),
+    /** Run discovery now ("Refresh Workspaces"). Resolves when it finishes. */
+    refresh: defineChannel('inventory:refresh', z.undefined(), InventorySchema),
+    updateWorkspaces: defineChannel(
+      'inventory:updateWorkspaces',
+      WorkspaceUpdateSchema,
+      InventorySchema,
+    ),
+    updateTenant: defineChannel('inventory:updateTenant', TenantUpdateSchema, InventorySchema),
+  },
+  groups: {
+    get: defineChannel('groups:get', z.undefined(), GroupsSnapshotSchema),
+    save: defineChannel('groups:save', GroupSchema, GroupsSnapshotSchema),
+    delete: defineChannel(
+      'groups:delete',
+      z.object({ id: z.string().min(1).max(100) }).strict(),
+      GroupsSnapshotSchema,
     ),
   },
   settings: {

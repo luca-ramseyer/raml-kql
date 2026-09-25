@@ -8,6 +8,8 @@ import { AppError } from '../../shared/errors';
 import type { AppInfo, IpcHandlers, SettingsUpdateRequest } from '../../shared/ipc/contracts';
 import type { LayoutState } from '../../shared/layout/layout-state';
 import type { MenuBarModel, MenuRole } from '../../shared/menus/menu-model';
+import type { Group, GroupsSnapshot } from '../../shared/workspaces/groups';
+import type { Inventory, TenantUpdate, WorkspaceUpdate } from '../../shared/workspaces/models';
 import { isAllowedExternalUrl } from '../security/navigation';
 
 /** Operations on the main window, provided by index.ts (keeps handlers free of Electron). */
@@ -34,6 +36,17 @@ export interface HandlerDependencies {
     reauthenticate(accountId: string, tenantId?: string): Promise<AccountsSnapshot>;
     refresh(accountId?: string): Promise<AccountsSnapshot>;
     setLabel(accountId: string, label: string | null): Promise<AccountsSnapshot>;
+  };
+  inventory: {
+    snapshot(): Inventory;
+    refresh(): Promise<Inventory>;
+    updateWorkspaces(update: WorkspaceUpdate): Promise<Inventory>;
+    updateTenant(update: TenantUpdate): Promise<Inventory>;
+  };
+  groups: {
+    snapshot(): GroupsSnapshot;
+    save(group: Group): Promise<GroupsSnapshot>;
+    delete(id: string): Promise<GroupsSnapshot>;
   };
   settings: {
     current: SettingsSnapshot;
@@ -72,6 +85,17 @@ export function createIpcHandlers(deps: HandlerDependencies): IpcHandlers {
         deps.accounts.reauthenticate(accountId, tenantId),
       refresh: ({ accountId }) => deps.accounts.refresh(accountId),
       setLabel: ({ accountId, label }) => deps.accounts.setLabel(accountId, label),
+    },
+    inventory: {
+      get: () => deps.inventory.snapshot(),
+      refresh: () => deps.inventory.refresh(),
+      updateWorkspaces: (update) => deps.inventory.updateWorkspaces(update),
+      updateTenant: (update) => deps.inventory.updateTenant(update),
+    },
+    groups: {
+      get: () => deps.groups.snapshot(),
+      save: (group) => deps.groups.save(group),
+      delete: ({ id }) => deps.groups.delete(id),
     },
     settings: {
       get: () => deps.settings.current,

@@ -70,6 +70,14 @@ export const DEFAULT_KEYBINDINGS: readonly DefaultKeybinding[] = [
   { command: 'workbench.action.reloadWindow', key: 'ctrl+r', mac: 'cmd+r', when: 'isDevelopment' },
   { command: 'workbench.action.toggleDevTools', key: 'ctrl+shift+i', mac: 'alt+cmd+i' },
 
+  // Privacy (spec 03)
+  {
+    command: 'privacy.togglePresentationMode',
+    key: 'ctrl+alt+p',
+    mac: 'cmd+alt+p',
+    when: 'privacyAliasingEnabled',
+  },
+
   // Quick input navigation (only while the quick input is open)
   { command: 'workbench.action.closeQuickOpen', key: 'escape', when: 'inQuickOpen' },
 

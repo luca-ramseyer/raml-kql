@@ -32,8 +32,25 @@ import { DemoAuthProvider } from './auth/demo-provider';
 import { EncryptedFileCachePlugin, resolveTokenPersistence } from './auth/encrypted-cache-plugin';
 import { MsalAuthProvider } from './auth/msal-provider';
 import { listTenants } from './azure/arm-tenants';
+import {
+  DISCOVERY_QUERIES,
+  hasSentinelOnboarding,
+  queryResourceGraph,
+} from './azure/resource-graph';
 import { configPaths, ensureConfigDir, resolveConfigDir } from './config/config-dir';
 import { watchDirectory } from './config/config-watcher';
+import { JsoncGroupsStore, MemoryGroupsStore } from './config/groups-config';
+import { JsoncWorkspacesConfig, MemoryWorkspacesConfig } from './config/workspaces-config';
+import {
+  DEMO_EXTRA_TENANTS,
+  DEMO_TENANT_NAMES,
+  DEMO_WORKSPACES,
+  demoDiscoveryRows,
+  demoResourceId,
+} from './demo/demo-inventory';
+import { DiscoveryService } from './discovery/discovery-service';
+import { GroupsService } from './discovery/groups-service';
+import { FileInventoryCache, MemoryInventoryCache } from './discovery/inventory-cache';
 import { createEventSender } from './ipc/events';
 import { createIpcHandlers, type WindowOperations } from './ipc/handlers';
 import { registerIpcRouter } from './ipc/router';
@@ -127,7 +144,19 @@ if (!app.requestSingleInstanceLock()) {
     watchDirectory(paths.themesDir, () => void userThemes.reload());
 
     const auth = createAuthService();
+    const discovery = createDiscoveryService(auth);
+    const groups = new GroupsService(
+      mode.demo ? new MemoryGroupsStore(DEMO_GROUPS) : new JsoncGroupsStore(paths.groupsFile),
+      (snapshot) => {
+        emit('groups.changed', snapshot);
+      },
+    );
+    await Promise.all([discovery.init(), groups.reload()]);
     void auth.init();
+    watchDirectory(paths.root, (file) => {
+      if (file === undefined || file === 'workspaces.jsonc') void discovery.reloadConfig();
+      if (file === undefined || file === 'groups.jsonc') void groups.reload();
+    });
 
     // macOS gets a native menu once the renderer sends its model; elsewhere the renderer
     // draws the menu bar itself, so there's no native menu at all.
@@ -152,6 +181,8 @@ if (!app.requestSingleInstanceLock()) {
         },
         showAbout,
         accounts: auth,
+        inventory: discovery,
+        groups,
         settings,
         keybindings,
         userThemes: () => userThemes.current,
@@ -201,6 +232,88 @@ async function openSignInPage(url: string): Promise<void> {
     throw new Error('Refusing to open an unexpected sign-in URL.');
   }
   await shell.openExternal(url);
+}
+
+/** Demo groups: one of each kind, so the Targets group picker has something to show. */
+const DEMO_GROUPS = [
+  { id: 'all-sentinel', name: 'All Sentinel', type: 'dynamic' as const, match: { sentinel: true } },
+  {
+    id: 'lighthouse-customers',
+    name: 'Lighthouse customers',
+    type: 'dynamic' as const,
+    match: { tenantIds: Object.values(DEMO_EXTRA_TENANTS).map((t) => t.tenantId) },
+  },
+  {
+    id: 'on-call',
+    name: 'On-call set',
+    type: 'static' as const,
+    workspaces: DEMO_WORKSPACES.filter((w) =>
+      ['la-contoso-soc', 'la-woodgrove-sentinel'].includes(w.name),
+    ).map(demoResourceId),
+  },
+];
+
+/**
+ * Discovery (spec 03): Resource Graph through net.fetch, or demo data. Runs again whenever the
+ * set of signed-in (account, tenant) pairs changes, e.g. after adding an account or signing in
+ * to a tenant that needed it.
+ */
+function createDiscoveryService(auth: AuthService): DiscoveryService {
+  const cloud = PUBLIC_CLOUD;
+  const discovery = new DiscoveryService({
+    auth,
+    source: mode.demo
+      ? {
+          query: (kind, { accountId, tenantId }) =>
+            Promise.resolve(demoDiscoveryRows(kind, accountId, tenantId)),
+          tenantNames: () => DEMO_TENANT_NAMES,
+        }
+      : {
+          query: (kind, { token }) =>
+            queryResourceGraph({
+              cloud,
+              token,
+              query: DISCOVERY_QUERIES[kind],
+              fetch: (url, init) => net.fetch(url, init),
+            }),
+          hasSentinel: (workspaceResourceId, token) =>
+            hasSentinelOnboarding({
+              cloud,
+              token,
+              workspaceResourceId,
+              fetch: (url, init) => net.fetch(url, init),
+            }),
+        },
+    config: mode.demo
+      ? new MemoryWorkspacesConfig()
+      : new JsoncWorkspacesConfig(paths.workspacesFile),
+    cache: mode.demo ? new MemoryInventoryCache() : new FileInventoryCache(paths.inventoryFile),
+    newWorkspaceDefault: () =>
+      settings.current.values['workspaces.newWorkspaceDefault'] === 'disabled'
+        ? 'disabled'
+        : 'enabled',
+    onChange: (inventory) => {
+      emit('inventory.changed', inventory);
+    },
+    onNewWorkspaces: (count) => {
+      emit('inventory.newWorkspaces', { count });
+    },
+  });
+
+  let signature = '';
+  let timer: NodeJS.Timeout | undefined;
+  auth.onDidChange((snapshot) => {
+    discovery.syncTenants(snapshot);
+    const next = snapshot.accounts
+      .flatMap((a) => a.tenants.filter((t) => t.state === 'ok').map((t) => `${a.id}|${t.tenantId}`))
+      .sort()
+      .join(',');
+    if (next === signature || snapshot.accounts.some((a) => a.refreshing)) return;
+    signature = next;
+    clearTimeout(timer);
+    timer = setTimeout(() => void discovery.refresh(), 500);
+  });
+  return discovery;
 }
 
 function createAuthService(): AuthService {

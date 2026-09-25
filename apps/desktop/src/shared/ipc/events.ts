@@ -6,6 +6,8 @@ import {
   SettingsSnapshotSchema,
   UserThemesSnapshotSchema,
 } from '../config/config-snapshots';
+import { GroupsSnapshotSchema } from '../workspaces/groups';
+import { InventorySchema } from '../workspaces/models';
 
 /**
  * Events pushed from the main process to the workbench (the opposite direction of
@@ -22,6 +24,10 @@ export const ipcEvents = {
   'accounts.changed': AccountsSnapshotSchema,
   /** Device code sign-in started: show the code to the user. */
   'accounts.deviceCode': DeviceCodePromptSchema,
+  'inventory.changed': InventorySchema,
+  /** Discovery found workspaces it hadn't seen before ("5 new workspaces discovered — Review"). */
+  'inventory.newWorkspaces': z.object({ count: z.number().int().positive() }),
+  'groups.changed': GroupsSnapshotSchema,
 } as const satisfies Record<string, z.ZodType>;
 
 export type IpcEvents = typeof ipcEvents;
