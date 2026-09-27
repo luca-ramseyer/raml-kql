@@ -19,10 +19,13 @@ import { createQueryDoc, isDirty, useQueryDocs } from './query-docs';
  */
 const SAVE_DELAY_MS = 500;
 
-type PersistedInput = EditorInput & { kind: Exclude<EditorInput['kind'], 'packUpdate'> };
+/** Views of transient state (update reviews, crash reports, network activity) aren't restored. */
+type PersistedInput = EditorInput & {
+  kind: Exclude<EditorInput['kind'], 'packUpdate' | 'crashReport' | 'networkActivity'>;
+};
 
 function isPersisted(editor: EditorInput): editor is PersistedInput {
-  return editor.kind !== 'packUpdate';
+  return !['packUpdate', 'crashReport', 'networkActivity'].includes(editor.kind);
 }
 
 export function buildTabsState(): TabsState {

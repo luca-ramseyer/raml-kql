@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
+import { useSetting } from '../../platform/settings';
 import { getBridge, unwrap } from '../../services/ipc';
 import { useAccounts } from '../accounts/accounts-store';
 import { useNamer } from '../privacy/privacy';
@@ -30,9 +31,10 @@ export function RendererView({
   const namer = useNamer();
   const workspaces = useInventory((s) => s.inventory.workspaces);
   const accounts = useAccounts((s) => s.snapshot.accounts);
+  const masking = useSetting('privacy.maskingRules');
   const display = useMemo(
-    () => buildDisplayNames(namer, workspaces, accounts),
-    [namer, workspaces, accounts],
+    () => buildDisplayNames(namer, workspaces, accounts, masking),
+    [namer, workspaces, accounts, masking],
   );
   // The answer for a run (and a retry counter), so a new run starts unanswered.
   const [answer, setAnswer] = useState<{ key: string; allowed: boolean } | undefined>(undefined);

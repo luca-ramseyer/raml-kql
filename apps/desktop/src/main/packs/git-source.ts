@@ -9,10 +9,10 @@ import {
   walk,
   type AuthCallback,
 } from 'isomorphic-git';
-import http from 'isomorphic-git/http/node';
 
 import { AppError } from '../../shared/errors';
 import type { CommitInfo } from '../../shared/packs/models';
+import { gitHttp as http } from '../network/git-http';
 
 import { isPackFile, PackFileBudget, safeRelativePath, sourceError } from './pack-files';
 

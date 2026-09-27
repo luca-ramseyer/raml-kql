@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { MaskingRulesSchema } from '../privacy/masking';
 import { ATTRIBUTION_COLUMNS } from '../query/models';
 
 /**
@@ -469,6 +470,24 @@ export const settingDefinitions = [
     description:
       'Start CSV files with a UTF-8 byte order mark, so Excel reads accented characters correctly.',
     category: ['Results', 'Export'],
+    scope: 'user',
+  }),
+  define({
+    key: 'crashReporting.mode',
+    schema: z.enum(['ask', 'off', 'auto']),
+    default: 'ask',
+    description:
+      'After a crash: `ask` offers a sanitized report you can review and file on GitHub yourself; `off` keeps crash records on this machine only; `auto` sends sanitized reports automatically (only in builds with a reporting endpoint).',
+    category: ['Privacy'],
+    scope: 'user',
+  }),
+  define({
+    key: 'privacy.maskingRules',
+    schema: MaskingRulesSchema,
+    default: [],
+    description:
+      'Text to replace in result cells while presentation mode is on, e.g. `{ "match": "fabrikam", "replace": "customer01" }` (`isRegex` and `caseSensitive` optional). Use "Privacy: Generate Masking Rules from Tenant Domains" to start.',
+    category: ['Privacy'],
     scope: 'user',
   }),
   define({

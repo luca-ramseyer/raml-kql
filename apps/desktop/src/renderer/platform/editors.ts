@@ -6,7 +6,14 @@ import { create } from 'zustand';
  * (all tabs, and the active group's active tab) for callers that don't care about groups.
  */
 /** `packUpdate`: reviewing a query pack update (one per source, not restored on restart). */
-export type EditorKind = 'welcome' | 'settings' | 'workspaces' | 'query' | 'packUpdate';
+export type EditorKind =
+  | 'welcome'
+  | 'settings'
+  | 'workspaces'
+  | 'query'
+  | 'packUpdate'
+  | 'crashReport'
+  | 'networkActivity';
 
 export interface EditorInput {
   id: string;
@@ -62,6 +69,8 @@ const SINGLETONS: Record<Exclude<EditorKind, 'query' | 'packUpdate'>, Omit<Edito
   welcome: { kind: 'welcome', title: 'Welcome', icon: 'home' },
   settings: { kind: 'settings', title: 'Settings', icon: 'settings' },
   workspaces: { kind: 'workspaces', title: 'Workspaces', icon: 'server' },
+  crashReport: { kind: 'crashReport', title: 'Crash Report', icon: 'bug' },
+  networkActivity: { kind: 'networkActivity', title: 'Network Activity', icon: 'radio-tower' },
 };
 
 let queryCounter = 0;

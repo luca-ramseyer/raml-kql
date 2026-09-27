@@ -7,6 +7,7 @@ import type {
   SettingsSnapshot,
   UserThemesSnapshot,
 } from '../../shared/config/config-snapshots';
+import type { CrashReport, PendingCrashes } from '../../shared/crash/models';
 import { AppError } from '../../shared/errors';
 import type {
   EnrichmentResultData,
@@ -21,6 +22,7 @@ import type {
 } from '../../shared/ipc/contracts';
 import type { LayoutState } from '../../shared/layout/layout-state';
 import type { MenuBarModel, MenuRole } from '../../shared/menus/menu-model';
+import type { NetworkActivity } from '../../shared/network/activity';
 import type {
   ImportResult,
   PackQueryData,
@@ -68,6 +70,14 @@ export interface HandlerDependencies {
   now: () => Date;
   relaunch: (options: { demo: boolean }) => void;
   showAbout: () => void;
+  networkActivity: () => NetworkActivity;
+  crash: {
+    pending(): Promise<PendingCrashes>;
+    report(): Promise<CrashReport>;
+    dismiss(): Promise<void>;
+    reportError(message: string, stack: string | undefined): Promise<void>;
+    openIssue(report: CrashReport): Promise<void>;
+  };
   accounts: {
     snapshot(): AccountsSnapshot;
     addAccount(request: AddAccountRequest): Promise<AccountsSnapshot>;
@@ -200,6 +210,20 @@ export function createIpcHandlers(deps: HandlerDependencies): IpcHandlers {
       },
       showAbout: () => {
         deps.showAbout();
+      },
+      networkActivity: () => deps.networkActivity(),
+    },
+    crash: {
+      pending: () => deps.crash.pending(),
+      report: () => deps.crash.report(),
+      dismiss: async () => {
+        await deps.crash.dismiss();
+      },
+      reportError: async ({ message, stack }) => {
+        await deps.crash.reportError(message, stack);
+      },
+      openIssue: async (report) => {
+        await deps.crash.openIssue(report);
       },
     },
     accounts: {

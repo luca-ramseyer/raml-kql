@@ -7,6 +7,11 @@ import {
   setNameFormatters,
   showDeviceCode,
 } from '../features/accounts/accounts-store';
+import {
+  offerCrashReport,
+  registerDiagnosticsCommands,
+  startErrorCapture,
+} from '../features/diagnostics/crash-reporting';
 import { preloadQueryEditorWhenIdle } from '../features/editor/editor-preload';
 import { registerExtensionCommands } from '../features/extensions/extension-commands';
 import {
@@ -130,6 +135,8 @@ export async function startWorkbench({
     registerQueryCommands(),
     registerPackCommands(),
     registerExtensionCommands(),
+    registerDiagnosticsCommands(),
+    startErrorCapture(),
     startExtensionContributions(),
     registerResultCommands(),
     registerQuickAccess(),
@@ -163,6 +170,7 @@ export async function startWorkbench({
   void loadHistory();
   void refreshPacks();
   void loadExtensions();
+  void offerCrashReport();
 
   // Status bar: "$(server) 12 workspaces · 5 tenants" for the current selection (spec 03).
   const targetsItem = registerStatusBarItem({

@@ -6,6 +6,7 @@ import {
   SettingsSnapshotSchema,
   UserThemesSnapshotSchema,
 } from '../config/config-snapshots';
+import { CrashReportSchema, PendingCrashesSchema } from '../crash/models';
 import {
   EnrichmentResultSchema,
   EntitySchema,
@@ -16,6 +17,7 @@ import {
 } from '../extensions/models';
 import { LayoutStateSchema } from '../layout/layout-state';
 import { MenuBarModelSchema, MenuRoleSchema } from '../menus/menu-model';
+import { NetworkActivitySchema } from '../network/activity';
 import {
   GIT_SHA,
   ImportResultSchema,
@@ -110,6 +112,26 @@ export const ipcContracts = {
     ),
     /** Native "About" dialog. */
     showAbout: defineChannel('app:showAbout', z.undefined(), z.undefined()),
+    /** Hosts contacted this session (spec 10, "Developer: Show Network Activity"). */
+    networkActivity: defineChannel('app:networkActivity', z.undefined(), NetworkActivitySchema),
+  },
+  crash: {
+    /** Crashes since the user last looked (empty unless `crashReporting.mode` is "ask"). */
+    pending: defineChannel('crash:pending', z.undefined(), PendingCrashesSchema),
+    /** The sanitized issue text for the pending crashes. */
+    report: defineChannel('crash:report', z.undefined(), CrashReportSchema),
+    /** Don't offer the current crashes again. */
+    dismiss: defineChannel('crash:dismiss', z.undefined(), z.undefined()),
+    /** An error in the workbench (sanitized and recorded in main). */
+    reportError: defineChannel(
+      'crash:reportError',
+      z
+        .object({ message: z.string().max(4000), stack: z.string().max(20_000).optional() })
+        .strict(),
+      z.undefined(),
+    ),
+    /** Open a prefilled GitHub issue (sanitized again in main); the user submits it. */
+    openIssue: defineChannel('crash:openIssue', CrashReportSchema.strict(), z.undefined()),
   },
   accounts: {
     /** Accounts and tenants. Never contains tokens. */

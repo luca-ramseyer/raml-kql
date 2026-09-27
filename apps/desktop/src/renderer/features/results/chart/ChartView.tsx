@@ -14,6 +14,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ResultColumn } from '../../../../shared/query/models';
 import type { ChartData } from '../../../../shared/results/requests';
 import { notify } from '../../../platform/notifications';
+import { useSetting } from '../../../platform/settings';
 import { useTheme } from '../../../platform/theme/theme-service';
 import { getBridge, unwrap } from '../../../services/ipc';
 import { Codicon } from '../../../workbench/common/Codicon';
@@ -81,10 +82,11 @@ export function ChartView(): React.JSX.Element {
   const namer = useNamer();
   const workspaces = useInventory((s) => s.inventory.workspaces);
   const accounts = useAccounts((s) => s.snapshot.accounts);
+  const masking = useSetting('privacy.maskingRules');
   const theme = useTheme((s) => s.active);
   const display = useMemo(
-    () => buildDisplayNames(namer, workspaces, accounts),
-    [namer, workspaces, accounts],
+    () => buildDisplayNames(namer, workspaces, accounts, masking),
+    [namer, workspaces, accounts, masking],
   );
   const [data, setData] = useState<ChartData | undefined>(undefined);
   const container = useRef<HTMLDivElement>(null);

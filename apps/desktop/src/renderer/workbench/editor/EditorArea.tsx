@@ -1,5 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 
+import { CrashReportEditor } from '../../features/diagnostics/CrashReportEditor';
+import { NetworkActivityEditor } from '../../features/diagnostics/NetworkActivityEditor';
 import {
   loadedQueryEditor,
   loadQueryEditor,
@@ -324,6 +326,8 @@ function GroupView({
             {editor?.kind === 'welcome' ? <WelcomePage /> : null}
             {editor?.kind === 'settings' ? <SettingsEditor /> : null}
             {editor?.kind === 'workspaces' ? <WorkspacesEditor /> : null}
+            {editor?.kind === 'crashReport' ? <CrashReportEditor /> : null}
+            {editor?.kind === 'networkActivity' ? <NetworkActivityEditor /> : null}
             {editor?.kind === 'packUpdate' ? (
               <PackUpdateEditor
                 key={editor.id}

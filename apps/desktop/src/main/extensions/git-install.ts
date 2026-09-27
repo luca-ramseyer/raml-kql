@@ -4,9 +4,9 @@ import path from 'node:path';
 
 import { compareVersions, parseVersion } from '@raml-kql/pack-schema/semver';
 import { addRemote, fetch as gitFetch, init, listServerRefs, TREE, walk } from 'isomorphic-git';
-import http from 'isomorphic-git/http/node';
 
 import { AppError } from '../../shared/errors';
+import { gitHttp as http } from '../network/git-http';
 import { checkGitUrl } from '../packs/git-source';
 import { safeRelativePath } from '../packs/pack-files';
 
