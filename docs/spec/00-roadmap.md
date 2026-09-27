@@ -191,8 +191,22 @@ Version targets:
 
 ## Phase 10 — Privacy polish and crash reporting
 
-- [ ] Presentation-mode indicator in the status bar, keybinding, and custom masking rules for result cells (spec 03)
-- [ ] Crash capture + sanitized "Report on GitHub" flow (spec 10)
+- [x] Presentation-mode indicator in the status bar, keybinding, and custom masking rules for result cells (spec 03)
+- [x] Crash capture + sanitized "Report on GitHub" flow (spec 10)
+
+> Status:
+> - `e2e/privacy.spec.ts` checks three things in the running app:
+>   - masking rules hide customer text in result cells, and in search, while presentation mode is on, and lift with real names;
+>   - after an error mentioning personal data and a killed app, the next start offers the report; the file on disk and the preview are sanitized, and "Open GitHub Issue" opens a prefilled issue whose body, including the user's own edits, is sanitized again;
+>   - "Developer: Show Network Activity" works.
+> - Unit tests cover:
+>   - the sanitizer against a corpus of realistic crash texts: GUIDs, UPNs, IPs, JWTs, bearer tokens, paths, ARM resource IDs, KQL, tenant names;
+>   - the crash store and service (session marker, prompt rules, `off`/`auto` modes);
+>   - the Sentry envelope sink;
+>   - masking;
+>   - the network recorder.
+> - The status bar indicator and the `Ctrl/Cmd+Alt+P` toggle already existed from Phase 3.
+> - Decisions: D-051 to D-053.
 
 ## Phase 11 — Packaging, signing, auto-update
 
