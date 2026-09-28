@@ -1,5 +1,7 @@
 import { tenantsNeedingReauth, useAccounts } from '../features/accounts/accounts-store';
 import { AccountsView } from '../features/accounts/AccountsView';
+import { HistoryView } from '../features/history/HistoryView';
+import { LibraryView } from '../features/library/LibraryView';
 import { WelcomeView } from '../features/placeholders/WelcomeView';
 import { TargetsView } from '../features/targets/TargetsView';
 
@@ -44,22 +46,20 @@ export const VIEWS: readonly ViewDescriptor[] = [
     title: 'Library',
     icon: 'library',
     position: 'top',
-    component: () => (
-      <WelcomeView
-        paragraphs={['Your saved queries and installed query packs will appear here.']}
-      />
-    ),
+    component: LibraryView,
+    actions: [
+      { icon: 'new-file', title: 'New Query…', command: 'library.newQuery' },
+      { icon: 'new-folder', title: 'New Folder…', command: 'library.newFolder' },
+      { icon: 'refresh', title: 'Refresh', command: 'library.refresh' },
+    ],
   },
   {
     id: 'workbench.view.history',
     title: 'History',
     icon: 'history',
     position: 'top',
-    component: () => (
-      <WelcomeView
-        paragraphs={['Queries you run will appear here. Only query text is kept, never results.']}
-      />
-    ),
+    component: HistoryView,
+    actions: [{ icon: 'clear-all', title: 'Clear History', command: 'history.clear' }],
   },
   {
     id: 'workbench.view.extensions',

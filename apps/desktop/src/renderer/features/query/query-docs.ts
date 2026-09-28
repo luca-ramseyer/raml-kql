@@ -37,6 +37,12 @@ export interface QueryDoc {
   timeRange: TimeRange;
   /** The query filters on TimeGenerated itself ("Set in query"). */
   timeSetInQuery: boolean;
+  /** Last cursor position (restored with the tab). */
+  cursor?: { line: number; column: number } | undefined;
+  /** The My Queries file this tab edits (relative path) and the text last saved there. */
+  file?: { path: string; savedText: string } | undefined;
+  /** Restored from the last session: its results were cleared (spec 04). */
+  restored?: boolean | undefined;
 }
 
 export const STARTER_QUERY = `SigninLogs
@@ -47,13 +53,18 @@ export const STARTER_QUERY = `SigninLogs
 
 export const useQueryDocs = create<{ docs: Record<string, QueryDoc> }>(() => ({ docs: {} }));
 
-export function createQueryDoc(id: string, text = ''): void {
+export function createQueryDoc(id: string, text = '', extra: Partial<QueryDoc> = {}): void {
   useQueryDocs.setState((state) => ({
     docs: {
       ...state.docs,
-      [id]: { text, timeRange: { kind: 'preset', preset: '24h' }, timeSetInQuery: false },
+      [id]: { text, timeRange: { kind: 'preset', preset: '24h' }, timeSetInQuery: false, ...extra },
     },
   }));
+}
+
+/** A linked file has unsaved changes. */
+export function isDirty(doc: QueryDoc | undefined): boolean {
+  return doc?.file !== undefined && doc.file.savedText !== doc.text;
 }
 
 export function updateQueryDoc(id: string, patch: Partial<QueryDoc>): void {

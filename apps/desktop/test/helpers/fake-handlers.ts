@@ -105,6 +105,30 @@ export function fakeHandlerDependencies(
     },
     keybindings: { current: { entries: [], problems: [] } },
     userThemes: () => ({ themes: [], problems: [] }),
+    queries: {
+      list: vi.fn(() => Promise.resolve([])),
+      read: vi.fn((path: string) => Promise.resolve({ path, name: path, body: '' })),
+      save: vi.fn((request: { path?: string; name?: string; body: string }) =>
+        Promise.resolve({
+          path: request.path ?? 'new.kql',
+          name: request.name ?? 'new',
+          body: request.body,
+        }),
+      ),
+      rename: vi.fn((path: string, name: string) => Promise.resolve({ path, name, body: '' })),
+      move: vi.fn((path: string) => Promise.resolve(path)),
+      createFolder: vi.fn(() => Promise.resolve()),
+      delete: vi.fn(() => Promise.resolve()),
+      reveal: vi.fn(),
+    },
+    history: {
+      list: vi.fn(() => Promise.resolve([])),
+      clear: vi.fn(() => Promise.resolve()),
+    },
+    tabs: {
+      read: vi.fn(() => Promise.resolve(undefined)),
+      write: vi.fn(() => Promise.resolve()),
+    },
     layout: {
       read: () => Promise.resolve(DEFAULT_LAYOUT_STATE),
       write: vi.fn(() => Promise.resolve()),

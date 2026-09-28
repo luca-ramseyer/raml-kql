@@ -7,7 +7,7 @@ import { useAccounts } from '../../src/renderer/features/accounts/accounts-store
 import { setAliased } from '../../src/renderer/features/privacy/privacy';
 import { useCommands } from '../../src/renderer/platform/commands';
 import { useContextKeys } from '../../src/renderer/platform/context-keys';
-import { useEditors } from '../../src/renderer/platform/editors';
+import { resetEditors } from '../../src/renderer/platform/editors';
 import { useLayout } from '../../src/renderer/platform/layout';
 import { clearAllNotifications, useNotifications } from '../../src/renderer/platform/notifications';
 import { hideQuickInput } from '../../src/renderer/platform/quickinput/quick-input';
@@ -77,7 +77,7 @@ export function resetWorkbenchState(): void {
   hideQuickInput();
   clearAllNotifications();
   useNotifications.setState({ notifications: [], toasts: [], centerVisible: false });
-  useEditors.setState({ editors: [], activeId: undefined });
+  resetEditors();
   useLayout.setState(DEFAULT_LAYOUT_STATE, true);
   useCommands.setState({ recent: [] });
   useContextKeys.setState({ values: {} });

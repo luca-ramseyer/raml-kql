@@ -146,3 +146,74 @@
   padding: 12px 20px;
   color: var(--vscode-descriptionForeground);
 }
+
+/* Editor groups side by side (spec 05). */
+.editor {
+  flex-direction: row;
+}
+
+.editor-group {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 120px;
+  min-height: 0;
+}
+
+.editor-group + .sash,
+.editor .sash {
+  flex: 0 0 auto;
+}
+
+.editor-group.drop-target,
+.editor-group-empty.drop-target {
+  background-color: var(--vscode-editorGroup-dropBackground, rgba(83, 89, 93, 0.5));
+}
+
+.editor-group-empty {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Inactive groups dim their active tab's accent, like VS Code. */
+.editor-group:not(.active) .tab.active {
+  color: var(--vscode-tab-unfocusedActiveForeground, var(--vscode-tab-activeForeground));
+}
+
+.editor-group:not(.active) .tab.active::after {
+  background-color: var(--vscode-tab-unfocusedActiveBorderTop, transparent);
+}
+
+.tab.preview .tab-label {
+  font-style: italic;
+}
+
+.tab-description {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.9em;
+}
+
+.tab.drop-target {
+  box-shadow: inset 2px 0 0 var(--vscode-focusBorder);
+}
+
+/* Dirty: a dot in place of the close button until hovered (VS Code). */
+.tab .tab-dirty-icon {
+  display: none;
+}
+
+.tab.dirty .tab-close {
+  visibility: visible;
+}
+
+.tab.dirty:not(:hover) .tab-close-icon {
+  display: none;
+}
+
+.tab.dirty:not(:hover) .tab-dirty-icon {
+  display: inline-block;
+}
+
+.tab.pinned .tab-close {
+  visibility: visible;
+}

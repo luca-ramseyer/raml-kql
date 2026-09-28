@@ -55,6 +55,9 @@ export interface ConfigPaths {
   readonly layoutStateFile: string;
   readonly schemaCacheDir: string;
   readonly auditDir: string;
+  readonly tabsStateFile: string;
+  readonly historyFile: string;
+  readonly queriesDir: string;
 }
 
 export function configPaths(root: string): ConfigPaths {
@@ -71,6 +74,9 @@ export function configPaths(root: string): ConfigPaths {
     layoutStateFile: path.join(root, 'state', 'ui-layout.json'),
     schemaCacheDir: path.join(root, 'state', 'schema-cache'),
     auditDir: path.join(root, 'audit'),
+    tabsStateFile: path.join(root, 'state', 'tabs.json'),
+    historyFile: path.join(root, 'state', 'history.jsonl'),
+    queriesDir: path.join(root, 'queries'),
   };
 }
 

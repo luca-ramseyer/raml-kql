@@ -7,6 +7,8 @@ import { showPanelTab, togglePanel, useLayout } from '../../platform/layout';
 import { dismissNotification, notify } from '../../platform/notifications';
 import { getBridge, unwrap } from '../../services/ipc';
 
+import { updateQueryDoc } from './query-docs';
+
 /**
  * Query runs per tab (spec 04). Holds run snapshots only (states, counts, table shapes);
  * result rows stay in the main process and are paged in by the results view.
@@ -86,6 +88,7 @@ function reportError(error: unknown, fallback: string): void {
 }
 
 export async function startRun(request: QueryRunRequest): Promise<void> {
+  updateQueryDoc(request.tabId, { restored: false });
   try {
     applyRunSnapshot(await unwrap(getBridge().query.run(request)));
   } catch (error) {

@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import { useEditors } from '../../platform/editors';
 import { showPanelTab } from '../../platform/layout';
 import { useSetting } from '../../platform/settings';
 import { Codicon } from '../../workbench/common/Codicon';
 import { useAccounts } from '../accounts/accounts-store';
 import { useNamer } from '../privacy/privacy';
+import { useQueryDocs } from '../query/query-docs';
 import { runSummaryText } from '../query/run-store';
 import { useInventory } from '../workspaces/inventory-store';
 
@@ -27,6 +29,10 @@ import './results.css';
 export function ResultsView(): React.JSX.Element {
   const { tabId, run } = useActiveRun();
   const ui = useTabResults(tabId, run?.runId);
+  const activeTab = useEditors((s) => s.activeId);
+  const restoredTab = useQueryDocs((s) =>
+    activeTab === undefined ? false : s.docs[activeTab]?.restored === true,
+  );
   const namer = useNamer();
   const workspaces = useInventory((s) => s.inventory.workspaces);
   const accounts = useAccounts((s) => s.snapshot.accounts);
@@ -55,7 +61,11 @@ export function ResultsView(): React.JSX.Element {
 
   if (run === undefined || tabId === undefined) {
     return (
-      <p className="panel-empty">Run a query to see merged results from all selected workspaces.</p>
+      <p className="panel-empty">
+        {restoredTab
+          ? 'Results from the previous session were cleared. Press Shift+Enter to run again.'
+          : 'Run a query to see merged results from all selected workspaces.'}
+      </p>
     );
   }
   const table = run.tables.find((t) => t.index === ui.tableIndex) ?? run.tables[0];

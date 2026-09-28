@@ -1,9 +1,19 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { activateEditor, closeActiveEditor, closeEditor, openEditor, useEditors } from './editors';
+import {
+  activateEditor,
+  closeActiveEditor,
+  closeEditor,
+  moveEditor,
+  openEditor,
+  openQueryEditor,
+  resetEditors,
+  splitGroup,
+  useEditors,
+} from './editors';
 
 beforeEach(() => {
-  useEditors.setState({ editors: [], activeId: undefined });
+  resetEditors();
 });
 
 describe('editors', () => {
@@ -30,6 +40,25 @@ describe('editors', () => {
     closeActiveEditor();
     expect(useEditors.getState().activeId).toBe('settings');
     closeEditor('settings');
-    expect(useEditors.getState()).toEqual({ editors: [], activeId: undefined });
+    expect(useEditors.getState().editors).toEqual([]);
+    expect(useEditors.getState().activeId).toBeUndefined();
+  });
+
+  it('splits into groups, moves tabs between them and closes emptied groups', () => {
+    const a = openQueryEditor();
+    const groupB = splitGroup();
+    const b = openQueryEditor();
+    expect(useEditors.getState().groups.map((g) => g.editors.map((e) => e.id))).toEqual([[a], [b]]);
+    expect(useEditors.getState().activeGroupId).toBe(groupB);
+    moveEditor(b, 'group-1');
+    expect(useEditors.getState().groups).toHaveLength(1);
+    expect(useEditors.getState().editors.map((e) => e.id)).toEqual([a, b]);
+  });
+
+  it('replaces the previous preview tab in a group', () => {
+    const first = openQueryEditor({ preview: true });
+    const second = openQueryEditor({ preview: true });
+    expect(useEditors.getState().editors.map((e) => e.id)).toEqual([second]);
+    expect(first).not.toBe(second);
   });
 });

@@ -31,6 +31,10 @@ export const ipcEvents = {
   'groups.changed': GroupsSnapshotSchema,
   /** A query run progressed (workspace states, row counts). Never contains result rows. */
   'query.runChanged': RunSnapshotSchema,
+  /** A run was added to the history, or it was cleared. */
+  'history.changed': z.object({}),
+  /** Files in My Queries changed (in the app or on disk). */
+  'queries.changed': z.object({}),
 } as const satisfies Record<string, z.ZodType>;
 
 export type IpcEvents = typeof ipcEvents;

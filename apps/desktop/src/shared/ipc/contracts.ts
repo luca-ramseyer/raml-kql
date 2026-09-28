@@ -8,7 +8,15 @@ import {
 } from '../config/config-snapshots';
 import { LayoutStateSchema } from '../layout/layout-state';
 import { MenuBarModelSchema, MenuRoleSchema } from '../menus/menu-model';
+import {
+  QueriesSnapshotSchema,
+  QueryFileSchema,
+  QueryPathSchema,
+  SaveQueryRequestSchema,
+} from '../queries/models';
+import { HistorySnapshotSchema } from '../query/history';
 import { QueryRunRequestSchema, RerunRequestSchema, RunSnapshotSchema } from '../query/models';
+import { TabsStateSchema } from '../query/tabs';
 import { ExportRequestSchema, ExportResultSchema } from '../results/export';
 import {
   AggregateRequestSchema,
@@ -201,6 +209,53 @@ export const ipcContracts = {
   themes: {
     /** Colour themes from `<config>/themes/`. Built-in themes ship with the renderer. */
     listUser: defineChannel('themes:listUser', z.undefined(), UserThemesSnapshotSchema),
+  },
+  queries: {
+    /** My Queries tree (folders and `.kql` files). */
+    list: defineChannel('queries:list', z.undefined(), QueriesSnapshotSchema),
+    read: defineChannel(
+      'queries:read',
+      z.object({ path: QueryPathSchema }).strict(),
+      QueryFileSchema,
+    ),
+    save: defineChannel('queries:save', SaveQueryRequestSchema, QueryFileSchema),
+    rename: defineChannel(
+      'queries:rename',
+      z.object({ path: QueryPathSchema, name: z.string().min(1).max(300) }).strict(),
+      QueryFileSchema,
+    ),
+    move: defineChannel(
+      'queries:move',
+      z
+        .object({ path: QueryPathSchema, folder: z.union([QueryPathSchema, z.literal('')]) })
+        .strict(),
+      z.object({ path: z.string() }),
+    ),
+    createFolder: defineChannel(
+      'queries:createFolder',
+      z.object({ path: QueryPathSchema }).strict(),
+      z.undefined(),
+    ),
+    /** Moves to the OS trash. */
+    delete: defineChannel(
+      'queries:delete',
+      z.object({ path: QueryPathSchema }).strict(),
+      z.undefined(),
+    ),
+    reveal: defineChannel(
+      'queries:reveal',
+      z.object({ path: QueryPathSchema.optional() }).strict(),
+      z.undefined(),
+    ),
+  },
+  history: {
+    list: defineChannel('history:list', z.undefined(), HistorySnapshotSchema),
+    clear: defineChannel('history:clear', z.undefined(), z.undefined()),
+  },
+  tabs: {
+    /** Tabs of the last session (null on first run). */
+    get: defineChannel('tabs:get', z.undefined(), TabsStateSchema.nullable()),
+    set: defineChannel('tabs:set', TabsStateSchema, z.undefined()),
   },
   layout: {
     get: defineChannel('layout:get', z.undefined(), LayoutStateSchema),

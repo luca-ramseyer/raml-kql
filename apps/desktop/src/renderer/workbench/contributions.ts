@@ -6,7 +6,7 @@ import {
   registerCommand,
   useCommands,
 } from '../platform/commands';
-import { activateEditor, closeActiveEditor, openEditor, useEditors } from '../platform/editors';
+import { closeActiveEditor, openEditor } from '../platform/editors';
 import { keybindingLabel } from '../platform/keybindings/keybinding-service';
 import { showView, toggleMaximizedPanel, togglePanel, toggleSidebar } from '../platform/layout';
 import {
@@ -337,27 +337,6 @@ export function registerQuickAccess(): () => void {
         if (item !== undefined) {
           openQuickAccess(item.id.slice('help:'.length));
         }
-      },
-    }),
-    registerQuickAccessProvider({
-      prefix: '',
-      helpText: 'Go to Query (open editors; saved queries and history arrive later)',
-      placeholder: 'Search open editors (append > to run commands, ? for help)',
-      noResultsText: 'No matching editors. Type > to search commands.',
-      getItems: (filter) =>
-        filterQuickPickItems(
-          useEditors.getState().editors.map((editor) => ({
-            id: `editor:${editor.id}`,
-            label: editor.title,
-            icon: editor.icon,
-            description: 'open editor',
-          })),
-          filter,
-          { sort: true },
-        ),
-      onAccept: (item) => {
-        const editor = useEditors.getState().editors.find((e) => `editor:${e.id}` === item?.id);
-        if (editor !== undefined) activateEditor(editor.id);
       },
     }),
   ];

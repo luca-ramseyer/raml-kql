@@ -115,12 +115,24 @@ Version targets:
 
 ## Phase 7 — Tabs, history, saved queries
 
-- [ ] Query tabs persist across restarts (text, targets, time range, name) with results cleared
-- [ ] Split editor groups (side-by-side tabs) like VS Code
-- [ ] History view (searchable, re-open into a tab, no result data)
-- [ ] "My Queries" saved as `.kql` files with front-matter in the config dir, plus an Explorer-like view
+- [x] Query tabs persist across restarts (text, targets, time range, name) with results cleared
+- [x] Split editor groups (side-by-side tabs) like VS Code
+- [x] History view (searchable, re-open into a tab, no result data)
+- [x] "My Queries" saved as `.kql` files with front-matter in the config dir, plus an Explorer-like view
 
 **Acceptance:** Restart restores tabs without results. History search works. Saved queries appear as files.
+
+> Status:
+> - `e2e/tabs.spec.ts` covers three things:
+>   - it runs a query, restarts the app on the same config dir, and checks that the tab comes back with its text and the "results were cleared" note, and that `state/tabs.json` holds no result data;
+>   - it searches History and reopens an entry;
+>   - it saves a tab with Ctrl/Cmd+S into `<config>/queries/`, checks the file and the Library tree, and saves it again in place.
+> - Unit tests cover:
+>   - editor groups (split, move, preview, MRU);
+>   - tab persistence round-trips and per-tab targets;
+>   - the tabs store, history service (dedupe, cap, damaged lines) and My Queries service (path safety, free names, rename, move, trash);
+>   - front-matter.
+> - Decisions: D-037 to D-039. The live check is in `docs/HUMAN-TODO.md`.
 
 ## Phase 8 — Query packs and git sources
 

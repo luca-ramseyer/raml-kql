@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { executeCommand } from '../../platform/commands';
 import { setContextKey } from '../../platform/context-keys';
+import { activateEditor, updateEditor, useEditors } from '../../platform/editors';
 import { useKeybindingLabel } from '../../platform/keybindings/keybinding-service';
 import { useSetting } from '../../platform/settings';
 import { useTheme } from '../../platform/theme/theme-service';
@@ -75,6 +76,10 @@ function watchTimeFilter(
   };
   const listener = model.onDidChangeContent(() => {
     updateQueryDoc(editorId, { text: model.getValue() });
+    // Editing a preview tab keeps it open (VS Code).
+    if (useEditors.getState().editors.find((e) => e.id === editorId)?.preview === true) {
+      updateEditor(editorId, { preview: false });
+    }
     check();
   });
   check();
@@ -135,7 +140,16 @@ export function QueryEditor({ editorId }: { editorId: string }): React.JSX.Eleme
           minimap: { enabled: false },
           suggest: { showInlineDetails: true },
         });
-        if (entry.viewState !== null) editor.restoreViewState(entry.viewState);
+        if (entry.viewState !== null) {
+          editor.restoreViewState(entry.viewState);
+        } else {
+          // A restored tab: put the cursor back where it was (spec 05).
+          const cursor = useQueryDocs.getState().docs[editorId]?.cursor;
+          if (cursor !== undefined) {
+            editor.setPosition({ lineNumber: cursor.line, column: cursor.column });
+            editor.revealLineInCenterIfOutsideViewport(cursor.line);
+          }
+        }
         editorRef.current = editor;
         setActiveCodeEditor(editorId, editor);
         saveViewState = () => {
@@ -143,8 +157,15 @@ export function QueryEditor({ editorId }: { editorId: string }): React.JSX.Eleme
         };
         disposables.push(
           watchTimeFilter(loaded, editorId, entry.model),
+          editor.onDidChangeCursorPosition((event) => {
+            updateQueryDoc(editorId, {
+              cursor: { line: event.position.lineNumber, column: event.position.column },
+            });
+          }),
           editor.onDidFocusEditorText(() => {
             setContextKey('editorTextFocus', true);
+            // Focusing an editor makes its group (and tab) the active one.
+            if (useEditors.getState().activeId !== editorId) activateEditor(editorId);
           }),
           editor.onDidBlurEditorText(() => {
             setContextKey('editorTextFocus', false);
@@ -169,7 +190,7 @@ export function QueryEditor({ editorId }: { editorId: string }): React.JSX.Eleme
           () => void executeCommand('query.cancel'),
           'ramlQueryRunning && !suggestWidgetVisible && !findWidgetVisible && !parameterHintsVisible',
         );
-        editor.focus();
+        if (useEditors.getState().activeId === editorId) editor.focus();
         setState('ready');
       })
       .catch((error: unknown) => {

@@ -77,3 +77,9 @@ Claude Code appends items here when blocked, and keeps working. Tick them off wh
 - [ ] **Verify the portal link.** Right-click a result cell → "Open Query in Azure Portal Logs" (or the link icon in the Run tab). The portal should open Logs on that workspace with the query filled in. For a Lighthouse customer it should open in your own tenant. If the portal changed its URL format, tell me what URL the portal's own "Copy link to query" produces.
 - [ ] **Verify the Defender device link** on a `DeviceProcessEvents` row (right-click → "Open Device in Microsoft Defender"), and an incident link from `SecurityIncident` (`IncidentUrl`).
 - [ ] **Exports in Excel:** open an exported XLSX and a CSV (with your locale's delimiter; set `export.csv.delimiter` to `;` if Excel shows everything in one column).
+
+## Added during Phase 7
+
+- [ ] **Tabs across a restart.** Open three or four query tabs, split one to the right (`Cmd+\`), pick different targets in two of them, quit and start again. The tabs, groups, text, time range and targets should come back, each with the "results were cleared" note.
+- [ ] **My Queries in your dotfiles.** Save a query (`Cmd+S`), then look at `~/.raml-kql/queries/`. If you keep the config folder in git, check that the `.kql` file diff reads well and that `state/` stays out of git.
+- [ ] **History on real runs.** After a few real runs, search History by a table name and by a (real, with presentation mode off) tenant name, and use "Run Again".

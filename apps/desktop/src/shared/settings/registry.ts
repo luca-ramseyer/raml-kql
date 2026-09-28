@@ -498,6 +498,15 @@ export const settingDefinitions = [
     category: ['Results'],
     scope: 'user',
   }),
+  define({
+    key: 'history.maxEntries',
+    schema: z.number().int().min(0).max(100_000),
+    default: 5000,
+    description:
+      'How many runs the History view keeps (query text and targets only, never results). `0` keeps no history.',
+    category: ['Query', 'History'],
+    scope: 'user',
+  }),
 ] as const satisfies readonly SettingDefinition[];
 
 export type SettingKey = (typeof settingDefinitions)[number]['key'];
