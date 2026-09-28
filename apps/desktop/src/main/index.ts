@@ -16,6 +16,7 @@ import {
   Menu,
   net,
   protocol,
+  safeStorage,
   session,
   shell,
 } from 'electron';
@@ -23,6 +24,14 @@ import {
 import { buildWorkbenchCsp } from '../shared/security/csp';
 
 import { resolveAppMode } from './app-mode';
+import { JsoncAccountsConfig, MemoryAccountsConfig } from './auth/accounts-config';
+import { AuthService, type AuthProviders } from './auth/auth-service';
+import { AzureCliAuthProvider } from './auth/azure-cli-provider';
+import { PUBLIC_CLOUD } from './auth/cloud';
+import { DemoAuthProvider } from './auth/demo-provider';
+import { EncryptedFileCachePlugin, resolveTokenPersistence } from './auth/encrypted-cache-plugin';
+import { MsalAuthProvider } from './auth/msal-provider';
+import { listTenants } from './azure/arm-tenants';
 import { configPaths, ensureConfigDir, resolveConfigDir } from './config/config-dir';
 import { watchDirectory } from './config/config-watcher';
 import { createEventSender } from './ipc/events';
@@ -117,6 +126,9 @@ if (!app.requestSingleInstanceLock()) {
     });
     watchDirectory(paths.themesDir, () => void userThemes.reload());
 
+    const auth = createAuthService();
+    void auth.init();
+
     // macOS gets a native menu once the renderer sends its model; elsewhere the renderer
     // draws the menu bar itself, so there's no native menu at all.
     Menu.setApplicationMenu(null);
@@ -139,6 +151,7 @@ if (!app.requestSingleInstanceLock()) {
           app.exit(0);
         },
         showAbout,
+        accounts: auth,
         settings,
         keybindings,
         userThemes: () => userThemes.current,
@@ -160,6 +173,7 @@ if (!app.requestSingleInstanceLock()) {
             await shell.openPath(paths.root);
           },
           openExternal: (url) => shell.openExternal(url),
+          writeClipboard: (text) => clipboard.writeText(text),
         },
       }),
       isTrustedSender: (url) => isTrustedOrigin(url, trustedOrigins),
@@ -170,6 +184,84 @@ if (!app.requestSingleInstanceLock()) {
     });
 
     mainWindow = createMainWindow();
+  });
+}
+
+/**
+ * The built-in Entra client ID, injected at build time from RAML_KQL_CLIENT_ID (see
+ * electron.vite.config.ts and docs/guides/entra-app-registration.md). Not a secret.
+ */
+const BUILTIN_CLIENT_ID = /^[0-9a-f-]{36}$/i.test(__RAML_KQL_CLIENT_ID__)
+  ? __RAML_KQL_CLIENT_ID__
+  : undefined;
+
+/** Sign-in pages may only open in the system browser, and only on the Entra authority host. */
+async function openSignInPage(url: string): Promise<void> {
+  if (new URL(url).origin !== new URL(PUBLIC_CLOUD.authorityHost).origin) {
+    throw new Error('Refusing to open an unexpected sign-in URL.');
+  }
+  await shell.openExternal(url);
+}
+
+function createAuthService(): AuthService {
+  const cloud = PUBLIC_CLOUD;
+  const persistence = mode.demo
+    ? 'encrypted'
+    : resolveTokenPersistence(
+        safeStorage,
+        process.platform,
+        settings.current.values['auth.sessionOnly'] === true,
+      );
+  const msal = (kind: 'builtin' | 'custom', clientId: string): MsalAuthProvider =>
+    new MsalAuthProvider({
+      kind,
+      clientId,
+      cloud,
+      openBrowser: openSignInPage,
+      // Kept in userData (machine-local), never in the shareable config dir.
+      ...(persistence === 'encrypted'
+        ? {
+            cachePlugin: new EncryptedFileCachePlugin(
+              path.join(app.getPath('userData'), 'auth', `msal-cache-${clientId}.bin`),
+              safeStorage,
+            ),
+          }
+        : {}),
+    });
+
+  const demo = mode.demo ? new DemoAuthProvider() : undefined;
+  const providers: AuthProviders =
+    demo !== undefined
+      ? { demo }
+      : {
+          ...(BUILTIN_CLIENT_ID === undefined
+            ? {}
+            : { builtin: msal('builtin', BUILTIN_CLIENT_ID) }),
+          azureCli: new AzureCliAuthProvider(cloud),
+          custom: (clientId) => msal('custom', clientId),
+        };
+
+  return new AuthService({
+    cloud,
+    providers,
+    persistence,
+    config: mode.demo ? new MemoryAccountsConfig() : new JsoncAccountsConfig(paths.accountsFile),
+    listTenants: (account, token) =>
+      demo !== undefined
+        ? Promise.resolve(demo.tenantsFor(account.id))
+        : // net.fetch uses Chromium's network stack, so system proxy settings apply.
+          listTenants({
+            cloud,
+            token,
+            homeTenantId: account.homeTenantId,
+            fetch: (url, init) => net.fetch(url, init),
+          }),
+    onChange: (snapshot) => {
+      emit('accounts.changed', snapshot);
+    },
+    onDeviceCode: (prompt) => {
+      emit('accounts.deviceCode', prompt);
+    },
   });
 }
 

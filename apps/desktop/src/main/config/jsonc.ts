@@ -69,10 +69,14 @@ export async function readTextFile(file: string): Promise<string | undefined> {
  * Rename follows the target path, so a symlinked file (dotfiles repo) is replaced by a
  * regular file; for symlinks we write in place instead.
  */
-export async function writeTextFileAtomic(file: string, content: string): Promise<void> {
+export async function writeTextFileAtomic(
+  file: string,
+  content: string,
+  mode?: number,
+): Promise<void> {
   const stat = await lstat(file).catch(() => undefined);
   if (stat?.isSymbolicLink() === true) {
-    await writeFile(file, content, 'utf8');
+    await writeFile(file, content, { encoding: 'utf8', ...(mode === undefined ? {} : { mode }) });
     return;
   }
   const temp = path.join(
@@ -80,7 +84,7 @@ export async function writeTextFileAtomic(file: string, content: string): Promis
     `.${path.basename(file)}.${randomBytes(6).toString('hex')}.tmp`,
   );
   try {
-    await writeFile(temp, content, 'utf8');
+    await writeFile(temp, content, { encoding: 'utf8', ...(mode === undefined ? {} : { mode }) });
     await rename(temp, file);
   } catch (error) {
     await rm(temp, { force: true });

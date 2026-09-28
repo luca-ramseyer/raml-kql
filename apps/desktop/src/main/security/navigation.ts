@@ -11,6 +11,10 @@ export const EXTERNAL_URL_ALLOWLIST: readonly string[] = [
   'portal.azure.com',
   'security.microsoft.com',
   'github.com',
+  // Device code sign-in pages (spec 02).
+  'microsoft.com',
+  'login.microsoft.com',
+  'login.microsoftonline.com',
 ];
 
 export function isAllowedExternalUrl(rawUrl: string): boolean {

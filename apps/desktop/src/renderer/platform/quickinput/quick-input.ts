@@ -35,6 +35,10 @@ export interface QuickInputProvider {
   onCancel?(): void;
   /** Text shown when nothing matches. */
   noResultsText?: string;
+  /** Message shown instead of the list for the current text (input boxes). */
+  message?(filter: string): string | undefined;
+  /** Input boxes: return an error to refuse Enter. */
+  validate?(filter: string): string | undefined;
 }
 
 export interface QuickAccessProvider extends QuickInputProvider {
@@ -118,6 +122,7 @@ export function hideQuickInput(cancelled = true): void {
 export function acceptQuickInput(item: QuickPickItem | undefined): void {
   const state = useQuickInput.getState();
   const { provider, filter } = currentProvider(state);
+  if (provider?.validate?.(filter) !== undefined) return;
   hideQuickInput(false);
   provider?.onAccept(item, filter);
 }
@@ -153,4 +158,33 @@ export function filterQuickPickItems(
     return scored.map(({ item }) => ({ ...item, group: undefined }));
   }
   return scored.map(({ item }) => item);
+}
+
+export interface InputBoxOptions {
+  placeholder: string;
+  /** Shown under the input while it is valid. */
+  prompt: string;
+  value?: string;
+  validate?: (value: string) => string | undefined;
+  onAccept: (value: string) => void;
+  onCancel?: () => void;
+}
+
+/** VS Code's `showInputBox`: a quick input with free text and validation. */
+export function showInputBox(options: InputBoxOptions): void {
+  showQuickPick(
+    {
+      placeholder: options.placeholder,
+      getItems: () => [],
+      message: (value) =>
+        options.validate?.(value) ??
+        `${options.prompt} (Press 'Enter' to confirm or 'Escape' to cancel)`,
+      validate: (value) => options.validate?.(value),
+      onAccept: (_item, value) => {
+        options.onAccept(value);
+      },
+      ...(options.onCancel === undefined ? {} : { onCancel: options.onCancel }),
+    },
+    options.value ?? '',
+  );
 }

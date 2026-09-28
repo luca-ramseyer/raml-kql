@@ -3,6 +3,7 @@ import { vi } from 'vitest';
 import { createIpcHandlers, type HandlerDependencies } from '../../src/main/ipc/handlers';
 import { registerIpcRouter } from '../../src/main/ipc/router';
 import { createRamlKqlApi } from '../../src/preload/api';
+import { useAccounts } from '../../src/renderer/features/accounts/accounts-store';
 import { useCommands } from '../../src/renderer/platform/commands';
 import { useContextKeys } from '../../src/renderer/platform/context-keys';
 import { useEditors } from '../../src/renderer/platform/editors';
@@ -77,6 +78,10 @@ export function resetWorkbenchState(): void {
   useCommands.setState({ recent: [] });
   useContextKeys.setState({ values: {} });
   applySettingsSnapshot({ values: {}, problems: [] });
+  useAccounts.setState({
+    snapshot: { accounts: [], builtinAvailable: false, persistence: 'encrypted' },
+    signingIn: false,
+  });
   vi.unstubAllGlobals();
 }
 

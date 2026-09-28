@@ -125,8 +125,13 @@ export function QuickInput(): React.JSX.Element | null {
         }}
       >
         {items.length === 0 ? (
-          <div className="quick-input-message">
-            {provider?.noResultsText ?? 'No matching results'}
+          <div
+            className={`quick-input-message${
+              provider?.validate?.(filter) === undefined ? '' : ' invalid'
+            }`}
+            role={provider?.validate?.(filter) === undefined ? undefined : 'alert'}
+          >
+            {provider?.message?.(filter) ?? provider?.noResultsText ?? 'No matching results'}
           </div>
         ) : (
           items.map((item, index) => {

@@ -1,3 +1,4 @@
+import type { AccountsSnapshot, AddAccountRequest } from '../../shared/auth/models';
 import type {
   KeybindingsSnapshot,
   SettingsSnapshot,
@@ -26,6 +27,14 @@ export interface HandlerDependencies {
   now: () => Date;
   relaunch: (options: { demo: boolean }) => void;
   showAbout: () => void;
+  accounts: {
+    snapshot(): AccountsSnapshot;
+    addAccount(request: AddAccountRequest): Promise<AccountsSnapshot>;
+    removeAccount(accountId: string): Promise<AccountsSnapshot>;
+    reauthenticate(accountId: string, tenantId?: string): Promise<AccountsSnapshot>;
+    refresh(accountId?: string): Promise<AccountsSnapshot>;
+    setLabel(accountId: string, label: string | null): Promise<AccountsSnapshot>;
+  };
   settings: {
     current: SettingsSnapshot;
     update(request: SettingsUpdateRequest): Promise<SettingsSnapshot>;
@@ -38,6 +47,7 @@ export interface HandlerDependencies {
     openConfigFile(file: 'settings' | 'keybindings'): Promise<void>;
     openConfigFolder(): Promise<void>;
     openExternal(url: string): Promise<void>;
+    writeClipboard(text: string): Promise<void>;
   };
 }
 
@@ -53,6 +63,15 @@ export function createIpcHandlers(deps: HandlerDependencies): IpcHandlers {
       showAbout: () => {
         deps.showAbout();
       },
+    },
+    accounts: {
+      get: () => deps.accounts.snapshot(),
+      add: (request) => deps.accounts.addAccount(request),
+      remove: ({ accountId }) => deps.accounts.removeAccount(accountId),
+      reauthenticate: ({ accountId, tenantId }) =>
+        deps.accounts.reauthenticate(accountId, tenantId),
+      refresh: ({ accountId }) => deps.accounts.refresh(accountId),
+      setLabel: ({ accountId, label }) => deps.accounts.setLabel(accountId, label),
     },
     settings: {
       get: () => deps.settings.current,
@@ -97,6 +116,9 @@ export function createIpcHandlers(deps: HandlerDependencies): IpcHandlers {
       },
       openConfigFolder: async () => {
         await deps.shell.openConfigFolder();
+      },
+      writeClipboard: async ({ text }) => {
+        await deps.shell.writeClipboard(text);
       },
       openExternal: async ({ url }) => {
         if (!isAllowedExternalUrl(url)) {

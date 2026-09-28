@@ -40,14 +40,16 @@ Version targets:
 
 ## Phase 2 — Accounts and authentication
 
-- [ ] MSAL Node public client with persistent encrypted cache (spec 02)
-- [ ] Add / remove / re-authenticate accounts (multiple accounts)
-- [ ] Per-tenant token acquisition (home tenant + guest tenants), with interactive fallback on `interaction_required`
-- [ ] Accounts view in the activity bar ("Accounts" icon at the bottom like VS Code) showing accounts, tenants and status
-- [ ] Auth provider modes: built-in client ID, custom client ID, Azure CLI
-- [ ] Demo auth provider
+- [x] MSAL Node public client with persistent encrypted cache (spec 02)
+- [x] Add / remove / re-authenticate accounts (multiple accounts)
+- [x] Per-tenant token acquisition (home tenant + guest tenants), with interactive fallback on `interaction_required`
+- [x] Accounts view in the activity bar ("Accounts" icon at the bottom like VS Code) showing accounts, tenants and status
+- [x] Auth provider modes: built-in client ID, custom client ID, Azure CLI
+- [x] Demo auth provider
 
 **Acceptance:** In demo mode, 2 fake accounts with 3 tenants are shown. Unit tests cover token routing logic. The manual live test is listed in HUMAN-TODO.
+
+> Status: e2e (`apps/desktop/e2e/accounts.spec.ts`) shows 2 demo accounts with 3 tenants, the re-auth badge and notification, and signing in to the tenant that needs it. Token routing, coalescing, `needsReauth` tracking and the providers are unit-tested; `/tenants` is integration-tested against the fake Azure server (`apps/desktop/test/fake-azure/`). The MSAL cache is encrypted with Electron `safeStorage` instead of msal-node-extensions (D-020). The live test with real accounts is in `docs/HUMAN-TODO.md`.
 
 ## Phase 3 — Discovery and workspace management
 
@@ -73,6 +75,7 @@ Version targets:
 ## Phase 5 — Query engine
 
 - [ ] Fan-out orchestrator with per-account concurrency, rate limiting, timeouts, retries and cancellation (spec 04)
+- [ ] `AzureHttp` on Electron `net.fetch`, and MSAL routed through it so sign-in honours the OS proxy (D-023)
 - [ ] Pre-flight parse check (don't fan out syntactically broken queries)
 - [ ] Merge with attribution columns; multiple result tables
 - [ ] Per-workspace status panel and "Re-run failed"

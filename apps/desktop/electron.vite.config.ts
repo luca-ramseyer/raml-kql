@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'electron-vite';
-import type { Plugin, UserConfig } from 'vite';
+import { loadEnv, type Plugin, type UserConfig } from 'vite';
 
 import { buildWorkbenchCsp } from './src/shared/security/csp';
 
@@ -39,8 +39,21 @@ const onwarn: NonNullable<NonNullable<UserConfig['build']>['rollupOptions']>['on
   defaultHandler(warning);
 };
 
+/**
+ * RAML_KQL_CLIENT_ID comes from the environment (CI secret) or the repo-root `.env` (local).
+ * It is a public identifier, not a secret; see docs/guides/entra-app-registration.md.
+ */
+const buildEnv = {
+  ...loadEnv('production', resolve(__dirname, '../..'), 'RAML_KQL_'),
+  ...process.env,
+};
+const clientId = /^[0-9a-f-]{36}$/i.test(buildEnv['RAML_KQL_CLIENT_ID'] ?? '')
+  ? (buildEnv['RAML_KQL_CLIENT_ID'] ?? '')
+  : '';
+
 export default defineConfig({
   main: {
+    define: { __RAML_KQL_CLIENT_ID__: JSON.stringify(clientId) },
     build: {
       rollupOptions: { input: { index: resolve(__dirname, 'src/main/index.ts') } },
     },

@@ -22,6 +22,44 @@ export function fakeHandlerDependencies(
     now: () => new Date(0),
     relaunch: vi.fn(),
     showAbout: vi.fn(),
+    accounts: {
+      snapshot: () => ({ accounts: [], builtinAvailable: true, persistence: 'encrypted' }),
+      addAccount: vi.fn(() =>
+        Promise.resolve({
+          accounts: [],
+          builtinAvailable: true,
+          persistence: 'encrypted' as const,
+        }),
+      ),
+      removeAccount: vi.fn(() =>
+        Promise.resolve({
+          accounts: [],
+          builtinAvailable: true,
+          persistence: 'encrypted' as const,
+        }),
+      ),
+      reauthenticate: vi.fn(() =>
+        Promise.resolve({
+          accounts: [],
+          builtinAvailable: true,
+          persistence: 'encrypted' as const,
+        }),
+      ),
+      refresh: vi.fn(() =>
+        Promise.resolve({
+          accounts: [],
+          builtinAvailable: true,
+          persistence: 'encrypted' as const,
+        }),
+      ),
+      setLabel: vi.fn(() =>
+        Promise.resolve({
+          accounts: [],
+          builtinAvailable: true,
+          persistence: 'encrypted' as const,
+        }),
+      ),
+    },
     settings: {
       current: { values: {}, problems: [] },
       update: vi.fn(() => Promise.resolve({ values: {}, problems: [] })),
@@ -45,6 +83,7 @@ export function fakeHandlerDependencies(
       openConfigFile: vi.fn(() => Promise.resolve()),
       openConfigFolder: vi.fn(() => Promise.resolve()),
       openExternal: vi.fn(() => Promise.resolve()),
+      writeClipboard: vi.fn(() => Promise.resolve()),
     },
     ...overrides,
   };

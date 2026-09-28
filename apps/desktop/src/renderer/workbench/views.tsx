@@ -1,3 +1,5 @@
+import { tenantsNeedingReauth, useAccounts } from '../features/accounts/accounts-store';
+import { AccountsView } from '../features/accounts/AccountsView';
 import { WelcomeView } from '../features/placeholders/WelcomeView';
 import { useContextKeys } from '../platform/context-keys';
 
@@ -14,6 +16,10 @@ export interface ViewDescriptor {
   /** Top group, or the bottom group (Accounts) like VS Code. */
   position: 'top' | 'bottom';
   component: () => React.JSX.Element;
+  /** Icon buttons in the view's title bar. */
+  actions?: readonly { icon: string; title: string; command: string }[];
+  /** Hook returning the activity bar badge count (0 = no badge). */
+  useBadge?: () => number;
 }
 
 function DemoModeAction(): React.JSX.Element {
@@ -82,9 +88,12 @@ export const VIEWS: readonly ViewDescriptor[] = [
     title: 'Accounts',
     icon: 'account',
     position: 'bottom',
-    component: () => (
-      <WelcomeView paragraphs={['Signed-in accounts and their tenants will appear here.']} />
-    ),
+    component: AccountsView,
+    actions: [
+      { icon: 'refresh', title: 'Refresh Accounts', command: 'accounts.refresh' },
+      { icon: 'add', title: 'Add Account…', command: 'accounts.add' },
+    ],
+    useBadge: () => useAccounts((state) => tenantsNeedingReauth(state.snapshot).length),
   },
 ];
 

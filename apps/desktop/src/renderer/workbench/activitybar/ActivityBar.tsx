@@ -26,6 +26,8 @@ function manageMenu(): MenuEntry[] {
   ];
 }
 
+const noBadge = (): number => 0;
+
 function ActivityItem({
   view,
   active,
@@ -36,7 +38,10 @@ function ActivityItem({
   // Re-render when keybindings change so the tooltip stays right.
   useKeybindings((state) => state.bindings);
   const keybinding = keybindingLabel(view.id);
-  const title = keybinding === undefined ? view.title : `${view.title} (${keybinding})`;
+  const badge = (view.useBadge ?? noBadge)();
+  const title =
+    (keybinding === undefined ? view.title : `${view.title} (${keybinding})`) +
+    (badge > 0 ? ` - ${String(badge)} need${badge === 1 ? 's' : ''} attention` : '');
   return (
     <li role="none">
       <button
@@ -51,6 +56,11 @@ function ActivityItem({
         }}
       >
         <Codicon name={view.icon} />
+        {badge > 0 ? (
+          <span className="activity-badge" aria-hidden="true">
+            {badge > 99 ? '99+' : badge}
+          </span>
+        ) : null}
         <span className="active-item-indicator" />
       </button>
     </li>

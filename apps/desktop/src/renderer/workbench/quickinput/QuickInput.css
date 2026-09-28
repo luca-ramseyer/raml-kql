@@ -110,6 +110,13 @@
   padding: 4px 12px;
 }
 
+.quick-input-message.invalid {
+  margin: 0 6px;
+  border: 1px solid var(--vscode-inputValidation-errorBorder);
+  background-color: var(--vscode-inputValidation-errorBackground);
+  color: var(--vscode-inputValidation-errorForeground, inherit);
+}
+
 /* Keycaps (also used by the welcome page and watermark). */
 .keybinding-label {
   display: inline-flex;

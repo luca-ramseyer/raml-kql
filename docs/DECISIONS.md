@@ -123,3 +123,33 @@ Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Con
 ## D-019 — Renderer structure and state (2026-09-24)
 
 **Decision:** `src/renderer/platform/` holds framework-level services, mirroring VS Code's "platform" layer: commands, context keys and when-clauses, keybindings, theme, settings, layout, notifications, status bar and quick input. `workbench/` holds the layout parts, and `features/` the feature UIs (spec 01). State lives in small Zustand stores exposed through plain functions (`toggleSidebar()`, `notify()`, `registerCommand()`), so commands, menus, tests and later extensions call the same API. Renderer tests boot the real preload API and main-process IPC router in jsdom, with only the main-process services faked (`test/helpers/workbench-harness.ts`).
+
+## D-020 — Token cache encryption with Electron safeStorage, not msal-node-extensions (2026-09-24)
+
+**Context:** spec 02 names `@azure/msal-node-extensions` for the encrypted MSAL cache. Its current version (5.x) depends on `keytar`, which its maintainers archived, and on the native `@azure/msal-node-runtime` broker. Both are native modules that must be rebuilt for every Electron version and platform.
+
+**Decision:** a small MSAL `ICachePlugin` (`main/auth/encrypted-cache-plugin.ts`) encrypts the serialized cache with Electron's built-in `safeStorage`, which uses the same OS stores (macOS Keychain, Windows DPAPI, libsecret/KWallet on Linux). The file lives in the app's userData folder (machine-local), never in the shareable config dir, and is written with mode 0600. On Linux, `safeStorage.getSelectedStorageBackend()` tells us when there's no keyring (`basic_text`): then persistence is `unavailable`, MSAL sign-in is refused with install instructions, and the user can explicitly opt into `auth.sessionOnly` (memory only). There is never a plaintext fallback.
+
+**Consequences:** no native modules to build; the cache is not shared with other MSAL apps (which msal-node-extensions could do via its file lock), which we don't need.
+
+## D-021 — Built-in client ID injected at build time (2026-09-24)
+
+**Decision:** `electron.vite.config.ts` reads `RAML_KQL_CLIENT_ID` from the environment (CI secret) or the repo-root `.env` (local) and injects it as a constant. The client ID is a public identifier, not a secret (the Entra guide says so). Builds without it still work: the built-in sign-in is shown as unavailable and custom client ID and Azure CLI sign-in remain.
+
+## D-022 — Accounts, providers and tenants (2026-09-24)
+
+**Decision:**
+
+- `AuthService` owns all tokens; `getToken({ accountId, tenantId, resource })` is main-process only and never exposed over IPC. The renderer sees account and tenant metadata only.
+- Providers share one interface: MSAL (one instance per client ID: built-in, and each custom client ID recorded in accounts.jsonc so it is recreated after a restart), Azure CLI (`az`, run with `execFile`; accounts appear only once the user adds them, because `az login` manages them) and demo.
+- `/tenants` `tenantCategory` maps to relations: the home tenant, `ProjectedBy`/`ManagedBy` → `lighthouse`, anything else → `guest`. Every tenant is probed with a silent ARM token → `ok` / `needsReauth` / `noAccess`. If `/tenants` fails, the home tenant is still shown.
+- Demo mode keeps accounts in memory and never writes accounts.jsonc.
+- `nextLink` is only followed on the ARM origin, so a malicious response can't redirect a bearer token to another host.
+- Sign-in pages open only in the system browser, and only when the URL's origin is the Entra authority host.
+- accounts.jsonc is read at startup; unlike settings.jsonc it isn't live-reloaded yet (it only holds labels and order).
+
+## D-023 — Network stack for Azure calls (2026-09-24)
+
+**Context:** SOC analysts often sit behind corporate proxies. Node's `fetch` ignores OS proxy settings; Electron's `net.fetch` uses Chromium's network stack, which honours them.
+
+**Decision:** ARM calls (and future Azure calls) go through `net.fetch`. MSAL still uses its own Node HTTP client for token requests, so sign-in doesn't follow the OS proxy yet. Phase 5 (AzureHttp) adds a custom MSAL network module on top of `net.fetch`; tracked in the roadmap.

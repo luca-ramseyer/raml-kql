@@ -16,6 +16,12 @@
   padding: 0 8px 0 20px;
 }
 
+.composite-title-actions {
+  display: flex;
+  margin-left: auto;
+  gap: 2px;
+}
+
 .composite-title-label {
   overflow: hidden;
   margin: 0;
