@@ -15,6 +15,7 @@ import { scopeFor, type AzureResource, type CloudProfile } from './cloud';
 import {
   InteractionRequiredError,
   NoAccessError,
+  SignInError,
   type AuthProvider,
   type ProviderAccount,
 } from './provider';
@@ -486,6 +487,14 @@ function toAppError(error: unknown, fallback: string): AppError {
       code: 'AUTH_NO_ACCESS',
       message: describeError(error.message).replace(/^Error: /, ''),
       retryable: false,
+      source: 'main',
+    });
+  }
+  if (error instanceof SignInError) {
+    return new AppError({
+      code: 'AUTH_FAILED',
+      message: describeError(error.message).replace(/^Error: /, ''),
+      retryable: true,
       source: 'main',
     });
   }

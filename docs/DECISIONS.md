@@ -298,3 +298,54 @@ Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Con
 - `.query-monaco[data-schema]` tells tests when the schema is in the language service.
 - The idle preload now starts within 1.5 s of start-up (was 5 s).
 - Under `pnpm dev`, only the very first run after installing dependencies is slow (~1.3 s), while Vite pre-bundles Monaco. Later dev runs open the editor in ~60 ms.
+
+## D-034 — Results architecture (2026-09-25)
+
+**Context:** spec 06 asks for a grid smooth at 1M rows, group-by in a renderer Web Worker over columnar data, charts, exports and deep links. Results are never persisted (spec 04) and live in the main-process result store.
+
+**Decision:**
+
+- **Rows stay in the main process.** The grid uses AG Grid Community's infinite row model. Sorting, filters (AG Grid's text, number and date models, validated with zod) and quick search are computed in the main process, in one pass next to the data. The resulting row order is cached by table version, and the grid fetches 200-row blocks.
+  - This deviates from spec 06's renderer-side columnar data. Shipping 1M rows to the renderer would duplicate them outside the encrypted store and cost hundreds of MB of IPC.
+  - Measured in e2e: 500,000 demo rows scroll to the last row in well under a second.
+- **Aliasing applies to filtering, search, sort and export too.** The renderer sends the display names on screen with every view request, and the main process maps the attribution columns before evaluating. Searching for a customer's real name therefore finds nothing while names are aliased. Clipboard copies always match the screen. Files follow `privacy.aliasing.applyToExports` (`ask` offers what's on screen first).
+- **Group-by runs in the main process too** (streaming aggregator in `shared/results/aggregate.ts`, isolated as the spec asks), over the current view. It is capped at 100,000 groups and sorted largest first. The grouped view is a small client-side grid; it can be charted and exported inline.
+- **"Filter to / Exclude this value"** are grid-only `valueFilters` on top of column filters (default `results.cellFilterMode: "grid"`). In `"query"` mode they append a `| where` line built from typed KQL literals.
+- **Charts:** ECharts core with only the charts and components used (line, bar, pie, scatter; tooltip, legend, title, data zoom, mark point). Render kinds map per spec. Kusto defaults apply when `render` names no columns: x is the first datetime column (time charts) or the first column; y is the numeric columns; series is the first string column. "Split by tenant" defaults on when there is more than one tenant and no explicit series. Several rows at the same x are summed unless an aggregation is chosen. Line series over 50,000 points are downsampled with LTTB. A query with `render` switches the panel to Chart when its results arrive. Exports: PNG via the canvas, SVG via a server-side-rendered SVG instance, and copy as image through `clipboard.write` (Electron 44 replaced `writeImage` with the async `ClipboardItem` API).
+- **Exports** are written in the main process:
+  - CSV follows RFC 4180, with BOM and delimiter settings.
+  - JSON parses `dynamic` columns into objects.
+  - Markdown truncates cells at 200 characters.
+  - The KQL `datatable` uses typed literals and is capped at 10,000 rows.
+  - XLSX (exceljs) writes one sheet per result table for "all rows", with typed cells and a frozen header.
+  - Scope can be all, filtered or selected rows, with visible or all columns. Files go through the native save dialog; the last folder is remembered for the session.
+- **Deep links:** the portal Logs URL format was verified against a share link published on Microsoft Learn. The query is gzip, then base64, then URL-encoded twice; `#@tenant` is the access path's tenant. Row links are a small registry (`IncidentUrl`, `AlertLink`/`AlertUrl`, `DeviceId` → Defender device page with `?tid=`), and only allowlisted hosts pass.
+- **Not done yet:** the Targets view's context menu entry for portal links (the Run panel and cell menu have it). The last export folder isn't persisted across restarts.
+
+## D-035 — Azure CLI "Sign in" runs `az login` (2026-09-25)
+
+**Context:** for Azure CLI accounts, "Sign in" on a tenant that needs it (MFA, Conditional Access, an expired session) always failed. The provider only told the user to run `az login` in a terminal, and that message was hidden behind a generic "Sign-in failed."
+
+**Decision:**
+
+- The Azure CLI provider's interactive sign-in runs `az login --tenant <tenant> --output none` (no shell; the tenant is a validated GUID). The CLI opens the system browser, like the built-in sign-in, and the app waits up to 5 minutes before getting a token for the tenant as usual.
+- `AZURE_CORE_LOGIN_EXPERIENCE_V2=off` is set for that call. Azure CLI 2.61+ otherwise asks in the terminal which subscription to use, and nobody can answer that from the app.
+- Azure CLI is looked up with the common install folders appended to `PATH` (`/opt/homebrew/bin`, `/usr/local/bin` on macOS; `/usr/local/bin`, `/snap/bin` on Linux). Apps started from Finder or the Dock get a minimal `PATH` without them.
+- Providers throw `SignInError` for failures written for the user. The auth service shows that message itself instead of "Sign-in failed." with the reason hidden in the details.
+
+## D-036 — Dev-mode robustness: StrictMode and the Kusto worker (2026-09-25)
+
+**Context:** under `pnpm dev`, a query tab showed no IntelliSense and Targets started with nothing selected. AG Grid also reported a deprecated option. Production builds were fine, so e2e (which runs the built app) didn't catch any of this.
+
+**Decision:**
+
+- **Kusto worker:** the language service (Bridge.NET output) refers to Node's `global`. Rollup rewrites it in production builds; Vite's dev server doesn't. The worker entry now imports a tiny shim (`worker-globals.ts`) first. Previously Monaco silently fell back to a worker without the language service.
+- **React StrictMode starts the workbench twice** in dev and stops the first start. Two registries shared state across the starts:
+  - Zustand keeps listeners in a `Set`, so subscribing the same module function twice leaves one entry. The first start's unsubscribe then removed the second start's subscription: the Targets selection never followed the inventory, and the theme stopped following settings. Subscriptions now use a fresh closure per start.
+  - Status bar items are keyed by id. Dispose and update now only touch an item while it's still the registration's own, as commands already did.
+- **AG Grid 36.2** deprecates `tooltipValueGetter`; the grid uses `tooltip` with a callback. AG Grid only reports deprecations through its validation module, which the app loads in dev.
+- **Regression tests:**
+  - a Targets test renders the workbench under `<StrictMode>`;
+  - a status bar test covers duplicate ids;
+  - a column-defs test checks the tooltip option;
+  - a manual dev-mode console sweep found no remaining warnings or errors.

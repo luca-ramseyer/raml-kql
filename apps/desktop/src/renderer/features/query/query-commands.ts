@@ -8,6 +8,7 @@ import { getActiveCodeEditor, runEditorAction } from '../editor/active-editor';
 import { disposeQueryModel } from '../editor/query-models';
 import { loadSchema } from '../editor/schema-store';
 import { showTimeRangePicker } from '../editor/TimeRangePicker';
+import { forgetTabResults } from '../results/results-ui';
 import { selectedWorkspaces } from '../targets/targets-store';
 
 import {
@@ -150,6 +151,7 @@ export function registerQueryCommands(): () => void {
     onEditorClosed((editor) => {
       if (editor.kind !== 'query') return;
       forgetTabRun(editor.id);
+      forgetTabResults(editor.id);
       deleteQueryDoc(editor.id);
       disposeQueryModel(editor.id);
     }),

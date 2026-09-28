@@ -10,6 +10,7 @@ import { DEMO_TENANTS, DemoAuthProvider } from './demo-provider';
 import {
   InteractionRequiredError,
   NoAccessError,
+  SignInError,
   type AuthProvider,
   type ProviderAccount,
 } from './provider';
@@ -199,6 +200,21 @@ describe('AuthService tenants and accounts', () => {
     );
     expect(snapshot.accounts[0]?.tenants.find((t) => t.tenantId === GUEST)?.state).toBe('ok');
     expect(auth.tenantsNeedingReauth()).toEqual([]);
+  });
+
+  it("shows a provider's own sign-in failure message", async () => {
+    const provider = fakeProvider({ [GUEST]: 'mfa' });
+    const { auth } = service({ builtin: provider });
+    await auth.addAccount({ method: 'browser' });
+    provider.acquireTokenInteractive.mockRejectedValueOnce(
+      new SignInError(
+        'Azure CLI was not found. Install it, or add it to your PATH, and try again.',
+      ),
+    );
+    await expect(auth.reauthenticate(ACCOUNT.id, GUEST)).rejects.toMatchObject({
+      code: 'AUTH_FAILED',
+      message: 'Azure CLI was not found. Install it, or add it to your PATH, and try again.',
+    });
   });
 
   it('sign-out removes the account and its tokens immediately', async () => {

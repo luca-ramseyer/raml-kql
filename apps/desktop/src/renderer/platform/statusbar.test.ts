@@ -21,4 +21,26 @@ describe('status bar items', () => {
     expect(sortStatusBarItems(items, 'left').map((i) => i.id)).toEqual(['l9', 'l1']);
     expect(sortStatusBarItems(items, 'right').map((i) => i.id)).toEqual(['r1', 'r9']);
   });
+
+  it('keeps a newer registration with the same id when an older one is disposed', () => {
+    const first = registerStatusBarItem({
+      id: 'dup',
+      alignment: 'left',
+      priority: 1,
+      text: 'first',
+    });
+    const second = registerStatusBarItem({
+      id: 'dup',
+      alignment: 'left',
+      priority: 1,
+      text: 'second',
+    });
+    first.update({ text: 'stale' });
+    first.dispose();
+    expect(useStatusBar.getState().items['dup']?.text).toBe('second');
+    second.update({ text: 'updated' });
+    expect(useStatusBar.getState().items['dup']?.text).toBe('updated');
+    second.dispose();
+    expect(useStatusBar.getState().items['dup']).toBeUndefined();
+  });
 });

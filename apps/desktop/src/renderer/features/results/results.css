@@ -170,3 +170,237 @@
 .state-pending {
   color: var(--vscode-descriptionForeground);
 }
+
+.results-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: 0;
+}
+
+.results-search {
+  width: 200px;
+  height: 22px;
+  box-sizing: border-box;
+  padding: 2px 6px;
+  border: 1px solid var(--vscode-input-border, transparent);
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font: inherit;
+}
+
+.results-search:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.results-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.results-actions .action-item.checked {
+  background-color: var(
+    --vscode-inputOption-activeBackground,
+    var(--vscode-toolbar-activeBackground)
+  );
+  outline: 1px solid var(--vscode-inputOption-activeBorder, transparent);
+}
+
+.value-filter-chip,
+.group-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 2px 0 6px;
+  border-radius: 2px;
+  background-color: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  gap: 2px;
+}
+
+.group-bar {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 4px 0 6px;
+  gap: 6px;
+}
+
+.group-label {
+  color: var(--vscode-descriptionForeground);
+}
+
+.group-bar select,
+.group-chip select {
+  height: 22px;
+  border: 1px solid var(--vscode-dropdown-border, transparent);
+  background-color: var(--vscode-dropdown-background);
+  color: var(--vscode-dropdown-foreground);
+  font: inherit;
+}
+
+.group-bar .button {
+  height: 22px;
+  padding: 1px 8px;
+}
+
+.column-picker-anchor {
+  position: relative;
+}
+
+.column-picker {
+  position: absolute;
+  z-index: 20;
+  top: 24px;
+  right: 0;
+  max-height: 320px;
+  min-width: 220px;
+  padding: 4px 0;
+  overflow: auto;
+  border: 1px solid var(--vscode-menu-border, var(--vscode-widget-border, transparent));
+  background-color: var(--vscode-menu-background, var(--vscode-editorWidget-background));
+  box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
+  color: var(--vscode-menu-foreground, var(--vscode-foreground));
+}
+
+.column-picker-item {
+  display: flex;
+  align-items: center;
+  padding: 2px 10px;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.column-picker-item:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.attribution-name {
+  color: var(--vscode-textLink-foreground);
+}
+
+.details-sheet {
+  display: flex;
+  flex: 0 0 380px;
+  flex-direction: column;
+  min-height: 0;
+  margin-left: 8px;
+  border-left: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.35));
+  padding-left: 8px;
+  overflow: auto;
+}
+
+.details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.details-header h3 {
+  margin: 4px 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.details-search {
+  margin: 4px 0 6px;
+  padding: 2px 6px;
+  border: 1px solid var(--vscode-input-border, transparent);
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font: inherit;
+}
+
+.details-fields {
+  margin: 0;
+}
+
+.details-field {
+  padding: 3px 0;
+  border-bottom: 1px solid var(--vscode-tree-tableColumnsBorder, rgba(128, 128, 128, 0.2));
+}
+
+.details-field dt {
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
+}
+
+.details-field dd {
+  margin: 0;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.details-json {
+  margin: 0;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.details-actions {
+  margin-bottom: 6px;
+}
+
+.json-tree,
+.json-children {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 12px;
+}
+
+.json-children {
+  padding-left: 16px;
+}
+
+.json-line {
+  display: flex;
+  align-items: center;
+  min-height: 20px;
+  gap: 2px;
+}
+
+.json-toggle {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.json-toggle-spacer {
+  display: inline-block;
+  width: 16px;
+}
+
+.json-key {
+  color: var(--vscode-symbolIcon-propertyForeground, var(--vscode-foreground));
+}
+
+.json-string {
+  color: var(--vscode-debugTokenExpression-string, var(--vscode-foreground));
+}
+
+.json-number,
+.json-boolean {
+  color: var(--vscode-debugTokenExpression-number, var(--vscode-foreground));
+}
+
+.json-summary {
+  color: var(--vscode-descriptionForeground);
+}
+
+.json-copy {
+  visibility: hidden;
+}
+
+.json-line:hover .json-copy {
+  visibility: visible;
+}

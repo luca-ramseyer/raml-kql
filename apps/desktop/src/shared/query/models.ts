@@ -114,6 +114,8 @@ export const RunSnapshotSchema = z.object({
   runId: z.string(),
   tabId: z.string(),
   state: RunStateSchema,
+  /** The query text that ran (for "Open query in Azure Portal Logs"). */
+  query: z.string().max(QUERY_TEXT_MAX),
   startedAt: z.iso.datetime(),
   finishedAt: z.iso.datetime().optional(),
   timespan: z.string().optional(),

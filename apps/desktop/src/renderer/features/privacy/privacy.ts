@@ -20,12 +20,13 @@ function aliasingActive(): boolean {
   return getSetting('privacy.aliasing.enabled') && usePrivacy.getState().aliased;
 }
 
-function buildNamer(): DisplayNamer {
+/** A namer for the current state; `active` overrides presentation mode (exports "always"). */
+export function buildNamer(active: boolean = aliasingActive()): DisplayNamer {
   const { inventory } = useInventory.getState();
   const { accounts } = useAccounts.getState().snapshot;
   return new DisplayNamer(
     {
-      active: aliasingActive(),
+      active,
       format: getSetting('privacy.aliasing.autoAliasFormat'),
       scope: new Set<AliasScope>(getSetting('privacy.aliasing.scope')),
     },

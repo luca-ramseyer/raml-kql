@@ -27,18 +27,22 @@ export interface StatusBarItemHandle {
 }
 
 export function registerStatusBarItem(item: StatusBarItem): StatusBarItemHandle {
+  // The item this registration owns. Updates and dispose only touch the entry while it is still
+  // ours: a later registration with the same id (e.g. the second workbench start under React
+  // StrictMode) must survive an earlier registration's dispose.
+  let mine = item;
   useStatusBar.setState((state) => ({ items: { ...state.items, [item.id]: item } }));
   return {
     update(changes) {
       useStatusBar.setState((state) => {
-        const current = state.items[item.id];
-        return current === undefined
-          ? state
-          : { items: { ...state.items, [item.id]: { ...current, ...changes } } };
+        if (state.items[item.id] !== mine) return state;
+        mine = { ...mine, ...changes };
+        return { items: { ...state.items, [item.id]: mine } };
       });
     },
     dispose() {
       useStatusBar.setState((state) => {
+        if (state.items[item.id] !== mine) return state;
         const { [item.id]: _removed, ...rest } = state.items;
         return { items: rest };
       });

@@ -95,3 +95,24 @@ describe('DemoDataSource', () => {
     await expect(pending).rejects.toMatchObject({ kind: 'cancelled' });
   });
 });
+
+describe('demo summarize and render', () => {
+  it('counts by columns and time bins, and returns the render spec', async () => {
+    const source = new DemoDataSource(() => Date.parse('2026-09-25T12:00:00Z'));
+    const result = await run(
+      source,
+      'la-contoso-soc',
+      'SecurityEvent | summarize count() by bin(TimeGenerated, 1h), Computer | render timechart',
+    );
+    expect(result.render).toEqual({ visualization: 'timechart' });
+    const table = result.tables[0];
+    expect(table?.columns.map((c) => c.name)).toEqual(['TimeGenerated', 'Computer', 'count_']);
+    expect(table?.rows.reduce((sum, r) => sum + Number(r[2]), 0)).toBe(400);
+    expect(table?.rows.every((r) => String(r[0]).endsWith(':00:00.000Z'))).toBe(true);
+    await expect(
+      run(source, 'la-contoso-soc', 'Heartbeat | summarize count() by Nope'),
+    ).rejects.toMatchObject({
+      kind: 'badRequest',
+    });
+  });
+});

@@ -432,6 +432,72 @@ export const settingDefinitions = [
     category: ['Privacy', 'Audit'],
     scope: 'user',
   }),
+  define({
+    key: 'results.copyWithHeaders',
+    schema: z.boolean(),
+    default: true,
+    description: 'Include column headers when copying selected rows (Ctrl/Cmd+C).',
+    category: ['Results'],
+    scope: 'user',
+  }),
+  define({
+    key: 'results.cellFilterMode',
+    schema: z.enum(['grid', 'query']),
+    default: 'grid',
+    description:
+      '"Filter to this value" / "Exclude this value" filter the grid, or add a `where` line to the query (portal behaviour).',
+    category: ['Results'],
+    scope: 'user',
+    control: {
+      kind: 'enum',
+      options: ['grid', 'query'],
+      optionDescriptions: ['Filter the results grid.', 'Append a `where` line to the query.'],
+    },
+  }),
+  define({
+    key: 'export.csv.delimiter',
+    schema: z.enum([',', ';', '\t', '|']),
+    default: ',',
+    description: 'Field delimiter for CSV exports (`;` suits Excel in many European locales).',
+    category: ['Results', 'Export'],
+    scope: 'user',
+  }),
+  define({
+    key: 'export.csv.bom',
+    schema: z.boolean(),
+    default: true,
+    description:
+      'Start CSV files with a UTF-8 byte order mark, so Excel reads accented characters correctly.',
+    category: ['Results', 'Export'],
+    scope: 'user',
+  }),
+  define({
+    key: 'privacy.aliasing.applyToExports',
+    schema: z.enum(['ask', 'always', 'never']),
+    default: 'ask',
+    description:
+      'Whether exported files use aliases for tenant, subscription, workspace and account names. Clipboard copies always match the screen.',
+    category: ['Privacy'],
+    scope: 'user',
+    control: {
+      kind: 'enum',
+      options: ['ask', 'always', 'never'],
+      optionDescriptions: [
+        'Ask on each export (defaults to what is on screen).',
+        'Always export aliases.',
+        'Always export real names.',
+      ],
+    },
+  }),
+  define({
+    key: 'links.enabled',
+    schema: z.boolean(),
+    default: true,
+    description:
+      'Offer "Open in Azure Portal" and row links (incidents, alerts, devices) in results. Links open in your browser.',
+    category: ['Results'],
+    scope: 'user',
+  }),
 ] as const satisfies readonly SettingDefinition[];
 
 export type SettingKey = (typeof settingDefinitions)[number]['key'];

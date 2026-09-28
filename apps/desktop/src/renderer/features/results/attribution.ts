@@ -1,5 +1,6 @@
 import type { DisplayNamer } from '../../../shared/privacy/aliasing';
 import type { ResultColumn } from '../../../shared/query/models';
+import { valueText } from '../../../shared/results/values';
 import type { Workspace } from '../../../shared/workspaces/models';
 
 /**
@@ -67,15 +68,8 @@ export function makeCellFormatter(
   };
 }
 
-export function formatValue(value: unknown): string {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-    return value.toString();
-  }
-  if (typeof value === 'function' || typeof value === 'symbol') return '';
-  return JSON.stringify(value);
-}
+/** A plain cell value as text. */
+export const formatValue = valueText;
 
 /** Attribution columns hidden by `results.attributionColumns`; data columns always show. */
 export function visibleColumnIndexes(

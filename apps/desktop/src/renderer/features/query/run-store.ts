@@ -2,7 +2,8 @@ import { create } from 'zustand';
 
 import { AppError } from '../../../shared/errors';
 import type { QueryRunRequest, RunSnapshot, WorkspaceRunState } from '../../../shared/query/models';
-import { showPanelTab, togglePanel } from '../../platform/layout';
+import { useEditors } from '../../platform/editors';
+import { showPanelTab, togglePanel, useLayout } from '../../platform/layout';
 import { dismissNotification, notify } from '../../platform/notifications';
 import { getBridge, unwrap } from '../../services/ipc';
 
@@ -31,6 +32,15 @@ export function applyRunSnapshot(snapshot: RunSnapshot): void {
   }
   useRuns.setState((state) => ({ byTab: { ...state.byTab, [snapshot.tabId]: snapshot } }));
   promptFailFast(snapshot);
+  // A query with `render` opens the Chart tab when its first results arrive (portal behaviour).
+  if (
+    snapshot.render !== undefined &&
+    current?.render === undefined &&
+    useEditors.getState().activeId === snapshot.tabId &&
+    useLayout.getState().panel.activeTab === 'results'
+  ) {
+    showPanelTab('chart');
+  }
 }
 
 function promptFailFast(snapshot: RunSnapshot): void {

@@ -568,6 +568,7 @@ export class QueryEngine {
     return {
       runId: run.runId,
       tabId: run.tabId,
+      query: run.query,
       state: run.finishedAt === undefined ? 'running' : run.cancelled ? 'cancelled' : 'completed',
       startedAt: new Date(run.startedAt).toISOString(),
       ...(run.finishedAt === undefined

@@ -1,3 +1,4 @@
+import { ChartView } from '../../features/results/chart/ChartView';
 import { ResultsView } from '../../features/results/ResultsView';
 import { RunView } from '../../features/results/RunView';
 import { executeCommand } from '../../platform/commands';
@@ -73,6 +74,8 @@ export function Panel(): React.JSX.Element {
           <ResultsView />
         ) : tab.id === 'run' ? (
           <RunView />
+        ) : tab.id === 'chart' ? (
+          <ChartView />
         ) : (
           <p className="panel-empty">{tab.empty}</p>
         )}

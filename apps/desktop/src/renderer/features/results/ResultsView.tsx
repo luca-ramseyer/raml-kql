@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import type { ResultPage } from '../../../shared/query/models';
 import { showPanelTab } from '../../platform/layout';
 import { useSetting } from '../../platform/settings';
-import { getBridge, unwrap } from '../../services/ipc';
 import { Codicon } from '../../workbench/common/Codicon';
 import { useAccounts } from '../accounts/accounts-store';
 import { useNamer } from '../privacy/privacy';
@@ -11,73 +9,79 @@ import { runSummaryText } from '../query/run-store';
 import { useInventory } from '../workspaces/inventory-store';
 
 import { useActiveRun } from './active-run';
-import { makeCellFormatter, visibleColumnIndexes } from './attribution';
+import { ColumnPicker, isColumnShown } from './ColumnPicker';
+import { DetailsSheet } from './DetailsSheet';
+import { buildDisplayNames } from './display-names';
+import { formatCell } from './grid/cell-format';
+import { ResultsGrid } from './grid/ResultsGrid';
+import { GroupBar, GroupedGrid } from './GroupBar';
+import { exportResults } from './result-actions';
+import { updateTabResults, useTabResults } from './results-ui';
 
 import './results.css';
 
-/** Rows shown until the results grid arrives (Phase 6). */
-const PREVIEW_ROWS = 200;
-
 /**
- * Merged results of the active tab (spec 04/06). A plain preview table for now: the real grid
- * (sorting, filtering, grouping, virtual scrolling over all rows) is Phase 6.
+ * Merged results of the active tab (spec 06): result table tabs, quick search, group-by,
+ * column picker, export, the grid and the details sheet.
  */
 export function ResultsView(): React.JSX.Element {
-  const { run } = useActiveRun();
-  const [tableIndex, setTableIndex] = useState(0);
-  const [fetched, setPage] = useState<ResultPage | undefined>(undefined);
+  const { tabId, run } = useActiveRun();
+  const ui = useTabResults(tabId, run?.runId);
   const namer = useNamer();
   const workspaces = useInventory((s) => s.inventory.workspaces);
   const accounts = useAccounts((s) => s.snapshot.accounts);
   const shownAttribution = useSetting('results.attributionColumns');
+  const zone = useSetting('time.displayZone');
+  const [search, setSearch] = useState(ui.view.quickSearch);
+  const [groupBarOpen, setGroupBarOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
-  const table = run?.tables.find((t) => t.index === tableIndex) ?? run?.tables[0];
-  const rowCount = table?.rowCount ?? 0;
-  const runId = run?.runId;
-  const index = table?.index;
-  // A page of another run or table (tab switched, new run) is not shown.
-  const page =
-    fetched !== undefined && fetched.runId === runId && fetched.tableIndex === index
-      ? fetched
-      : undefined;
-
-  // Results stream in as workspaces finish: refetch the preview when the row count changes.
-  useEffect(() => {
-    if (runId === undefined || index === undefined) return undefined;
-    let stale = false;
-    const timer = setTimeout(() => {
-      void unwrap(
-        getBridge().results.page({ runId, tableIndex: index, offset: 0, limit: PREVIEW_ROWS }),
-      )
-        .then((result) => {
-          if (!stale) setPage(result);
-        })
-        .catch(() => undefined);
-    }, 150);
-    return () => {
-      stale = true;
-      clearTimeout(timer);
-    };
-  }, [runId, index, rowCount]);
-
-  const format = useMemo(
-    () =>
-      page === undefined
-        ? undefined
-        : makeCellFormatter(page.columns, {
-            namer,
-            workspaces,
-            accountIds: new Map(accounts.map((a) => [a.username, a.id])),
-          }),
-    [page, namer, workspaces, accounts],
+  const display = useMemo(
+    () => buildDisplayNames(namer, workspaces, accounts),
+    [namer, workspaces, accounts],
   );
 
-  if (run === undefined) {
+  // Debounced quick search (spec 06, "global quick-search box").
+  const runId = run?.runId;
+  useEffect(() => {
+    if (tabId === undefined || runId === undefined) return undefined;
+    const timer = setTimeout(() => {
+      updateTabResults(tabId, runId, (state) => ({ view: { ...state.view, quickSearch: search } }));
+    }, 250);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [search, tabId, runId]);
+
+  if (run === undefined || tabId === undefined) {
     return (
       <p className="panel-empty">Run a query to see merged results from all selected workspaces.</p>
     );
   }
-  const visible = page === undefined ? [] : visibleColumnIndexes(page.columns, shownAttribution);
+  const table = run.tables.find((t) => t.index === ui.tableIndex) ?? run.tables[0];
+  const columns = table?.columns ?? [];
+  const rowCount = table?.rowCount ?? 0;
+  const shownNames = columns
+    .filter((c) => c.attribution === true && isColumnShown(c, ui.columnOverrides, shownAttribution))
+    .map((c) => c.name);
+  const hidden = new Set(
+    columns
+      .filter(
+        (c) => c.attribution !== true && !isColumnShown(c, ui.columnOverrides, shownAttribution),
+      )
+      .map((c) => c.name),
+  );
+  const visibleColumns = columns.flatMap((c, i) =>
+    isColumnShown(c, ui.columnOverrides, shownAttribution) ? [i] : [],
+  );
+  const filtered = ui.filteredRows ?? rowCount;
+  const showGrouped = ui.showGrouped && ui.grouped !== undefined;
+  const exportContext = {
+    run,
+    tabId,
+    visibleColumns,
+    grouped: showGrouped ? ui.grouped : undefined,
+  };
 
   return (
     <div className="results-view">
@@ -105,7 +109,14 @@ export function ResultsView(): React.JSX.Element {
                 aria-selected={t.index === table?.index}
                 className={`results-table-tab${t.index === table?.index ? ' checked' : ''}`}
                 onClick={() => {
-                  setTableIndex(t.index);
+                  updateTabResults(tabId, run.runId, {
+                    tableIndex: t.index,
+                    view: { ...ui.view, sort: [], filters: {}, valueFilters: [] },
+                    grouped: undefined,
+                    showGrouped: false,
+                    selected: [],
+                    details: undefined,
+                  });
                 }}
               >
                 {`Table ${String(t.index + 1)}`}
@@ -113,15 +124,124 @@ export function ResultsView(): React.JSX.Element {
             ))}
           </div>
         ) : null}
+        <input
+          type="search"
+          className="results-search"
+          placeholder="Search results"
+          aria-label="Search results"
+          value={search}
+          onChange={(event) => {
+            setSearch(event.target.value);
+          }}
+        />
+        {ui.view.valueFilters.map((filter, i) => (
+          <span key={`${String(filter.column)}-${String(i)}`} className="value-filter-chip">
+            {columns[filter.column]?.name} {filter.mode === 'include' ? '=' : '≠'}{' '}
+            {formatCell(filter.values[0], columns[filter.column]?.type ?? 'string', zone) ||
+              '(empty)'}
+            <button
+              type="button"
+              className="action-item"
+              aria-label="Remove filter"
+              onClick={() => {
+                updateTabResults(tabId, run.runId, (state) => ({
+                  view: {
+                    ...state.view,
+                    valueFilters: state.view.valueFilters.filter((_, j) => j !== i),
+                  },
+                }));
+              }}
+            >
+              <Codicon name="close" />
+            </button>
+          </span>
+        ))}
+        <div className="results-actions" role="toolbar" aria-label="Results actions">
+          <button
+            type="button"
+            className={`action-item${groupBarOpen ? ' checked' : ''}`}
+            title="Group"
+            aria-label="Group"
+            aria-pressed={groupBarOpen}
+            onClick={() => {
+              setGroupBarOpen(!groupBarOpen);
+            }}
+          >
+            <Codicon name="group-by-ref-type" />
+          </button>
+          {ui.grouped === undefined ? null : (
+            <button
+              type="button"
+              className="action-item"
+              title={showGrouped ? 'Show Rows' : 'Show Grouped View'}
+              aria-label={showGrouped ? 'Show rows' : 'Show grouped view'}
+              onClick={() => {
+                updateTabResults(tabId, run.runId, { showGrouped: !showGrouped });
+              }}
+            >
+              <Codicon name={showGrouped ? 'list-flat' : 'list-tree'} />
+            </button>
+          )}
+          <span className="column-picker-anchor">
+            <button
+              type="button"
+              className="action-item"
+              title="Choose Columns"
+              aria-label="Choose columns"
+              onClick={() => {
+                setPickerOpen(!pickerOpen);
+              }}
+            >
+              <Codicon name="list-selection" />
+            </button>
+            {pickerOpen ? (
+              <ColumnPicker
+                columns={columns}
+                overrides={ui.columnOverrides}
+                shownAttribution={shownAttribution}
+                onChange={(name, shown) => {
+                  updateTabResults(tabId, run.runId, (state) => ({
+                    columnOverrides: { ...state.columnOverrides, [name]: shown },
+                  }));
+                }}
+                onClose={() => {
+                  setPickerOpen(false);
+                }}
+              />
+            ) : null}
+          </span>
+          <button
+            type="button"
+            className="action-item"
+            title="Copy Results As…"
+            aria-label="Copy results as"
+            onClick={() => void exportResults(exportContext, 'clipboard')}
+          >
+            <Codicon name="copy" />
+          </button>
+          <button
+            type="button"
+            className="action-item"
+            title="Export Results…"
+            aria-label="Export results"
+            onClick={() => void exportResults(exportContext, 'file')}
+          >
+            <Codicon name="desktop-download" />
+          </button>
+        </div>
         <span className="results-bar-spacer" />
         {run.demo ? (
           <span className="demo-badge" title="These rows were generated by demo mode, not queried.">
             <Codicon name="beaker" /> Demo data
           </span>
         ) : null}
-        <span className="results-count">
-          {rowCount.toLocaleString()} row{rowCount === 1 ? '' : 's'}
-          {rowCount > PREVIEW_ROWS ? ` (showing first ${String(PREVIEW_ROWS)})` : ''}
+        <span className="results-count" role="status">
+          {showGrouped
+            ? `${(ui.grouped?.rows.length ?? 0).toLocaleString()} group${ui.grouped?.rows.length === 1 ? '' : 's'}`
+            : filtered === rowCount
+              ? `${rowCount.toLocaleString()} row${rowCount === 1 ? '' : 's'}`
+              : `${filtered.toLocaleString()} of ${rowCount.toLocaleString()} rows`}
+          {ui.selected.length > 0 ? ` · ${ui.selected.length.toLocaleString()} selected` : ''}
         </span>
       </div>
       {run.truncated ? (
@@ -130,45 +250,51 @@ export function ResultsView(): React.JSX.Element {
           your query or reduce targets.
         </div>
       ) : null}
-      {page === undefined || format === undefined || page.columns.length === 0 ? (
+      {groupBarOpen && table !== undefined ? (
+        <GroupBar
+          tabId={tabId}
+          run={run}
+          tableIndex={table.index}
+          columns={columns}
+          display={display}
+          onClose={() => {
+            setGroupBarOpen(false);
+          }}
+        />
+      ) : null}
+      {table === undefined ? (
         <p className="panel-empty">
           {run.state === 'running' ? 'Waiting for the first workspace…' : 'No results.'}
         </p>
       ) : (
-        <div className="results-scroll">
-          <table className="results-table" aria-label="Results">
-            <thead>
-              <tr>
-                {visible.map((i) => {
-                  const column = page.columns[i];
-                  return (
-                    <th
-                      key={column?.name}
-                      title={
-                        column?.widenedFrom === undefined
-                          ? column?.type
-                          : `${column.type} (workspaces returned ${column.widenedFrom.join(', ')}; widened to ${column.type})`
-                      }
-                    >
-                      {column?.name}
-                      {column?.widenedFrom === undefined ? null : (
-                        <Codicon name="info" className="widened" />
-                      )}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {page.rows.map((row, r) => (
-                <tr key={r}>
-                  {visible.map((i) => (
-                    <td key={i}>{format(row, i)}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="results-body">
+          {showGrouped && ui.grouped !== undefined ? (
+            <GroupedGrid grouped={ui.grouped} />
+          ) : (
+            <ResultsGrid
+              key={`${run.runId}-${String(table.index)}`}
+              run={run}
+              tabId={tabId}
+              tableIndex={table.index}
+              columns={columns}
+              rowCount={rowCount}
+              display={display}
+              hiddenColumns={hidden}
+              shownAttribution={shownNames}
+            />
+          )}
+          {ui.details === undefined || showGrouped ? null : (
+            <DetailsSheet
+              runId={run.runId}
+              tableIndex={table.index}
+              columns={columns}
+              display={display}
+              details={ui.details}
+              onClose={() => {
+                updateTabResults(tabId, run.runId, { details: undefined });
+              }}
+            />
+          )}
         </div>
       )}
     </div>

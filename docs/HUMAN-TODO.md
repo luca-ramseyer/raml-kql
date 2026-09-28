@@ -66,3 +66,14 @@ Claude Code appends items here when blocked, and keeps working. Tick them off wh
   3. "Audit: Verify Log Integrity" from the Command Palette reports the log as intact; `~/.raml-kql/audit/audit-YYYY-MM.jsonl` has one line per workspace attempt and no result values.
   4. Quit the app: the `session-cache` folder in the app's data folder (macOS: `~/Library/Application Support/Raml KQL/`) is empty.
 - [ ] **Proxy test (if you work behind a proxy).** With the OS proxy configured, sign in, discover and run a query. All three should work without extra settings, because sign-in, ARM and Log Analytics now all use Chromium's network stack (D-023, D-032).
+
+## Added during Phase 6
+
+- [ ] **Live results test.** Run a query that returns a few thousand rows across tenants, then check:
+  1. sorting, column filters, quick search and "Filter to This Value" (right-click a cell) behave as you'd expect;
+  2. double-clicking a row shows all its columns, and a `dynamic` cell shows its JSON;
+  3. Group (toolbar) → "Group by Tenant";
+  4. a `| render timechart` query draws one line per tenant.
+- [ ] **Verify the portal link.** Right-click a result cell → "Open Query in Azure Portal Logs" (or the link icon in the Run tab). The portal should open Logs on that workspace with the query filled in. For a Lighthouse customer it should open in your own tenant. If the portal changed its URL format, tell me what URL the portal's own "Copy link to query" produces.
+- [ ] **Verify the Defender device link** on a `DeviceProcessEvents` row (right-click → "Open Device in Microsoft Defender"), and an incident link from `SecurityIncident` (`IncidentUrl`).
+- [ ] **Exports in Excel:** open an exported XLSX and a CSV (with your locale's delimiter; set `export.csv.delimiter` to `;` if Excel shows everything in one column).

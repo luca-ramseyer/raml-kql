@@ -98,14 +98,20 @@ Version targets:
 
 ## Phase 6 — Results
 
-- [ ] AG Grid results with virtual scrolling, sort, filter, resize, reorder, pin, and copy (cell / row / selection as TSV)
-- [ ] JSON/dynamic cell viewer, cell details side panel
-- [ ] Group-by panel (client-side aggregation over merged results)
-- [ ] Charts from the `render` operator and from a manual chart builder (ECharts)
-- [ ] Export: CSV, JSON, XLSX, Markdown table, KQL `datatable`, copy as each
-- [ ] Deep links: open query in Azure Portal Logs for a workspace; row-level links where columns allow
+- [x] AG Grid results with virtual scrolling, sort, filter, resize, reorder, pin, and copy (cell / row / selection as TSV)
+- [x] JSON/dynamic cell viewer, cell details side panel
+- [x] Group-by panel (client-side aggregation over merged results)
+- [x] Charts from the `render` operator and from a manual chart builder (ECharts)
+- [x] Export: CSV, JSON, XLSX, Markdown table, KQL `datatable`, copy as each
+- [x] Deep links: open query in Azure Portal Logs for a workspace; row-level links where columns allow
 
 **Acceptance:** A 500k-row demo result scrolls smoothly. Each render type draws. Exports round-trip in tests.
+
+> Status:
+> - `e2e/results.spec.ts` scrolls a 500,000-row demo result to the end and the middle within seconds, sorts, searches, filters to a value, opens row details, groups by tenant, draws a `render timechart` and switches through every chart type, and exports CSV to a file and Markdown to the clipboard.
+> - Unit tests cover every render kind, CSV/JSON/JSON Lines/Markdown/datatable/XLSX round-trips, the views (filters, sorting, search on aliases, spilled batches), group-by, LTTB, portal links (decoded like Learn's sample) and row links.
+> - Rows stay in the main process, and sorting, filtering and grouping run there (D-034).
+> - The live test is in `docs/HUMAN-TODO.md`.
 
 ## Phase 7 — Tabs, history, saved queries
 

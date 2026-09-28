@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import type { WorkspaceRunState, WorkspaceRunStatus } from '../../../shared/query/models';
 import { executeCommand } from '../../platform/commands';
+import { useSetting } from '../../platform/settings';
 import { getBridge, unwrap } from '../../services/ipc';
 import { Codicon } from '../../workbench/common/Codicon';
 import { useAccounts } from '../accounts/accounts-store';
@@ -10,6 +11,7 @@ import { runCounts, runSummaryText } from '../query/run-store';
 import { useInventory } from '../workspaces/inventory-store';
 
 import { useActiveRun } from './active-run';
+import { openInPortal } from './result-actions';
 
 import './results.css';
 
@@ -40,7 +42,16 @@ function useTicker(active: boolean): number {
   return now;
 }
 
-function WorkspaceRow({ status }: { status: WorkspaceRunStatus }): React.JSX.Element {
+function WorkspaceRow({
+  status,
+  query,
+  timespan,
+}: {
+  status: WorkspaceRunStatus;
+  query: string;
+  timespan: string | undefined;
+}): React.JSX.Element {
+  const linksEnabled = useSetting('links.enabled');
   const namer = useNamer();
   const workspace = useInventory((s) =>
     s.inventory.workspaces.find((w) => w.resourceId === status.resourceId),
@@ -69,6 +80,17 @@ function WorkspaceRow({ status }: { status: WorkspaceRunStatus }): React.JSX.Ele
         {status.message ?? ''}
       </td>
       <td className="run-actions">
+        {linksEnabled && workspace !== undefined ? (
+          <button
+            type="button"
+            className="action-item"
+            title="Open Query in Azure Portal Logs"
+            aria-label="Open query in Azure Portal Logs"
+            onClick={() => void openInPortal(workspace, query, timespan)}
+          >
+            <Codicon name="link-external" />
+          </button>
+        ) : null}
         {needsSignIn ? (
           <button
             type="button"
@@ -164,7 +186,12 @@ export function RunView(): React.JSX.Element {
           </thead>
           <tbody>
             {run.workspaces.map((status) => (
-              <WorkspaceRow key={status.resourceId} status={status} />
+              <WorkspaceRow
+                key={status.resourceId}
+                status={status}
+                query={run.query}
+                timespan={run.timespan}
+              />
             ))}
           </tbody>
         </table>

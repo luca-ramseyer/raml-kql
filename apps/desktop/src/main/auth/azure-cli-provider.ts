@@ -7,15 +7,46 @@ import { resourceUriFor } from './cloud';
 import {
   InteractionRequiredError,
   NoAccessError,
+  SignInError,
   type AuthProvider,
   type ProviderAccount,
 } from './provider';
 import type { AccessToken } from './token-cache';
 
-/** Runs the Azure CLI and returns stdout. Injected so tests never spawn processes. */
-export type CommandRunner = (command: string, args: readonly string[]) => Promise<string>;
+export interface CommandOptions {
+  /** Kill the process after this long (default 60 s). */
+  timeoutMs?: number;
+  /** Extra environment variables. */
+  env?: Record<string, string>;
+}
 
-export const execAzureCli: CommandRunner = (command, args) =>
+/** Runs the Azure CLI and returns stdout. Injected so tests never spawn processes. */
+export type CommandRunner = (
+  command: string,
+  args: readonly string[],
+  options?: CommandOptions,
+) => Promise<string>;
+
+/**
+ * Where Azure CLI is usually installed. Apps started from Finder or the Dock on macOS get a
+ * minimal PATH (`/usr/bin:/bin:/usr/sbin:/sbin`) that misses Homebrew and pipx installs.
+ */
+const EXTRA_PATHS: Partial<Record<NodeJS.Platform, string[]>> = {
+  darwin: ['/opt/homebrew/bin', '/usr/local/bin'],
+  linux: ['/usr/local/bin', '/usr/bin', '/snap/bin'],
+};
+
+function cliPath(): string {
+  const current = process.env['PATH'] ?? '';
+  const extra = (EXTRA_PATHS[process.platform] ?? []).filter(
+    (dir) => !current.split(':').includes(dir),
+  );
+  return [current, ...extra]
+    .filter((part) => part !== '')
+    .join(process.platform === 'win32' ? ';' : ':');
+}
+
+export const execAzureCli: CommandRunner = (command, args, options = {}) =>
   new Promise((resolve, reject) => {
     // execFile passes arguments directly, without a shell, except on Windows: there `az` is a
     // .cmd script, which Node only runs through the shell. That is safe here because every
@@ -23,7 +54,12 @@ export const execAzureCli: CommandRunner = (command, args) =>
     execFile(
       command,
       [...args],
-      { timeout: 60_000, maxBuffer: 10 * 1024 * 1024, shell: process.platform === 'win32' },
+      {
+        timeout: options.timeoutMs ?? 60_000,
+        maxBuffer: 10 * 1024 * 1024,
+        shell: process.platform === 'win32',
+        env: { ...process.env, PATH: cliPath(), ...options.env },
+      },
       (error, stdout, stderr) => {
         if (error !== null) {
           const failure: Error & { stderr?: string } = error;
@@ -53,6 +89,9 @@ const TokenSchema = z.object({
 });
 
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** `az login` waits for the browser sign-in; give the user time for MFA. */
+const LOGIN_TIMEOUT_MS = 5 * 60 * 1000;
 
 /**
  * Tokens via `az account get-access-token` (spec 02, mode `azureCli`), for environments where
@@ -153,9 +192,42 @@ export class AzureCliAuthProvider implements AuthProvider {
     return { token: token.accessToken, expiresOn };
   }
 
-  acquireTokenInteractive(): Promise<AccessToken> {
-    return Promise.reject(
-      new Error('Azure CLI accounts sign in with "az login --tenant <tenant>" in a terminal.'),
-    );
+  /**
+   * "Sign in" for a tenant that needs it: run `az login --tenant <tenant>`, which opens the
+   * system browser (MFA, Conditional Access), then get a token for the tenant as usual.
+   */
+  async acquireTokenInteractive(
+    accountId: string,
+    tenantId: string,
+    scope: string,
+  ): Promise<AccessToken> {
+    if (!GUID.test(tenantId)) throw new Error('Invalid tenant ID');
+    try {
+      await this.run('az', ['login', '--tenant', tenantId, '--output', 'none'], {
+        timeoutMs: LOGIN_TIMEOUT_MS,
+        env: {
+          // Azure CLI 2.61+ asks which subscription to use after `az login`; nobody can answer
+          // that prompt from the app, so turn it off for this call.
+          AZURE_CORE_LOGIN_EXPERIENCE_V2: 'off',
+        },
+      });
+    } catch (error) {
+      const failure = error as { stderr?: string; killed?: boolean; code?: string };
+      if (failure.code === 'ENOENT') {
+        throw new SignInError(
+          'Azure CLI was not found. Install it, or add it to your PATH, and try again.',
+        );
+      }
+      if (failure.killed === true) {
+        throw new SignInError(
+          'Azure CLI sign-in timed out. Try again, and finish the sign-in in your browser.',
+        );
+      }
+      const stderr = (failure.stderr ?? '').trim();
+      throw new SignInError(
+        `Azure CLI sign-in didn't complete${stderr === '' ? '.' : `: ${stderr.split('\n').slice(-3).join(' ').slice(0, 300)}`}`,
+      );
+    }
+    return this.acquireTokenSilent(accountId, tenantId, scope);
   }
 }

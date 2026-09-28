@@ -1,0 +1,57 @@
+.chart-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.chart-builder {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 4px 0 6px;
+  gap: 10px;
+}
+
+.chart-builder label {
+  display: inline-flex;
+  align-items: center;
+  color: var(--vscode-descriptionForeground);
+  gap: 4px;
+}
+
+.chart-builder select {
+  height: 22px;
+  border: 1px solid var(--vscode-dropdown-border, transparent);
+  background-color: var(--vscode-dropdown-background);
+  color: var(--vscode-dropdown-foreground);
+  font: inherit;
+}
+
+.chart-check {
+  color: var(--vscode-foreground);
+}
+
+.chart-canvas {
+  flex: 1;
+  min-height: 160px;
+}
+
+.chart-card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-card-value {
+  color: var(--vscode-foreground);
+  font-size: 48px;
+  font-weight: 300;
+}
+
+.chart-card-label {
+  color: var(--vscode-descriptionForeground);
+}

@@ -10,6 +10,7 @@ import {
   type ResultPage,
   type ResultTableInfo,
 } from '../../shared/query/models';
+import { valueText } from '../../shared/results/values';
 import { widenKqlType, type KqlType } from '../../shared/schema/models';
 
 /**
@@ -48,6 +49,8 @@ interface MergedColumnState {
 }
 
 interface StoredTable {
+  /** Increases whenever rows are added or removed (invalidates cached views). */
+  version: number;
   name: string;
   columns: MergedColumnState[];
   batches: Batch[];
@@ -69,6 +72,8 @@ export interface ResultStoreOptions {
 }
 
 const IV_BYTES = 12;
+/** Decrypted spilled batches kept for random access (sorted views jump between batches). */
+const READ_CACHE_BATCHES = 8;
 const TAG_BYTES = 16;
 
 export class ResultStore {
@@ -77,8 +82,8 @@ export class ResultStore {
   private nextBatchId = 1;
   private memoryBytes = 0;
   private disposed = false;
-  /** The last spilled batch read back, so paging through it doesn't decrypt every time. */
-  private readCache: { batchId: number; rows: unknown[][] } | undefined;
+  /** Recently read spilled batches (most recent last), so random access doesn't decrypt each time. */
+  private readCache: { batchId: number; rows: unknown[][] }[] = [];
 
   private constructor(private readonly options: ResultStoreOptions) {
     this.key = randomBytes(32);
@@ -125,7 +130,7 @@ export class ResultStore {
 
     let table = run.tables[input.tableIndex];
     if (table === undefined) {
-      table = { name: input.tableName, columns: [], batches: [], rowCount: 0 };
+      table = { name: input.tableName, columns: [], batches: [], rowCount: 0, version: 0 };
       run.tables[input.tableIndex] = table;
     }
     for (const column of input.columns) {
@@ -154,6 +159,7 @@ export class ResultStore {
     };
     table.batches.push(batch);
     table.rowCount += rows.length;
+    table.version += 1;
     run.rowCount += rows.length;
     this.memoryBytes += bytes;
     await this.enforceBudget();
@@ -170,6 +176,7 @@ export class ResultStore {
       table.batches = table.batches.filter((b) => b.workspaceKey !== workspaceKey);
       for (const batch of removed) {
         table.rowCount -= batch.rowCount;
+        table.version += 1;
         run.rowCount -= batch.rowCount;
         await this.dropBatch(batch);
       }
@@ -221,6 +228,71 @@ export class ResultStore {
     return { runId, tableIndex, offset, columns, rows: rows as ResultPage['rows'] };
   }
 
+  /** Version of a table's contents; changes whenever rows are added or removed. */
+  tableVersion(runId: string, tableIndex: number): number | undefined {
+    return this.runs.get(runId)?.tables[tableIndex]?.version;
+  }
+
+  /** Merged columns of a table (attribution first). */
+  columns(runId: string, tableIndex: number): ResultColumn[] {
+    const table = this.runs.get(runId)?.tables[tableIndex];
+    return table === undefined ? [] : mergedColumns(table);
+  }
+
+  /** Rows by position in merged order (for sorted/filtered views). */
+  async rowsAt(
+    runId: string,
+    tableIndex: number,
+    positions: readonly number[],
+  ): Promise<unknown[][]> {
+    this.assertUsable();
+    const table = this.runs.get(runId)?.tables[tableIndex];
+    if (table === undefined) return [];
+    const starts: number[] = [];
+    let offset = 0;
+    for (const batch of table.batches) {
+      starts.push(offset);
+      offset += batch.rowCount;
+    }
+    const out: unknown[][] = [];
+    for (const position of positions) {
+      // Binary search for the batch containing this position.
+      let lo = 0;
+      let hi = starts.length - 1;
+      while (lo < hi) {
+        const mid = (lo + hi + 1) >> 1;
+        if ((starts[mid] ?? 0) <= position) lo = mid;
+        else hi = mid - 1;
+      }
+      const batch = table.batches[lo];
+      if (batch === undefined || position >= offset) continue;
+      const rows = await this.rowsOf(batch);
+      out.push(projectRow(batch, rows[position - (starts[lo] ?? 0)] ?? [], table.columns));
+    }
+    return out;
+  }
+
+  /**
+   * Visit every row of a table in merged order, batch by batch (sorting, filtering, grouping,
+   * export). `visit` receives the projected row and its position.
+   */
+  async forEachRow(
+    runId: string,
+    tableIndex: number,
+    visit: (row: unknown[], position: number) => void,
+  ): Promise<void> {
+    this.assertUsable();
+    const table = this.runs.get(runId)?.tables[tableIndex];
+    if (table === undefined) return;
+    let position = 0;
+    for (const batch of table.batches) {
+      const rows = await this.rowsOf(batch);
+      for (let r = 0; r < batch.rowCount; r++) {
+        visit(projectRow(batch, rows[r] ?? [], table.columns), position++);
+      }
+    }
+  }
+
   async deleteRun(runId: string): Promise<void> {
     const run = this.runs.get(runId);
     if (run === undefined) return;
@@ -239,7 +311,7 @@ export class ResultStore {
     if (this.disposed) return;
     this.disposed = true;
     this.runs.clear();
-    this.readCache = undefined;
+    this.readCache = [];
     this.memoryBytes = 0;
     rmSync(this.options.dir, { recursive: true, force: true });
     this.key.fill(0);
@@ -263,18 +335,26 @@ export class ResultStore {
 
   private async rowsOf(batch: Batch): Promise<unknown[][]> {
     if (batch.rows !== undefined) return batch.rows;
-    if (this.readCache?.batchId === batch.id) return this.readCache.rows;
+    const cachedIndex = this.readCache.findIndex((entry) => entry.batchId === batch.id);
+    if (cachedIndex >= 0) {
+      const [entry] = this.readCache.splice(cachedIndex, 1);
+      if (entry !== undefined) {
+        this.readCache.push(entry);
+        return entry.rows;
+      }
+    }
     if (batch.file === undefined) return [];
     const data = await readFile(batch.file);
     const rows = JSON.parse(this.decrypt(data, batch.runId).toString('utf8')) as unknown[][];
-    this.readCache = { batchId: batch.id, rows };
+    this.readCache.push({ batchId: batch.id, rows });
+    if (this.readCache.length > READ_CACHE_BATCHES) this.readCache.shift();
     return rows;
   }
 
   private async dropBatch(batch: Batch): Promise<void> {
     if (batch.rows !== undefined) this.memoryBytes -= batch.bytes;
     batch.rows = undefined;
-    if (this.readCache?.batchId === batch.id) this.readCache = undefined;
+    this.readCache = this.readCache.filter((entry) => entry.batchId !== batch.id);
     if (batch.file !== undefined) {
       await rm(batch.file, { force: true });
       batch.file = undefined;
@@ -346,14 +426,4 @@ function projectRow(batch: Batch, row: unknown[], merged: MergedColumnState[]): 
     );
   }
   return out;
-}
-
-/** A value as text, for columns widened to `string`. */
-function valueText(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-    return value.toString();
-  }
-  if (typeof value === 'function' || typeof value === 'symbol' || value === undefined) return '';
-  return JSON.stringify(value);
 }
