@@ -42,7 +42,7 @@ test('changes the theme via the Settings UI and writes settings.jsonc', async ({
   configDir,
 }) => {
   await window.emulateMedia({ colorScheme: 'dark' });
-  await expect.poll(() => editorBackground(window)).toBe('#1f1f1f');
+  await expect.poll(() => editorBackground(window)).toBe('#211f1c');
 
   await window.keyboard.press(`${MOD}+,`);
   await expect(window.getByRole('tab', { name: /Settings/ })).toHaveAttribute(

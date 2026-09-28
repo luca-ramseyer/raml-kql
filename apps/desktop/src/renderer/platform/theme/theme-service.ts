@@ -6,7 +6,7 @@ import { getBridge } from '../../services/ipc';
 import { notify } from '../notifications';
 import { useSettings } from '../settings';
 
-import { BUILTIN_THEMES } from './builtin-themes';
+import { BUILTIN_THEMES, DEFAULT_DARK_THEME } from './builtin-themes';
 import { Color } from './color';
 import { ColorResolver, cssVariableName } from './color-registry';
 import { findTheme, selectThemeLabel, type OsAppearance } from './theme-selection';
@@ -23,7 +23,7 @@ export const useTheme = create<ThemeState>(() => ({
   userThemes: [],
   os: { dark: true, highContrast: false },
   previewLabel: undefined,
-  active: findTheme(BUILTIN_THEMES, 'Default Dark Modern'),
+  active: findTheme(BUILTIN_THEMES, DEFAULT_DARK_THEME),
 }));
 
 export function allThemes(): ColorTheme[] {

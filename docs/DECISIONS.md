@@ -645,3 +645,17 @@ The examples are built with esbuild (now a root dev dependency) by `pnpm build:e
 The extension host's own session blocks all requests, so it never appears. README and the new `SECURITY.md` carry the privacy stance from spec 10 and point to this view.
 
 **Also fixed:** `HistoryService` could lose an entry when a list and an append loaded the file at the same time (two cache arrays); loading is now shared. It showed up as a flaky test under load.
+
+## D-054 — Raml brand themes are the default (2026-09-28)
+
+**Context:** Luca asked for a default theme in the Raml design system (style guide: `luca-ramseyer.github.io/brand/style-guide.html`). Spec 05 made VS Code's Dark Modern / Light Modern the defaults.
+
+**Decision:** two built-in themes, **Raml Dark** and **Raml Light**, are now the defaults (`workbench.colorTheme` and `workbench.preferredDarkColorTheme` are "Raml Dark", `workbench.preferredLightColorTheme` is "Raml Light"; the OS still picks between them). The VS Code themes stay built in and selectable. This deviates from spec 05; the layout, spacing, icons and keyboard behaviour stay VS Code's, only the colours change.
+
+- `scripts/build-raml-themes.mjs` holds the palette in one place and generates both theme files. Light is cream paper (`#F4EFE4`), ivory for raised surfaces, ink and graphite text and hairline borders. Dark follows the brand wallpapers: an ink ground (`#211F1C`) with cream text.
+- Swiss Red (`#C0473A`) is used sparingly, as the guide asks: the focus ring, the active tab and view hairlines, badges, the cursor and the primary button. Chrome (title, activity, side and status bars) stays neutral.
+- The brand has no syntax colours, so KQL gets muted, warm-leaning companion hues (brick keywords, slate functions, olive strings, ochre numbers, plum types).
+- Stone is only used for non-essential text. The script fails if any text colour misses WCAG AA (4.5:1). A unit test fails if a VS Code default blue leaks through a key the palette doesn't set.
+- Fonts (Cormorant Garamond, Montserrat) and 3 px corners are not part of a colour theme and are unchanged; the UI keeps VS Code's system font stack.
+
+**Consequences:** the example theme extension, previously also called "Raml Dark" (teal), is renamed to `teal-theme` / "Teal Dark" so its label doesn't clash with the built-in theme (extension themes with a duplicate label are skipped).

@@ -59,7 +59,7 @@ Settings referenced in the specs (non-exhaustive):
 
 | Key | Default |
 |---|---|
-| `workbench.colorTheme` | `"Default Dark Modern"` (follows OS if `window.autoDetectColorScheme`) |
+| `workbench.colorTheme` | `"Raml Dark"` (follows OS if `window.autoDetectColorScheme`) |
 | `editor.fontFamily`, `editor.fontSize`, `editor.minimap.enabled`, `editor.wordWrap`, `editor.runScope` | see spec 05 |
 | `auth.provider` | `"builtin"` |
 | `accounts.showTenantsWithoutAccess` | `false` |

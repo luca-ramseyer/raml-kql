@@ -60,7 +60,7 @@ export const settingDefinitions = [
   define({
     key: 'workbench.colorTheme',
     schema: themeLabel,
-    default: 'Default Dark Modern',
+    default: 'Raml Dark',
     description:
       'Specifies the color theme used in the workbench when `window.autoDetectColorScheme` is off.',
     category: ['Workbench', 'Appearance'],
@@ -81,7 +81,7 @@ export const settingDefinitions = [
   define({
     key: 'workbench.preferredDarkColorTheme',
     schema: themeLabel,
-    default: 'Default Dark Modern',
+    default: 'Raml Dark',
     description:
       'Specifies the color theme used when the OS is in dark mode and `window.autoDetectColorScheme` is on.',
     category: ['Workbench', 'Appearance'],
@@ -91,7 +91,7 @@ export const settingDefinitions = [
   define({
     key: 'workbench.preferredLightColorTheme',
     schema: themeLabel,
-    default: 'Default Light Modern',
+    default: 'Raml Light',
     description:
       'Specifies the color theme used when the OS is in light mode and `window.autoDetectColorScheme` is on.',
     category: ['Workbench', 'Appearance'],

@@ -34,7 +34,7 @@ export function selectThemeLabel(settings: ThemeSettings, os: OsAppearance): str
   return settings['workbench.colorTheme'];
 }
 
-/** Find a theme by label, falling back to Default Dark Modern (then to the first theme). */
+/** Find a theme by label, falling back to the default dark theme (then to the first theme). */
 export function findTheme(themes: readonly ColorTheme[], label: string): ColorTheme {
   const found =
     themes.find((theme) => theme.label === label) ??

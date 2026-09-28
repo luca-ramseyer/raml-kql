@@ -82,12 +82,12 @@ describe('Workbench', () => {
   it('follows the OS appearance and applies theme colours as CSS variables', async () => {
     setMediaMatch('(prefers-color-scheme: dark)', true);
     await renderWorkbench();
-    expect(themeVar('editor-background')).toBe('#1f1f1f');
+    expect(themeVar('editor-background')).toBe('#211f1c');
     expect(document.body).toHaveClass('vs-dark');
     act(() => {
       setMediaMatch('(prefers-color-scheme: dark)', false);
     });
-    expect(themeVar('editor-background')).toBe('#ffffff');
+    expect(themeVar('editor-background')).toBe('#f4efe4');
     expect(document.body).toHaveClass('vs');
     setMediaMatch('(prefers-color-scheme: dark)', false);
   });

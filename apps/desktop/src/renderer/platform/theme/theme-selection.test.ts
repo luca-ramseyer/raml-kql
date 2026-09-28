@@ -8,13 +8,9 @@ import { findTheme, selectThemeLabel } from './theme-selection';
 describe('selectThemeLabel', () => {
   const defaults = defaultSettingValues();
 
-  it('follows the OS by default', () => {
-    expect(selectThemeLabel(defaults, { dark: true, highContrast: false })).toBe(
-      'Default Dark Modern',
-    );
-    expect(selectThemeLabel(defaults, { dark: false, highContrast: false })).toBe(
-      'Default Light Modern',
-    );
+  it('follows the OS by default, with the Raml brand themes', () => {
+    expect(selectThemeLabel(defaults, { dark: true, highContrast: false })).toBe('Raml Dark');
+    expect(selectThemeLabel(defaults, { dark: false, highContrast: false })).toBe('Raml Light');
   });
 
   it('switches to high contrast when the OS asks for it', () => {
@@ -40,8 +36,8 @@ describe('selectThemeLabel', () => {
 });
 
 describe('findTheme', () => {
-  it('finds by label and falls back to Default Dark Modern', () => {
+  it('finds by label and falls back to Raml Dark', () => {
     expect(findTheme(BUILTIN_THEMES, 'Default Light Modern').id).toBe('default-light-modern');
-    expect(findTheme(BUILTIN_THEMES, 'Not Installed').id).toBe('default-dark-modern');
+    expect(findTheme(BUILTIN_THEMES, 'Not Installed').id).toBe('raml-dark');
   });
 });
