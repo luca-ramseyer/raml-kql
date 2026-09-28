@@ -4,6 +4,8 @@ node_modules/
 # Build output
 out/
 dist/
+# ...except hand-written test fixtures that must ship as they are.
+!apps/desktop/e2e/fixtures/extensions/*/dist/
 release/
 *.tsbuildinfo
 
