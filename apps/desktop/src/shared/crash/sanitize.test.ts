@@ -8,7 +8,18 @@ import { sanitize } from './sanitize';
  */
 const HOME = '/Users/analyst';
 // A fake token, built at runtime so the source contains nothing token-shaped (secret scanning).
-const b64url = (text: string): string => Buffer.from(text).toString('base64url');
+const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+/** Base64url of ASCII text (shared code has no Node `Buffer`). */
+function b64url(text: string): string {
+  let out = '';
+  for (let i = 0; i < text.length; i += 3) {
+    const [a = 0, b = 0, c = 0] = [0, 1, 2].map((k) => text.charCodeAt(i + k) || 0);
+    const n = (a << 16) | (b << 8) | c;
+    const chars = [18, 12, 6, 0].map((shift) => B64.charAt((n >> shift) & 63));
+    out += chars.slice(0, Math.min(4, text.length - i + 1)).join('');
+  }
+  return out;
+}
 const JWT = [
   b64url('{"alg":"RS256","typ":"JWT"}'),
   b64url('{"tid":"00000000-0000-0000-0000-000000000001"}'),
@@ -73,6 +84,10 @@ describe('sanitize', () => {
     expect(out).toContain('at ResultStore.append (~/dev/raml-kql/out/main/index.js:1234:18)');
     expect(out).toContain('(<app>/app.asar/out/main/index.js:88:3)');
     expect(out).toContain("TypeError: Cannot read properties of undefined (reading 'tables')");
+  });
+
+  it('builds its fake token like a real one', () => {
+    expect(b64url('{"alg":"RS256","typ":"JWT"}')).toBe('eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9');
   });
 
   it('marks what it replaced', () => {
