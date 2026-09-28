@@ -298,4 +298,3 @@ Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Con
 - `.query-monaco[data-schema]` tells tests when the schema is in the language service.
 - The idle preload now starts within 1.5 s of start-up (was 5 s).
 - Under `pnpm dev`, only the very first run after installing dependencies is slow (~1.3 s), while Vite pre-bundles Monaco. Later dev runs open the editor in ~60 ms.
-
