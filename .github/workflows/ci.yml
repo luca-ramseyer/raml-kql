@@ -40,6 +40,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+        env:
+          # Type-aware ESLint over the whole monorepo needs more than Node's default heap.
+          NODE_OPTIONS: --max-old-space-size=6144
       - run: pnpm typecheck
       - run: pnpm test --coverage
       - run: pnpm check:licenses
