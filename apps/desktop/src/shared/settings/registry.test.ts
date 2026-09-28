@@ -39,7 +39,7 @@ describe('settings registry', () => {
 
   it('follows the OS appearance by default (roadmap Phase 1)', () => {
     expect(defaultSettingValues()['window.autoDetectColorScheme']).toBe(true);
-    expect(defaultSettingValues()['workbench.colorTheme']).toBe('Default Dark Modern');
+    expect(defaultSettingValues()['workbench.colorTheme']).toBe('Raml Dark');
   });
 
   it('generates a JSON Schema for settings.jsonc', () => {

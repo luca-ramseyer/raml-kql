@@ -7,7 +7,7 @@ Claude Code appends items here when blocked, and keeps working. Tick them off wh
 - [x] **Entra multi-tenant app registration.** Follow `docs/guides/entra-app-registration.md`, then put the client ID in a local `.env` (`RAML_KQL_CLIENT_ID=...`) and later in the GitHub Actions secret `RAML_KQL_CLIENT_ID`.
   - Done: the local `.env` and the GitHub secret exist. The CI installer build passes the secret to the build (Phase 10 follow-up).
 - [x] **Branding:** a 1024×1024 app icon (`apps/desktop/build/icon.png`). Done (1080×1080, committed).
-- [ ] **Raml colour values** for the optional Raml theme (see also "Brand colours for Raml Dark" under Phase 9).
+- [x] **Raml colour values** for the optional Raml theme. Done: the built-in Raml Dark and Raml Light themes use the brand style guide (D-054).
 - [ ] **Apple signing:** create a "Developer ID Application" certificate, export it as .p12, and create an App Store Connect API key. Add the secrets `CSC_LINK` (base64 .p12), `CSC_KEY_PASSWORD`, `APPLE_API_KEY` (base64 .p8), `APPLE_API_KEY_ID` and `APPLE_API_ISSUER`.
 - [ ] **Windows signing:** after going public, apply to SignPath Foundation (OSS program), or evaluate Microsoft's cloud signing service eligibility.
 - [x] **Live test:** sign in with two accounts, verify Lighthouse workspaces are listed, run a query across them, and verify the guest-tenant re-auth prompt.
@@ -100,7 +100,7 @@ Claude Code appends items here when blocked, and keeps working. Tick them off wh
 
   Check the prompts read well to you.
 
-- [ ] **Brand colours for Raml Dark.** The example theme uses teal accents I picked. If Raml has brand colours, tell me and I'll use them.
+- [x] **Brand colours for Raml Dark.** Done: the brand themes are built in (D-054); the teal example is now "Teal Dark".
 - [ ] **Publish `@raml-kql/extension-api` and `@raml-kql/extension-cli` to npm** when the repo goes public (Phase 12). The scaffold's `package.json` and the author guide already point at those names.
 
 ## Added during Phase 10

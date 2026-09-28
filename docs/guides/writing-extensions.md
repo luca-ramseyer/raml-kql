@@ -11,7 +11,7 @@ Three complete examples live in [`examples/extensions/`](../../examples/extensio
 | ---------------------- | -------------------------------------------------------------- |
 | `virustotal-enricher`  | An enricher, `net.fetch`, `secrets`, settings, commands        |
 | `country-map-renderer` | A result renderer (sandboxed UI, bundled data, `results.read`) |
-| `raml-dark-theme`      | A theme-only extension (no code, no permissions)               |
+| `teal-theme`           | A theme-only extension (no code, no permissions)               |
 
 Build them with `pnpm build:examples`. The `.rkqlx` files land in `examples/extensions/dist/`.
 

@@ -1,7 +1,7 @@
 {
-  "name": "raml-dark-theme",
+  "name": "teal-theme",
   "publisher": "raml",
-  "displayName": "Raml Dark",
+  "displayName": "Teal Dark",
   "version": "1.0.0",
   "description": "A dark colour theme with teal accents. An example of a theme-only extension: data, no code, no permissions.",
   "license": "MIT",
@@ -12,9 +12,9 @@
   "contributes": {
     "themes": [
       {
-        "label": "Raml Dark",
+        "label": "Teal Dark",
         "uiTheme": "vs-dark",
-        "path": "themes/raml-dark.json"
+        "path": "themes/teal-dark.json"
       }
     ]
   }

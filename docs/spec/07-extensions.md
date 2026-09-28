@@ -173,4 +173,4 @@ Also:
 
 1. **virustotal-enricher**: IP, domain and hash lookups. Needs the VirusTotal API key via `secrets`. Adds result columns "VT malicious/total" as an enrichment overlay (a derived view, not modifying the source data).
 2. **country-map-renderer**: a result renderer that aggregates an IP-geo or country column into a choropleth using a bundled low-res world GeoJSON (no remote tiles, so it needs no network permission).
-3. **raml-dark-theme**: a theme-only extension (Raml brand colours), to prove the theme contribution.
+3. **teal-theme**: a theme-only extension (a teal dark theme), to prove the theme contribution. The Raml brand themes are built in (spec 05).

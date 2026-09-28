@@ -67,11 +67,11 @@ test('the Country Map renderer draws the result after results.read is allowed', 
   await expect(frame.locator('.country.hit').first()).toBeVisible();
 });
 
-test('the Raml Dark theme can be chosen', async ({ electronApp, window }) => {
-  await install(electronApp, window, 'raml-dark-theme.rkqlx', 'Raml Dark');
+test('the Teal Dark example theme can be chosen', async ({ electronApp, window }) => {
+  await install(electronApp, window, 'teal-theme.rkqlx', 'Teal Dark');
   await runCommand(window, 'Color Theme');
-  await quickInput(window).fill('Raml');
-  await window.getByRole('option', { name: /Raml Dark/ }).click();
+  await quickInput(window).fill('Teal');
+  await window.getByRole('option', { name: /Teal Dark/ }).click();
   await expect(window.locator('html')).toHaveAttribute(
     'style',
     /--vscode-editor-background: #0f1a1e/,
