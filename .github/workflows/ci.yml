@@ -111,6 +111,9 @@ jobs:
         env:
           # Unsigned builds: stop electron-builder from looking for signing identities.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          # The built-in Entra client ID (a public identifier, kept as a secret so it stays out
+          # of logs). Empty for PRs from forks: those builds offer custom client ID and Azure CLI.
+          RAML_KQL_CLIENT_ID: ${{ secrets.RAML_KQL_CLIENT_ID }}
       - uses: actions/upload-artifact@v7
         with:
           name: installers-${{ matrix.os }}
