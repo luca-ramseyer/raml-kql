@@ -186,3 +186,40 @@ Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Con
 ## D-027 — Targets selection until query tabs exist (2026-09-25)
 
 **Decision:** until query tabs arrive (Phase 4/7), the Targets selection is one session-wide selection. The first inventory selects every enabled workspace; disabled or missing workspaces drop out of the selection automatically. Choosing a group filters the tree to that group and selects exactly its (enabled) workspaces. "Save Selection as Group…" creates a static group. The selection becomes per-tab state in Phase 7.
+
+## D-028 — Monaco and monaco-kusto integration (2026-09-25)
+
+**Context:** spec 05 asks for Monaco with `@kusto/monaco-kusto`, bundled, with workers wired for electron-vite, under the strict CSP (no `unsafe-eval`).
+
+**Decision:**
+
+- `monaco-editor` 0.55.1 and `@kusto/monaco-kusto` 15.0.1 (current on npm, both MIT). Monaco is loaded as `edcore.main` (every editor feature, none of Monaco's other languages), lazily with the first query tab: `QueryEditor` is a `React.lazy` chunk, so startup cost doesn't change.
+- Workers are Vite `?worker` module workers served from `raml-kql://app` (`worker-src 'self'`). The Kusto worker entry also includes Monaco's editor worker. The Kusto language service (Bridge.NET) uses `eval` in `newtonsoft.json.min.js`. This runs only inside the worker, which has no DOM, no preload bridge and no IPC, and gets no CSP of its own from our protocol. The page CSP still forbids `eval`, and e2e runs the built app to check that no CSP violation occurs.
+- Control commands are off (`includeControlCommands: false`): Log Analytics is read-only.
+- F1 in the editor opens the workbench command palette, not Monaco's own.
+- The renderer bundle is not minified (electron-vite default). Minification is a release-polish item. It needs care because of Bridge.NET's reflection over names.
+
+**Consequences:** each monaco-kusto cached database is only rebuilt when its `majorVersion` increases, so every schema sent gets a new version. Its completion cache also can't be invalidated, so the editor waits (up to 5 s) for the first schema of the current targets before taking input. After a later change of targets, only the word being typed can show stale completions.
+
+## D-029 — Schema service (2026-09-25)
+
+**Context:** spec 05 "Schema-aware IntelliSense".
+
+**Decision:**
+
+- Per workspace, `GET {logAnalyticsEndpoint}/v1/workspaces/{customerId}/metadata` with a Log Analytics token, trying the preferred access path first and then the others. Learn has no maintained reference page for this response. It is parsed leniently: only `tables[].name/description/columns[].name/type/description` and `functions[].name/parameters/body/description` are read, unknown fields are ignored, and `null`s are tolerated. No fallback to `getschema` or the ARM tables API yet. It will be added if the metadata API turns out to be unavailable for some workspaces.
+- Cache: `state/schema-cache/<sha256(resourceId)>.json`, metadata only, TTL `schema.cacheHours` (0 = always fetch). File names are hashes, so no names end up in paths. If a fetch fails, an expired cached schema is used rather than none.
+- Merge: tables, columns and functions are united by name, with availability counts. The denominator is the number of workspaces whose schema loaded (a failed workspace isn't counted as "missing" the table). Conflicting column types widen (`int`→`long`→`real`, otherwise `string`), as the results merge does (spec 04).
+- The merged schema is sent to the language service as one synthetic database, "Targets". Availability appears in docstrings (hover and the completion details pane: "Available in 3/10 selected workspaces"). The completion item detail shows `3/10`: monaco-kusto passes only `label` and `detail` through, and Monaco shows `detail` next to the focused item.
+- Built-in table descriptions: `shared/schema/table-descriptions.ts`, written for this project. With `schema.hideTablesMissingEverywhere: false`, those tables are offered even if no target has them ("Not in any selected workspace").
+- Functions with tabular parameters are left out of IntelliSense (their parameter syntax isn't parsed yet).
+- Nothing is fetched until the first query tab opens. After that the schema follows the Targets selection, debounced by 300 ms.
+- Demo mode serves fixed demo schemas that differ per workspace (Defender tables in 3 workspaces, a Contoso `_CL` table and function). The forbidden demo workspace fails, like the fake query engine will.
+
+## D-030 — Time range and "Set in query" (2026-09-25)
+
+**Decision:**
+
+- "Set in query" uses the Kusto language service's classifications (tokens from the real parser) rather than a regex. It reports true when a `where`/`filter` predicate compares `TimeGenerated` with `> >= < <= == between !between in !in`. Comments and string literals never count. This is token-level rather than a full syntax-tree walk, and it counts `where` clauses inside subqueries (`join`, `let`) too. It's a close approximation of "top level", deliberately erring towards "Set in query". A syntax-tree walk can replace it if false positives show up.
+- Custom ranges are entered as `YYYY-MM-DD HH:mm` in two input boxes (quick-input style, keyboard-first) in `time.displayZone` (default UTC), and stored as ISO instants. The API `timespan` is `PTnM`/`PTnH`/`PnD` for presets and `start/end` for custom ranges, and it is omitted when "Set in query".
+- Until tab persistence (Phase 7), the first New Query of a session starts with the sample query, and later ones are empty.

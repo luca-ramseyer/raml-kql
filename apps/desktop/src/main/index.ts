@@ -22,6 +22,7 @@ import {
 } from 'electron';
 
 import { buildWorkbenchCsp } from '../shared/security/csp';
+import { accessPathKey } from '../shared/workspaces/models';
 
 import { resolveAppMode } from './app-mode';
 import { JsoncAccountsConfig, MemoryAccountsConfig } from './auth/accounts-config';
@@ -32,6 +33,7 @@ import { DemoAuthProvider } from './auth/demo-provider';
 import { EncryptedFileCachePlugin, resolveTokenPersistence } from './auth/encrypted-cache-plugin';
 import { MsalAuthProvider } from './auth/msal-provider';
 import { listTenants } from './azure/arm-tenants';
+import { fetchWorkspaceMetadata } from './azure/log-analytics-metadata';
 import {
   DISCOVERY_QUERIES,
   hasSentinelOnboarding,
@@ -48,6 +50,7 @@ import {
   demoDiscoveryRows,
   demoResourceId,
 } from './demo/demo-inventory';
+import { demoFetchSchema } from './demo/demo-schema';
 import { DiscoveryService } from './discovery/discovery-service';
 import { GroupsService } from './discovery/groups-service';
 import { FileInventoryCache, MemoryInventoryCache } from './discovery/inventory-cache';
@@ -56,6 +59,8 @@ import { createIpcHandlers, type WindowOperations } from './ipc/handlers';
 import { registerIpcRouter } from './ipc/router';
 import { KeybindingsService, NEW_KEYBINDINGS_FILE } from './keybindings/keybindings-service';
 import { APP_ENTRY_URL, APP_ORIGIN, APP_SCHEME, resolveAppFile } from './protocol/app-protocol';
+import { FileSchemaCache, MemorySchemaCache } from './schema/schema-cache';
+import { SchemaService } from './schema/schema-service';
 import { installNavigationGuards, isTrustedOrigin, originKey } from './security/navigation';
 import { denyAllPermissions } from './security/permissions';
 import { secureWebPreferences } from './security/web-preferences';
@@ -151,6 +156,7 @@ if (!app.requestSingleInstanceLock()) {
         emit('groups.changed', snapshot);
       },
     );
+    const schema = createSchemaService(auth, discovery);
     await Promise.all([discovery.init(), groups.reload()]);
     void auth.init();
     watchDirectory(paths.root, (file) => {
@@ -182,6 +188,7 @@ if (!app.requestSingleInstanceLock()) {
         showAbout,
         accounts: auth,
         inventory: discovery,
+        schema,
         groups,
         settings,
         keybindings,
@@ -314,6 +321,52 @@ function createDiscoveryService(auth: AuthService): DiscoveryService {
     timer = setTimeout(() => void discovery.refresh(), 500);
   });
   return discovery;
+}
+
+/**
+ * Workspace schemas for IntelliSense (spec 05): the Log Analytics metadata API through
+ * net.fetch, cached per workspace on disk, or the demo schemas.
+ */
+function createSchemaService(auth: AuthService, discovery: DiscoveryService): SchemaService {
+  const cloud = PUBLIC_CLOUD;
+  return new SchemaService({
+    workspace: (resourceId) =>
+      discovery.snapshot().workspaces.find((w) => w.resourceId === resourceId),
+    cache: mode.demo ? new MemorySchemaCache() : new FileSchemaCache(paths.schemaCacheDir),
+    cacheHours: () => {
+      const hours = settings.current.values['schema.cacheHours'];
+      return typeof hours === 'number' ? hours : 24;
+    },
+    fetchSchema: mode.demo
+      ? (workspace) => demoFetchSchema(workspace.resourceId)
+      : async (workspace) => {
+          // Preferred access path first, then the others (spec 03).
+          const paths = [...workspace.paths].sort(
+            (a, b) =>
+              Number(accessPathKey(b) === workspace.preferredPath) -
+              Number(accessPathKey(a) === workspace.preferredPath),
+          );
+          let lastError: unknown = new Error('No access path');
+          for (const path of paths) {
+            try {
+              const token = await auth.getToken({
+                accountId: path.accountId,
+                tenantId: path.authorityTenantId,
+                resource: 'logAnalytics',
+              });
+              return await fetchWorkspaceMetadata({
+                cloud,
+                token: token.token,
+                customerId: workspace.customerId,
+                fetch: (url, init) => net.fetch(url, init),
+              });
+            } catch (error) {
+              lastError = error;
+            }
+          }
+          throw lastError;
+        },
+  });
 }
 
 function createAuthService(): AuthService {

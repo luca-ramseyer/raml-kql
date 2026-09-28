@@ -1,0 +1,71 @@
+.query-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.query-toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--vscode-editorGroup-border, transparent);
+  background-color: var(--vscode-editor-background);
+  gap: 8px;
+}
+
+.query-run {
+  height: 24px;
+  padding: 2px 10px 2px 6px;
+  gap: 4px;
+}
+
+.query-run:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.query-time-range {
+  display: inline-flex;
+  box-sizing: border-box;
+  align-items: center;
+  height: 24px;
+  padding: 2px 6px;
+  border: 1px solid var(--vscode-dropdown-border, transparent);
+  border-radius: 2px;
+  background-color: var(--vscode-dropdown-background);
+  color: var(--vscode-dropdown-foreground);
+  cursor: pointer;
+  font: inherit;
+  gap: 4px;
+}
+
+.query-time-range:disabled {
+  cursor: default;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.query-time-range:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.query-toolbar-status {
+  display: inline-flex;
+  align-items: center;
+  color: var(--vscode-descriptionForeground);
+  gap: 4px;
+}
+
+.query-monaco {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.query-editor-message {
+  padding: 12px 20px;
+  color: var(--vscode-descriptionForeground);
+}

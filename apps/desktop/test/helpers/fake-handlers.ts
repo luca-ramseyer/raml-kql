@@ -6,6 +6,8 @@ import { DEFAULT_LAYOUT_STATE } from '../../src/shared/layout/layout-state';
 
 export const EMPTY_INVENTORY = { workspaces: [], tenants: [], refreshing: false, problems: [] };
 
+export const EMPTY_SCHEMA = { loaded: 0, failed: 0, tables: [], functions: [] };
+
 export const TEST_APP_INFO: AppInfo = {
   name: 'Raml KQL',
   version: '0.0.0',
@@ -67,6 +69,9 @@ export function fakeHandlerDependencies(
       refresh: vi.fn(() => Promise.resolve(EMPTY_INVENTORY)),
       updateWorkspaces: vi.fn(() => Promise.resolve(EMPTY_INVENTORY)),
       updateTenant: vi.fn(() => Promise.resolve(EMPTY_INVENTORY)),
+    },
+    schema: {
+      get: vi.fn(() => Promise.resolve(EMPTY_SCHEMA)),
     },
     groups: {
       snapshot: () => ({ groups: [], problems: [] }),

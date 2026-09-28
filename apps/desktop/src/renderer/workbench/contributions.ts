@@ -6,7 +6,7 @@ import {
   registerCommand,
   useCommands,
 } from '../platform/commands';
-import { closeActiveEditor, openEditor, useEditors } from '../platform/editors';
+import { activateEditor, closeActiveEditor, openEditor, useEditors } from '../platform/editors';
 import { keybindingLabel } from '../platform/keybindings/keybinding-service';
 import { showView, toggleMaximizedPanel, togglePanel, toggleSidebar } from '../platform/layout';
 import {
@@ -357,7 +357,7 @@ export function registerQuickAccess(): () => void {
         ),
       onAccept: (item) => {
         const editor = useEditors.getState().editors.find((e) => `editor:${e.id}` === item?.id);
-        if (editor !== undefined) openEditor(editor.kind);
+        if (editor !== undefined) activateEditor(editor.id);
       },
     }),
   ];

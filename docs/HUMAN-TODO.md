@@ -48,3 +48,12 @@ Claude Code appends items here when blocked, and keeps working. Tick them off wh
   2. Workspaces settings (gear icon in Targets) lets you disable a workspace and it disappears from Targets;
   3. a workspace reachable through two accounts shows one row with an access-path dropdown;
   4. `~/.raml-kql/workspaces.jsonc` contains only resource IDs, enabled flags, aliases and tags (nothing secret).
+
+## Added during Phase 4
+
+- [ ] **Live schema test.** Signed in with discovery done (Phase 3 steps), press ⌘N / Ctrl+N and:
+  1. type the start of a table you know exists in only some selected workspaces: the completion shows `n/m`, and hovering the table name shows "Available in n/m selected workspaces";
+  2. a custom `_CL` table and a workspace function show up in completions;
+  3. `~/.raml-kql/state/schema-cache/` contains hashed `.json` files with only table, column and function names (no data, no workspace names in file names);
+  4. Command Palette → "Query: Refresh Schema" works, and a workspace you can't read produces the "could not be loaded for 1 of n workspaces" warning.
+     The metadata API has no maintained Learn reference (D-029). If any workspace's schema is missing although you can query it, please note which kind of workspace it is.

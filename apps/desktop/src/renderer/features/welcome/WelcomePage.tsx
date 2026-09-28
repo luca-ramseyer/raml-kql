@@ -54,6 +54,7 @@ export function WelcomePage(): React.JSX.Element {
           <section className="welcome-section" aria-labelledby="welcome-start">
             <h2 id="welcome-start">Start</h2>
             <ul className="welcome-list">
+              <StartLink icon="new-file" label="New Query" command="query.new" />
               {demo ? (
                 <StartLink
                   icon="beaker"

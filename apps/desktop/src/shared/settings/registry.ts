@@ -247,6 +247,81 @@ export const settingDefinitions = [
     category: ['Privacy'],
     scope: 'user',
   }),
+  define({
+    key: 'editor.fontFamily',
+    schema: z.string().max(500),
+    default: '',
+    description:
+      'Controls the font family of the query editor. Empty uses the platform default (Menlo on macOS, Consolas on Windows, Droid Sans Mono on Linux).',
+    category: ['Text Editor', 'Font'],
+    scope: 'user',
+    commonlyUsed: true,
+  }),
+  define({
+    key: 'editor.fontSize',
+    schema: z.number().int().min(0).max(100),
+    default: 0,
+    description:
+      'Controls the font size in pixels of the query editor. `0` uses the platform default (12 on macOS, 14 elsewhere).',
+    category: ['Text Editor', 'Font'],
+    scope: 'user',
+    commonlyUsed: true,
+  }),
+  define({
+    key: 'editor.minimap.enabled',
+    schema: z.boolean(),
+    default: false,
+    description: 'Controls whether the minimap is shown.',
+    category: ['Text Editor', 'Minimap'],
+    scope: 'user',
+  }),
+  define({
+    key: 'editor.wordWrap',
+    schema: z.enum(['off', 'on']),
+    default: 'off',
+    description: 'Controls how lines should wrap.',
+    category: ['Text Editor'],
+    scope: 'user',
+    commonlyUsed: true,
+  }),
+  define({
+    key: 'schema.cacheHours',
+    schema: z
+      .number()
+      .int()
+      .min(0)
+      .max(24 * 30),
+    default: 24,
+    description:
+      'How long a workspace schema (tables and columns, never data) is cached on disk before it is fetched again. `0` always fetches.',
+    category: ['Query', 'Schema'],
+    scope: 'user',
+  }),
+  define({
+    key: 'schema.hideTablesMissingEverywhere',
+    schema: z.boolean(),
+    default: true,
+    description:
+      'Hide tables from IntelliSense that exist in none of the selected workspaces (e.g. tables known only from the built-in descriptions).',
+    category: ['Query', 'Schema'],
+    scope: 'user',
+  }),
+  define({
+    key: 'time.displayZone',
+    schema: z.enum(['utc', 'local']),
+    default: 'utc',
+    description: 'Time zone used to show and enter times, e.g. in the custom time range.',
+    category: ['Query', 'Time'],
+    scope: 'user',
+    control: {
+      kind: 'enum',
+      options: ['utc', 'local'],
+      optionDescriptions: [
+        'Coordinated Universal Time (recommended for SOC work).',
+        'The time zone of this computer.',
+      ],
+    },
+  }),
 ] as const satisfies readonly SettingDefinition[];
 
 export type SettingKey = (typeof settingDefinitions)[number]['key'];

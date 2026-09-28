@@ -8,6 +8,7 @@ import {
 } from '../config/config-snapshots';
 import { LayoutStateSchema } from '../layout/layout-state';
 import { MenuBarModelSchema, MenuRoleSchema } from '../menus/menu-model';
+import { MergedSchemaSchema, SchemaRequestSchema } from '../schema/models';
 import { GroupSchema, GroupsSnapshotSchema } from '../workspaces/groups';
 import { InventorySchema, TenantUpdateSchema, WorkspaceUpdateSchema } from '../workspaces/models';
 
@@ -102,6 +103,10 @@ export const ipcContracts = {
       InventorySchema,
     ),
     updateTenant: defineChannel('inventory:updateTenant', TenantUpdateSchema, InventorySchema),
+  },
+  schema: {
+    /** Merged schema (tables, columns, functions; never data) for a set of workspaces. */
+    get: defineChannel('schema:get', SchemaRequestSchema.strict(), MergedSchemaSchema),
   },
   groups: {
     get: defineChannel('groups:get', z.undefined(), GroupsSnapshotSchema),

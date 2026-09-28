@@ -8,6 +8,7 @@ import {
   showDeviceCode,
 } from '../features/accounts/accounts-store';
 import { currentNamer, startPrivacy } from '../features/privacy/privacy';
+import { registerQueryCommands } from '../features/query/query-commands';
 import {
   selectedWorkspaces,
   syncTargetsWithInventory,
@@ -97,6 +98,7 @@ export async function startWorkbench({
     registerBuiltinCommands(),
     registerAccountCommands(),
     registerWorkspaceCommands(),
+    registerQueryCommands(),
     registerQuickAccess(),
     startPrivacy(),
   );
@@ -144,7 +146,13 @@ export async function startWorkbench({
     setContextKey('activeViewlet', sidebar.visible ? sidebar.activeView : undefined);
     setContextKey('panelVisible', panel.visible);
     setContextKey('panelMaximized', panel.visible && panel.maximized);
-    setContextKey('activeEditor', useEditors.getState().activeId);
+    const { editors, activeId } = useEditors.getState();
+    setContextKey('activeEditor', activeId);
+    // Like VS Code's `editorLangId`: set while a query tab is active.
+    setContextKey(
+      'editorLangId',
+      editors.find((e) => e.id === activeId)?.kind === 'query' ? 'kusto' : undefined,
+    );
     setContextKey('notificationToastsVisible', useNotifications.getState().toasts.length > 0);
     setContextKey('notificationCenterVisible', useNotifications.getState().centerVisible);
   };

@@ -53,6 +53,7 @@ export interface ConfigPaths {
   readonly themesDir: string;
   readonly stateDir: string;
   readonly layoutStateFile: string;
+  readonly schemaCacheDir: string;
 }
 
 export function configPaths(root: string): ConfigPaths {
@@ -67,6 +68,7 @@ export function configPaths(root: string): ConfigPaths {
     themesDir: path.join(root, 'themes'),
     stateDir: path.join(root, 'state'),
     layoutStateFile: path.join(root, 'state', 'ui-layout.json'),
+    schemaCacheDir: path.join(root, 'state', 'schema-cache'),
   };
 }
 
