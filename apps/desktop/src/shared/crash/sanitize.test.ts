@@ -6,16 +6,21 @@ import { sanitize } from './sanitize';
  * Corpus test (spec 10): every sensitive token in these realistic crash texts must be gone
  * after sanitizing, while the stack keeps its shape.
  */
-const HOME = '/Users/luca.ramseyer';
-const JWT =
-  'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0aWQiOiIwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDEifQ.c2lnbmF0dXJlLWZha2UtdGhhdC1pcy1sb25nLWVub3VnaA';
+const HOME = '/Users/analyst';
+// A fake token, built at runtime so the source contains nothing token-shaped (secret scanning).
+const b64url = (text: string): string => Buffer.from(text).toString('base64url');
+const JWT = [
+  b64url('{"alg":"RS256","typ":"JWT"}'),
+  b64url('{"tid":"00000000-0000-0000-0000-000000000001"}'),
+  b64url('signature-fake-that-is-long-enough'),
+].join('.');
 
 const CORPUS: { text: string; secrets: string[] }[] = [
   {
     text: `TypeError: Cannot read properties of undefined (reading 'tables')
     at ResultStore.append (${HOME}/dev/raml-kql/out/main/index.js:1234:18)
     at QueryEngine.finish (/Applications/Raml KQL.app/Contents/Resources/app.asar/out/main/index.js:88:3)`,
-    secrets: ['luca.ramseyer'],
+    secrets: ['analyst'],
   },
   {
     text: `Error: Request failed for workspace /subscriptions/00000000-0000-0000-0000-000000000501/resourcegroups/rg-la-contoso-soc/providers/microsoft.operationalinsights/workspaces/la-contoso-soc (tenant 00000000-0000-0000-0000-0000000000a1)`,
