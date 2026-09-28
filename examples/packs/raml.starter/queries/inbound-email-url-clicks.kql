@@ -1,0 +1,29 @@
+// ---
+// id: inbound-email-url-clicks
+// name: Inbound email with URL clicks
+// description: Links in inbound email that recipients clicked, with the delivery verdict. Clicked-through links in delivered phishing are the ones to act on first.
+// category: triage
+// severity: medium
+// tables: [EmailEvents, UrlClickEvents]
+// mitre: [T1566, T1566.002]
+// tags: [email, defender, phishing]
+// timespan: P1D
+// parameters:
+//   - name: OnlyClickedThrough
+//     type: bool
+//     default: false
+//     description: Only clicks where the user went on to the site despite a warning
+// ---
+let OnlyClickedThrough = false;
+EmailEvents
+| where TimeGenerated > ago(1d)
+| where EmailDirection == "Inbound"
+| project NetworkMessageId, Subject, SenderFromAddress, RecipientEmailAddress, DeliveryAction, ThreatTypes
+| join kind=inner (
+    UrlClickEvents
+    | where TimeGenerated > ago(1d)
+    | where not(OnlyClickedThrough) or IsClickedThrough
+    | project ClickTime = TimeGenerated, NetworkMessageId, Url, AccountUpn, ActionType, IsClickedThrough
+    ) on NetworkMessageId
+| project ClickTime, AccountUpn, Url, ActionType, IsClickedThrough, Subject, SenderFromAddress, DeliveryAction, ThreatTypes
+| order by ClickTime desc

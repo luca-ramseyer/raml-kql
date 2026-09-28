@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../../../packages/pack-schema/schemas/rkqlpack.schema.json
+schemaVersion: 1
+id: raml.starter
+name: Starter Hunting Pack
+version: 1.0.0
+description: >-
+  A small set of practical Log Analytics / Microsoft Sentinel queries across identity,
+  endpoint, email, Azure activity and ingestion health. A starting point, and an example of
+  the pack format.
+authors: ['Raml KQL contributors']
+license: MIT
+tags: [starter, sentinel]
+defaults:
+  timespan: P1D

@@ -1,0 +1,29 @@
+// ---
+// id: failed-signins-by-user
+// name: Failed sign-ins by user
+// description: Users with the most failed interactive sign-ins, with their top failure reasons. A burst for one user suggests brute force; many users failing from one IP suggests password spraying.
+// category: hunting
+// severity: medium
+// tables: [SigninLogs]
+// mitre: [T1110, T1110.001, T1110.003]
+// tags: [identity, bruteforce, password-spray]
+// timespan: P1D
+// parameters:
+//   - name: MinFailures
+//     type: long
+//     default: 10
+//     description: Only show users with at least this many failures
+//   - name: UserFilter
+//     type: string
+//     default: ""
+//     description: Optional part of the user principal name
+// ---
+let MinFailures = 10;
+let UserFilter = "";
+SigninLogs
+| where TimeGenerated > ago(1d)
+| where ResultType != "0"
+| where isempty(UserFilter) or UserPrincipalName has UserFilter
+| summarize Failures = count(), IPAddresses = dcount(IPAddress), Reasons = make_set(ResultDescription, 5) by UserPrincipalName
+| where Failures >= MinFailures
+| top 25 by Failures

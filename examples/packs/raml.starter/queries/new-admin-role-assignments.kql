@@ -1,0 +1,27 @@
+// ---
+// id: new-admin-role-assignments
+// name: New admin role assignments
+// description: Members added to Entra ID directory roles whose name matches the filter (admin roles by default), with who made the change.
+// category: investigation
+// severity: high
+// tables: [AuditLogs]
+// mitre: [T1098, T1098.003]
+// tags: [identity, privilege]
+// timespan: P7D
+// parameters:
+//   - name: RoleFilter
+//     type: string
+//     default: Admin
+//     description: Part of the role name to match
+// ---
+let RoleFilter = "Admin";
+AuditLogs
+| where TimeGenerated > ago(7d)
+| where OperationName == "Add member to role"
+| extend Role = tostring(TargetResources[0].modifiedProperties[1].newValue)
+| extend Role = trim('"', Role)
+| where Role has RoleFilter
+| extend Member = tostring(TargetResources[0].userPrincipalName)
+| extend Actor = coalesce(tostring(InitiatedBy.user.userPrincipalName), tostring(InitiatedBy.app.displayName))
+| project TimeGenerated, Role, Member, Actor, Result, CorrelationId
+| order by TimeGenerated desc

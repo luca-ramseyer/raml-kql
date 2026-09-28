@@ -1,6 +1,10 @@
 import { mkdir, readdir, readFile, rename, stat } from 'node:fs/promises';
 import path from 'node:path';
 
+import { ParameterSchema } from '@raml-kql/pack-schema/schemas';
+import { z } from 'zod';
+
+import { AppError } from '../../shared/errors';
 import { formatQueryFile, parseQueryFile } from '../../shared/queries/front-matter';
 import type { QueryFile, QueryNode, SaveQueryRequest } from '../../shared/queries/models';
 import { writeTextFileAtomic } from '../config/jsonc';
@@ -17,6 +21,13 @@ export interface QueriesServiceOptions {
 }
 
 const MAX_DEPTH = 8;
+
+/** A message the user should see (the IPC router hides plain errors). */
+function fileError(message: string): AppError {
+  return new AppError({ code: 'FILE_OPERATION_FAILED', message, retryable: false, source: 'main' });
+}
+
+const ParametersSchema = z.array(ParameterSchema).max(50);
 const MAX_NODES = 5000;
 
 export function slugify(name: string): string {
@@ -43,7 +54,7 @@ export class QueriesService {
     const root = path.resolve(this.options.root);
     const absolute = path.resolve(root, ...relative.split('/').filter((p) => p !== ''));
     if (absolute !== root && !absolute.startsWith(root + path.sep)) {
-      throw new Error('That path is outside My Queries.');
+      throw fileError('That path is outside My Queries.');
     }
     return absolute;
   }
@@ -91,12 +102,21 @@ export class QueriesService {
   }
 
   async read(relative: string): Promise<QueryFile> {
-    const text = await readFile(this.resolve(relative), 'utf8');
+    let text: string;
+    try {
+      text = await readFile(this.resolve(relative), 'utf8');
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw fileError(`${relative} could not be read. It may have been moved or deleted.`);
+    }
     const { meta, body } = parseQueryFile(text);
+    const parameters = ParametersSchema.safeParse(meta['parameters']);
     return {
       path: relative,
       name: meta.name ?? path.posix.basename(relative).replace(/\.kql$/i, ''),
       body,
+      ...(parameters.success && parameters.data.length > 0 ? { parameters: parameters.data } : {}),
+      ...(typeof meta.timespan === 'string' ? { timespan: meta.timespan } : {}),
     };
   }
 
@@ -113,7 +133,7 @@ export class QueriesService {
     } else {
       const name = request.name ?? 'New Query';
       relative = await this.freePath(request.folder ?? '', slugify(name));
-      meta = { id: slugify(name) };
+      meta = { ...request.meta, id: slugify(name) };
     }
     if (request.name !== undefined) meta = { ...meta, name: request.name };
     const absolute = this.resolve(relative);
@@ -135,9 +155,9 @@ export class QueriesService {
     const base = path.posix.basename(relative);
     const target = toFolder === '' ? base : `${toFolder}/${base}`;
     if (target === relative) return relative;
-    if (target.startsWith(`${relative}/`)) throw new Error('A folder cannot move into itself.');
+    if (target.startsWith(`${relative}/`)) throw fileError('A folder cannot move into itself.');
     if (await this.exists(target))
-      throw new Error('Something with that name already exists there.');
+      throw fileError('Something with that name already exists there.');
     await mkdir(path.dirname(this.resolve(target)), { recursive: true });
     await rename(this.resolve(relative), this.resolve(target));
     return target;
@@ -148,7 +168,7 @@ export class QueriesService {
   }
 
   async delete(relative: string): Promise<void> {
-    if (relative === '') throw new Error('The My Queries folder itself cannot be deleted.');
+    if (relative === '') throw fileError('The My Queries folder itself cannot be deleted.');
     await this.options.trash(this.resolve(relative));
   }
 
@@ -172,6 +192,6 @@ export class QueriesService {
       const candidate = folder === '' ? file : `${folder}/${file}`;
       if (candidate === current || !(await this.exists(candidate))) return candidate;
     }
-    throw new Error('Too many queries with that name.');
+    throw fileError('Too many queries with that name.');
   }
 }

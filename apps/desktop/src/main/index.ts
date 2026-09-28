@@ -74,6 +74,10 @@ import { createIpcHandlers, type WindowOperations } from './ipc/handlers';
 import { registerIpcRouter } from './ipc/router';
 import { KeybindingsService, NEW_KEYBINDINGS_FILE } from './keybindings/keybindings-service';
 import { portalQueryUrl } from './links/portal';
+import { createPacksOperations } from './packs/packs-operations';
+import { PacksService } from './packs/packs-service';
+import { withParameters } from './packs/parameters';
+import { JsoncSourcesStore } from './packs/sources-config';
 import { APP_ENTRY_URL, APP_ORIGIN, APP_SCHEME, resolveAppFile } from './protocol/app-protocol';
 import { QueriesService } from './queries/queries-service';
 import { ENGINE_DEFAULTS } from './query/limits';
@@ -83,6 +87,7 @@ import { ResultStore } from './results/result-store';
 import { ResultViews } from './results/result-views';
 import { FileSchemaCache, MemorySchemaCache } from './schema/schema-cache';
 import { SchemaService } from './schema/schema-service';
+import { CredentialStore } from './security/credential-store';
 import { installNavigationGuards, isTrustedOrigin, originKey } from './security/navigation';
 import { denyAllPermissions } from './security/permissions';
 import { secureWebPreferences } from './security/web-preferences';
@@ -213,6 +218,7 @@ if (!app.requestSingleInstanceLock()) {
       emit('queries.changed', {});
     });
     const queries = createQueryServices(auth, discovery);
+    const packs = await createPacks(myQueries);
     await Promise.all([discovery.init(), groups.reload()]);
     void auth.init().then(() => {
       queries.trackSignIns();
@@ -221,6 +227,11 @@ if (!app.requestSingleInstanceLock()) {
     watchDirectory(paths.root, (file) => {
       if (file === undefined || file === 'workspaces.jsonc') void discovery.reloadConfig();
       if (file === undefined || file === 'groups.jsonc') void groups.reload();
+      if (file === undefined || file === 'sources.jsonc') {
+        void packs.service.reload().then(() => {
+          emit('packs.changed', {});
+        });
+      }
     });
 
     // macOS gets a native menu once the renderer sends its model; elsewhere the renderer
@@ -269,6 +280,7 @@ if (!app.requestSingleInstanceLock()) {
         tabs: tabsStore,
         history: queries.history,
         queries: myQueries,
+        packs: packs.operations,
         window: windowOperations(),
         shell: {
           openConfigFile: async (file) => {
@@ -463,6 +475,62 @@ function effective<K extends SettingKey>(key: K): SettingValue<K> {
  * The query engine (spec 04): fan-out through AzureHttp to the Log Analytics Query API (or the
  * demo data source), the encrypted session result store and the audit log.
  */
+/** Query pack sources (spec 08): load installed packs, then check for updates in the background. */
+async function createPacks(myQueries: QueriesService) {
+  const credentials = new CredentialStore(
+    path.join(app.getPath('userData'), 'credentials.json'),
+    safeStorage,
+  );
+  const service = new PacksService({
+    sourcesDir: paths.sourcesDir,
+    stateFile: paths.packSourcesStateFile,
+    store: new JsoncSourcesStore(paths.sourcesFile),
+    credentials,
+    onChange: () => {
+      emit('packs.changed', {});
+    },
+  });
+  await service.cleanUp().catch(() => undefined);
+  await service.reload().catch(() => undefined);
+  const operations = createPacksOperations({
+    service,
+    saveQuery: (request) => myQueries.save(request),
+    pick: async (kind) => {
+      const options: Electron.OpenDialogOptions =
+        kind === 'folder'
+          ? { title: 'Import Query Pack Folder', properties: ['openDirectory'] }
+          : {
+              title: 'Import Query Pack or Queries',
+              properties: ['openFile', 'multiSelections'],
+              filters: [
+                { name: 'Query packs and queries', extensions: ['rkqlpack', 'zip', 'kql'] },
+              ],
+            };
+      const result =
+        mainWindow === undefined
+          ? await dialog.showOpenDialog(options)
+          : await dialog.showOpenDialog(mainWindow, options);
+      return result.canceled ? undefined : result.filePaths;
+    },
+  });
+  // Startup update check (throttled to once a day per source). Never applied silently unless
+  // `sources.autoUpdate` says so.
+  setTimeout(() => {
+    if (!effective('sources.checkForUpdates')) return;
+    void service
+      .checkUpdates({ force: false })
+      .then(async ({ updates }) => {
+        if (updates === 0 || !effective('sources.autoUpdate')) return;
+        const snapshot = await service.snapshot();
+        for (const source of snapshot.sources) {
+          if (source.update !== undefined) await service.applyUpdate(source.id, source.update.sha);
+        }
+      })
+      .catch(() => undefined);
+  }, 15_000);
+  return { service, operations };
+}
+
 function createQueryServices(auth: AuthService, discovery: DiscoveryService) {
   const cloud = PUBLIC_CLOUD;
   const store = ResultStore.create(path.join(app.getPath('userData'), 'session-cache'), {
@@ -538,8 +606,10 @@ function createQueryServices(auth: AuthService, discovery: DiscoveryService) {
   /** The engine as the IPC handlers see it: runs are also recorded in the history. */
   const query = {
     run: async (request: QueryRunRequest) => {
-      const snapshot = await engine.run(request);
-      if (effective('history.maxEntries') > 0) history.started(snapshot.runId, request);
+      // Pack parameters become typed `let` statements (spec 08); history keeps what ran.
+      const prepared = withParameters(request);
+      const snapshot = await engine.run(prepared);
+      if (effective('history.maxEntries') > 0) history.started(snapshot.runId, prepared);
       history.observe(engine.get(snapshot.runId) ?? snapshot); // may have finished already
       return snapshot;
     },

@@ -1,0 +1,53 @@
+.parameter-bar {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--vscode-editorGroup-border, transparent);
+  background-color: var(--vscode-editor-background);
+  gap: 6px 10px;
+}
+
+.parameter {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 2px 0 8px;
+  border: 1px solid var(--vscode-input-border, var(--vscode-widget-border, transparent));
+  border-radius: 12px;
+  background-color: var(--vscode-input-background);
+  gap: 6px;
+}
+
+.parameter.invalid {
+  border-color: var(--vscode-inputValidation-errorBorder, #be1100);
+}
+
+.parameter-name {
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.parameter .parameter-input,
+.parameter .parameter-select {
+  height: 20px;
+  min-width: 0;
+  padding: 0 6px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 12px;
+}
+
+.parameter .parameter-input:focus,
+.parameter .parameter-select:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.parameter .checkbox {
+  margin: 0 6px 0 0;
+}

@@ -1,0 +1,30 @@
+// ---
+// id: rare-process-executions
+// name: Rare process executions
+// description: Processes that ran on only a few devices in the period. Rare binaries in a large fleet are worth a look, especially from user-writable folders.
+// category: hunting
+// severity: low
+// tables: [DeviceProcessEvents]
+// mitre: [T1204, T1059]
+// tags: [endpoint, defender, rare]
+// timespan: P7D
+// parameters:
+//   - name: MaxDevices
+//     type: int
+//     default: 3
+//     description: A process seen on at most this many devices counts as rare
+//   - name: ExcludedFolders
+//     type: stringList
+//     default: ["C:\\Windows\\WinSxS\\", "C:\\Program Files\\WindowsApps\\"]
+//     description: Folder prefixes to ignore
+// ---
+let MaxDevices = 3;
+let ExcludedFolders = dynamic(["C:\\Windows\\WinSxS\\", "C:\\Program Files\\WindowsApps\\"]);
+DeviceProcessEvents
+| where TimeGenerated > ago(7d)
+| where isnotempty(SHA256)
+| where not(FolderPath has_any (ExcludedFolders))
+| summarize Devices = dcount(DeviceName), Executions = count(), FirstSeen = min(TimeGenerated), SampleDevices = make_set(DeviceName, 5), SampleCommandLine = take_any(ProcessCommandLine) by FileName, FolderPath, SHA256
+| where Devices <= MaxDevices
+| order by Devices asc, Executions desc
+| take 100

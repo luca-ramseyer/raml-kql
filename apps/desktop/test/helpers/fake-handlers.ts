@@ -125,6 +125,20 @@ export function fakeHandlerDependencies(
       list: vi.fn(() => Promise.resolve([])),
       clear: vi.fn(() => Promise.resolve()),
     },
+    packs: {
+      snapshot: vi.fn(() => Promise.resolve({ sources: [], packs: [], problems: [] })),
+      readQuery: vi.fn(() => {
+        throw new Error('No pack query');
+      }),
+      previewGit: vi.fn(() => Promise.reject(new Error('Not in tests'))),
+      importFile: vi.fn(() => Promise.resolve({ type: 'cancelled' as const })),
+      add: vi.fn(() => Promise.resolve({ sources: [], packs: [], problems: [] })),
+      cancelPreview: vi.fn(() => Promise.resolve()),
+      remove: vi.fn(() => Promise.resolve({ sources: [], packs: [], problems: [] })),
+      checkUpdates: vi.fn(() => Promise.resolve({ checked: 0, updates: 0, errors: [] })),
+      updatePreview: vi.fn(() => Promise.reject(new Error('Not in tests'))),
+      applyUpdate: vi.fn(() => Promise.resolve({ sources: [], packs: [], problems: [] })),
+    },
     tabs: {
       read: vi.fn(() => Promise.resolve(undefined)),
       write: vi.fn(() => Promise.resolve()),

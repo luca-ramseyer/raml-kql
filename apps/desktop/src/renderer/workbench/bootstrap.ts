@@ -10,6 +10,7 @@ import {
 import { preloadQueryEditorWhenIdle } from '../features/editor/editor-preload';
 import { loadHistory } from '../features/history/history-store';
 import { loadMyQueries } from '../features/library/my-queries';
+import { refreshPacks, registerPackCommands } from '../features/packs/pack-commands';
 import { currentNamer, startPrivacy } from '../features/privacy/privacy';
 import { registerQueryCommands } from '../features/query/query-commands';
 import { applyRunSnapshot, useRuns } from '../features/query/run-store';
@@ -109,6 +110,7 @@ export async function startWorkbench({
     bridge.events.on('query.runChanged', applyRunSnapshot),
     bridge.events.on('history.changed', () => void loadHistory()),
     bridge.events.on('queries.changed', () => void loadMyQueries()),
+    bridge.events.on('packs.changed', () => void refreshPacks()),
     useInventory.subscribe(() => {
       syncTargetsWithInventory();
     }),
@@ -116,6 +118,7 @@ export async function startWorkbench({
     registerAccountCommands(),
     registerWorkspaceCommands(),
     registerQueryCommands(),
+    registerPackCommands(),
     registerResultCommands(),
     registerQuickAccess(),
     startPrivacy(),
@@ -146,6 +149,7 @@ export async function startWorkbench({
   // For quick open (Ctrl/Cmd+P): saved queries and recent runs.
   void loadMyQueries();
   void loadHistory();
+  void refreshPacks();
 
   // Status bar: "$(server) 12 workspaces · 5 tenants" for the current selection (spec 03).
   const targetsItem = registerStatusBarItem({

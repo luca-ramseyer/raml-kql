@@ -1,0 +1,24 @@
+// ---
+// id: bulk-resource-deletions
+// name: Bulk Azure resource deletions
+// description: Callers who deleted many Azure resources in the period. Mass deletion can be destruction by an attacker or a runaway script.
+// category: hunting
+// severity: high
+// tables: [AzureActivity]
+// mitre: [T1485]
+// tags: [azure, activity]
+// timespan: P1D
+// parameters:
+//   - name: MinDeletions
+//     type: long
+//     default: 10
+//     description: Deletions per caller before a caller is listed
+// ---
+let MinDeletions = 10;
+AzureActivity
+| where TimeGenerated > ago(1d)
+| where OperationNameValue endswith "/DELETE"
+| where ActivityStatusValue in ("Success", "Succeeded")
+| summarize Deletions = count(), ResourceGroups = make_set(ResourceGroup, 10), Operations = make_set(OperationNameValue, 10), FirstDeletion = min(TimeGenerated), LastDeletion = max(TimeGenerated) by Caller, CallerIpAddress
+| where Deletions >= MinDeletions
+| order by Deletions desc

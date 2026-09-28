@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { QueryNode } from '../../../shared/queries/models';
 import { Codicon } from '../../workbench/common/Codicon';
 import { ContextMenu, type MenuEntry } from '../../workbench/common/ContextMenu';
+import { isFilterEmpty, parsePackFilter } from '../packs/packs-store';
 
 import {
   deleteQuery,
@@ -16,6 +17,7 @@ import {
   revealQuery,
   useMyQueries,
 } from './my-queries';
+import { PacksSection } from './PacksSection';
 
 import './LibraryView.css';
 
@@ -26,13 +28,12 @@ function depthOf(path: string): number {
 }
 
 /**
- * The Library view (spec 08): My Queries as a folder tree. Single click opens a preview tab,
- * double click keeps it; drag files onto folders to move them. Packs arrive in Phase 8.
+ * My Queries as a folder tree. Single click opens a preview tab, double click keeps it; drag
+ * files onto folders to move them.
  */
-export function LibraryView(): React.JSX.Element {
+function MyQueriesSection({ search }: { search: string }): React.JSX.Element {
   const { nodes, loaded } = useMyQueries();
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
-  const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string | undefined>(undefined);
   const [menu, setMenu] = useState<
     { x: number; y: number; node: QueryNode | undefined } | undefined
@@ -44,16 +45,18 @@ export function LibraryView(): React.JSX.Element {
   }, [loaded]);
 
   const visible = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    if (needle !== '') {
-      return nodes.filter(
-        (n) =>
-          n.kind === 'file' &&
-          [n.name, n.path, n.description ?? '', ...(n.tags ?? [])]
-            .join(' ')
-            .toLowerCase()
-            .includes(needle),
-      );
+    const filter = parsePackFilter(search);
+    if (!isFilterEmpty(filter)) {
+      // My Queries index names, descriptions and tags (not tables, MITRE or categories).
+      if (filter.mitre.length + filter.tables.length + filter.categories.length > 0) return [];
+      return nodes.filter((n) => {
+        if (n.kind !== 'file') return false;
+        const tags = (n.tags ?? []).map((t) => t.toLowerCase());
+        const text = [n.name, n.path, n.description ?? '', ...tags].join(' ').toLowerCase();
+        return (
+          filter.tags.every((t) => tags.includes(t)) && filter.words.every((w) => text.includes(w))
+        );
+      });
     }
     return nodes.filter((n) => {
       // Hidden when any parent folder is collapsed.
@@ -126,41 +129,21 @@ export function LibraryView(): React.JSX.Element {
     },
   });
 
-  if (loaded && nodes.length === 0) {
-    return (
-      <div className="welcome-view">
-        <p>Save queries with Ctrl/Cmd+S to keep them here as .kql files in your config folder.</p>
-        <button
-          type="button"
-          className="button button-primary welcome-view-button"
-          onClick={() => void newQueryFile()}
-        >
-          New Query
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div
-      className={`library-view${dropFolder === '' ? ' drop-target' : ''}`}
+      className={`library-section-body${dropFolder === '' ? ' drop-target' : ''}`}
       onContextMenu={(event) => {
         event.preventDefault();
         setMenu({ x: event.clientX, y: event.clientY, node: undefined });
       }}
       {...dropProps('')}
     >
-      <input
-        type="search"
-        className="input library-search"
-        placeholder="Search My Queries"
-        aria-label="Search My Queries"
-        value={search}
-        onChange={(event) => {
-          setSearch(event.target.value);
-        }}
-      />
       <div className="library-section">My Queries</div>
+      {loaded && nodes.length === 0 ? (
+        <p className="library-hint">
+          Save a query with Ctrl/Cmd+S to keep it here as a .kql file in your config folder.
+        </p>
+      ) : null}
       <ul className="library-tree" role="tree" aria-label="My Queries">
         {visible.map((node) => {
           const isFolder = node.kind === 'folder';
@@ -235,6 +218,30 @@ export function LibraryView(): React.JSX.Element {
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** The Library view (spec 08): My Queries and installed query packs, with one search box. */
+export function LibraryView(): React.JSX.Element {
+  const [search, setSearch] = useState('');
+  return (
+    <div className="library-view">
+      <input
+        type="search"
+        className="input library-search"
+        placeholder="Search (tag:, mitre:, table:, category:)"
+        aria-label="Search the Library"
+        title="Search names and descriptions. Filters: tag:identity mitre:T1110 table:SigninLogs category:hunting"
+        value={search}
+        onChange={(event) => {
+          setSearch(event.target.value);
+        }}
+      />
+      <div className="library-scroll">
+        <MyQueriesSection search={search} />
+        <PacksSection search={search} />
+      </div>
     </div>
   );
 }

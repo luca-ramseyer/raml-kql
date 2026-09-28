@@ -94,7 +94,7 @@ Field rules:
 
 ## Parameters
 
-- Types: `string`, `long`, `int`, `real`, `bool`, `datetime`, `timespan`, `dynamic`, `enum` (with `values: [...]`, rendered as a dropdown), `stringList` (becomes `dynamic([...])`).
+- Types: `string`, `long`, `int`, `real`, `bool`, `datetime`, `timespan`, `dynamic` (becomes `parse_json("…")` of an escaped string, D-041), `enum` (with `values: [...]`, rendered as a dropdown), `stringList` (becomes `dynamic([...])`).
 - When a query with parameters opens, a **parameter form** appears above the editor (a slim bar, like the portal's parameter pills). Values persist per tab.
 - **Injection:** at run time the engine prepends typed `let` statements, generated with proper KQL literal escaping:
 

@@ -1,0 +1,31 @@
+// ---
+// id: open-incidents-by-severity
+// name: Open incidents by severity
+// description: The latest state of Sentinel incidents that are not closed, filtered by severity, oldest first so nothing waits too long.
+// category: triage
+// severity: informational
+// tables: [SecurityIncident]
+// tags: [sentinel, incidents]
+// timespan: P30D
+// parameters:
+//   - name: Severities
+//     type: stringList
+//     default: [High, Medium]
+//     description: Severities to include (High, Medium, Low, Informational)
+//   - name: Assignment
+//     type: enum
+//     values: [Anyone, Unassigned]
+//     default: Anyone
+//     description: Only unassigned incidents, or all
+// ---
+let Severities = dynamic(["High", "Medium"]);
+let Assignment = "Anyone";
+SecurityIncident
+| where TimeGenerated > ago(30d)
+| summarize arg_max(TimeGenerated, *) by IncidentNumber
+| where Status != "Closed"
+| where Severity in (Severities)
+| extend AssignedTo = tostring(Owner.assignedTo)
+| where Assignment == "Anyone" or isempty(AssignedTo)
+| project IncidentNumber, Title, Severity, Status, AssignedTo, CreatedTime, IncidentUrl
+| order by CreatedTime asc

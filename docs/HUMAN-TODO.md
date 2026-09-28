@@ -83,3 +83,10 @@ Claude Code appends items here when blocked, and keeps working. Tick them off wh
 - [ ] **Tabs across a restart.** Open three or four query tabs, split one to the right (`Cmd+\`), pick different targets in two of them, quit and start again. The tabs, groups, text, time range and targets should come back, each with the "results were cleared" note.
 - [ ] **My Queries in your dotfiles.** Save a query (`Cmd+S`), then look at `~/.raml-kql/queries/`. If you keep the config folder in git, check that the `.kql` file diff reads well and that `state/` stays out of git.
 - [ ] **History on real runs.** After a few real runs, search History by a table name and by a (real, with presentation mode off) tenant name, and use "Run Again".
+
+## Added during Phase 8
+
+- [ ] **Starter pack against real data.** The example queries in `examples/packs/raml.starter` parse cleanly, but only a real workspace shows whether columns and values (e.g. `ResultType == "500121"`, the `AuditLogs` role fields) behave as intended. Import the folder ("Library: Import Pack from Folder…"), run each query on a Sentinel workspace, and tell me which ones return nothing useful or fail.
+- [ ] **A real git source.** Put a test pack in a public GitHub repository and add it with "Library: Add Pack Source…". Push a change and run "Check for Pack Updates", then review and apply it.
+- [ ] **A private repository.** Try the same with a private repository and a fine-grained token (read-only "Contents" on that one repository). Check that `~/.raml-kql/sources.jsonc` contains no token.
+- [ ] **Decide where packs are published.** For example a `raml-kql-packs` repository. I'll then point the Welcome page and the docs at it. The GitHub Actions snippet in `docs/guides/query-packs.md` works once `@raml-kql/extension-cli` is published to npm (Phase 12).

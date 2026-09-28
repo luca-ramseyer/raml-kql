@@ -105,4 +105,33 @@ describe('QueriesService', () => {
     await service.save({ name: 'Same', body: '2', folder: 'A' });
     await expect(service.move('A/same.kql', '')).rejects.toThrow(/already exists/);
   });
+
+  it('keeps pack metadata and parameters when duplicating a pack query', async () => {
+    const { service, root } = create();
+    const saved = await service.save({
+      name: 'Failed sign-ins',
+      body: 'let MinFailures = 10;\nSigninLogs',
+      meta: {
+        description: 'From a pack.',
+        tables: ['SigninLogs'],
+        mitre: ['T1110'],
+        timespan: 'P7D',
+        parameters: [{ name: 'MinFailures', type: 'long', default: 10 }],
+      },
+    });
+    const text = readFileSync(path.join(root, saved.path), 'utf8');
+    expect(text).toContain('// mitre:');
+    expect(await service.read(saved.path)).toMatchObject({
+      name: 'Failed sign-ins',
+      timespan: 'P7D',
+      parameters: [{ name: 'MinFailures', type: 'long', default: 10 }],
+    });
+  });
+
+  it('reports user-facing errors as AppErrors', async () => {
+    const { service } = create();
+    await expect(service.read('missing.kql')).rejects.toMatchObject({
+      code: 'FILE_OPERATION_FAILED',
+    });
+  });
 });

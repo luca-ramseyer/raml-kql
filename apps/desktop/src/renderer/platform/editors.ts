@@ -5,7 +5,8 @@ import { create } from 'zustand';
  * side, each with its own tabs, active tab and MRU order. `editors` and `activeId` are derived
  * (all tabs, and the active group's active tab) for callers that don't care about groups.
  */
-export type EditorKind = 'welcome' | 'settings' | 'workspaces' | 'query';
+/** `packUpdate`: reviewing a query pack update (one per source, not restored on restart). */
+export type EditorKind = 'welcome' | 'settings' | 'workspaces' | 'query' | 'packUpdate';
 
 export interface EditorInput {
   id: string;
@@ -57,7 +58,7 @@ function derive(groups: EditorGroup[], activeGroupId: string): EditorsState {
 
 export const useEditors = create<EditorsState>(() => derive([newGroup('group-1')], 'group-1'));
 
-const SINGLETONS: Record<Exclude<EditorKind, 'query'>, Omit<EditorInput, 'id'>> = {
+const SINGLETONS: Record<Exclude<EditorKind, 'query' | 'packUpdate'>, Omit<EditorInput, 'id'>> = {
   welcome: { kind: 'welcome', title: 'Welcome', icon: 'home' },
   settings: { kind: 'settings', title: 'Settings', icon: 'settings' },
   workspaces: { kind: 'workspaces', title: 'Workspaces', icon: 'server' },
@@ -170,7 +171,20 @@ export function openQueryEditor(titleOrOptions?: string | OpenQueryOptions): str
 }
 
 /** Open (or focus) a singleton editor such as Welcome or Settings. */
-export function openEditor(kind: Exclude<EditorKind, 'query'>): void {
+/** Open (or focus) an editor with its own id, such as a pack update review. */
+export function openEditorInput(input: EditorInput): void {
+  const existing = useEditors.getState().editors.find((e) => e.id === input.id);
+  if (existing !== undefined) {
+    updateEditor(existing.id, { title: input.title });
+    activateEditor(existing.id);
+    return;
+  }
+  update((state) => ({
+    groups: state.groups.map((g) => (g.id === state.activeGroupId ? insert(g, input).group : g)),
+  }));
+}
+
+export function openEditor(kind: Exclude<EditorKind, 'query' | 'packUpdate'>): void {
   const existing = useEditors.getState().editors.find((e) => e.kind === kind);
   if (existing !== undefined) {
     activateEditor(existing.id);

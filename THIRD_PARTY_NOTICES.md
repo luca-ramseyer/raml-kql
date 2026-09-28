@@ -23,6 +23,9 @@ to date whenever a component that ends up in the packaged app is added or remove
   Foundation): charts. Apache ECharts includes software developed at The Apache Software
   Foundation (https://www.apache.org/).
 - **[ExcelJS](https://github.com/exceljs/exceljs)** (MIT): XLSX export.
+- **[isomorphic-git](https://github.com/isomorphic-git/isomorphic-git)** (MIT): git pack
+  sources without a system git.
+- **[fflate](https://github.com/101arrowz/fflate)** (MIT): reading `.rkqlpack` archives.
 - **[yaml](https://github.com/eemeli/yaml)** (ISC, © Eemeli Aro): front-matter in My Queries
   and query packs.
 - **[monaco-kusto](https://github.com/Azure/monaco-kusto)** (`@kusto/monaco-kusto`, MIT, ©

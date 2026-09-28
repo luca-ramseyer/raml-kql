@@ -507,6 +507,24 @@ export const settingDefinitions = [
     category: ['Query', 'History'],
     scope: 'user',
   }),
+  define({
+    key: 'sources.checkForUpdates',
+    schema: z.boolean(),
+    default: true,
+    description:
+      'Check git query pack sources for new commits on startup (at most once a day per source).',
+    category: ['Library', 'Sources'],
+    scope: 'user',
+  }),
+  define({
+    key: 'sources.autoUpdate',
+    schema: z.boolean(),
+    default: false,
+    description:
+      'Apply query pack updates without reviewing them first. Off by default: updates are shown with their changes, and you apply them.',
+    category: ['Library', 'Sources'],
+    scope: 'user',
+  }),
 ] as const satisfies readonly SettingDefinition[];
 
 export type SettingKey = (typeof settingDefinitions)[number]['key'];

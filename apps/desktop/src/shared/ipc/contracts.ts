@@ -9,6 +9,17 @@ import {
 import { LayoutStateSchema } from '../layout/layout-state';
 import { MenuBarModelSchema, MenuRoleSchema } from '../menus/menu-model';
 import {
+  GIT_SHA,
+  ImportResultSchema,
+  PackQueryRefSchema,
+  PackQuerySchema,
+  PacksSnapshotSchema,
+  PreviewGitRequestSchema,
+  SourcePreviewSchema,
+  SourceRefSchema,
+  UpdatePreviewSchema,
+} from '../packs/models';
+import {
   QueriesSnapshotSchema,
   QueryFileSchema,
   QueryPathSchema,
@@ -246,6 +257,50 @@ export const ipcContracts = {
       'queries:reveal',
       z.object({ path: QueryPathSchema.optional() }).strict(),
       z.undefined(),
+    ),
+  },
+  packs: {
+    /** Pack sources and installed packs (spec 08). */
+    list: defineChannel('packs:list', z.undefined(), PacksSnapshotSchema),
+    /** A pack query with its body. */
+    readQuery: defineChannel('packs:readQuery', PackQueryRefSchema, PackQuerySchema),
+    /** Clone a git source into a temporary folder and describe it (nothing is added yet). */
+    previewGit: defineChannel('packs:previewGit', PreviewGitRequestSchema, SourcePreviewSchema),
+    /**
+     * Pick files in the OS dialog: a `.rkqlpack` zip or loose `.kql` files (which become My
+     * Queries), or a pack folder.
+     */
+    importFile: defineChannel(
+      'packs:importFile',
+      z.object({ kind: z.enum(['file', 'folder']) }).strict(),
+      ImportResultSchema,
+    ),
+    add: defineChannel(
+      'packs:add',
+      z.object({ previewId: z.string().min(1).max(100) }).strict(),
+      PacksSnapshotSchema,
+    ),
+    cancelPreview: defineChannel(
+      'packs:cancelPreview',
+      z.object({ previewId: z.string().min(1).max(100) }).strict(),
+      z.undefined(),
+    ),
+    remove: defineChannel('packs:remove', SourceRefSchema, PacksSnapshotSchema),
+    /** Check git sources for newer commits (`force` skips the 24-hour throttle). */
+    checkUpdates: defineChannel(
+      'packs:checkUpdates',
+      z.object({ sourceId: z.string().max(100).optional(), force: z.boolean() }).strict(),
+      z.object({
+        checked: z.number().int(),
+        updates: z.number().int(),
+        errors: z.array(z.object({ label: z.string(), message: z.string() })),
+      }),
+    ),
+    updatePreview: defineChannel('packs:updatePreview', SourceRefSchema, UpdatePreviewSchema),
+    applyUpdate: defineChannel(
+      'packs:applyUpdate',
+      z.object({ sourceId: z.string().max(100), sha: z.string().regex(GIT_SHA) }).strict(),
+      PacksSnapshotSchema,
     ),
   },
   history: {

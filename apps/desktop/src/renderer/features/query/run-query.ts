@@ -1,3 +1,4 @@
+import type { BoundParameter } from '../../../shared/query/models';
 import { executeCommand } from '../../platform/commands';
 import { useEditors } from '../../platform/editors';
 import { showPanelTab, togglePanel } from '../../platform/layout';
@@ -6,6 +7,7 @@ import { getSetting } from '../../platform/settings';
 import { getActiveCodeEditor } from '../editor/active-editor';
 import { selectedWorkspaces, useTargets } from '../targets/targets-store';
 
+import { bindParameters } from './parameters';
 import { useQueryDocs, type QueryDoc } from './query-docs';
 import { startRun, useRuns } from './run-store';
 import { queryToRun } from './run-text';
@@ -62,6 +64,21 @@ export async function runActiveQuery(options: { scope?: 'block' | 'all' } = {}):
     }
   }
 
+  let parameters: BoundParameter[] | undefined;
+  if (active.doc.parameters !== undefined) {
+    const bound = bindParameters(active.doc.parameters);
+    if ('error' in bound) {
+      notify({
+        severity: 'error',
+        message: `${bound.error} The query was not sent.`,
+        source: 'Query',
+      });
+      document.querySelector<HTMLElement>(`[data-parameter="${bound.name}"]`)?.focus();
+      return;
+    }
+    parameters = bound.parameters;
+  }
+
   const targets = selectedWorkspaces();
   if (targets.length === 0) {
     notify({
@@ -88,5 +105,6 @@ export async function runActiveQuery(options: { scope?: 'block' | 'all' } = {}):
     ...(groupId === undefined ? {} : { groupId }),
     timeRange: active.doc.timeRange,
     ...(title === undefined ? {} : { tabTitle: title }),
+    ...(parameters === undefined ? {} : { parameters }),
   });
 }
