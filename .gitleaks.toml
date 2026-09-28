@@ -1,0 +1,12 @@
+# gitleaks configuration: the default rules, plus narrow allowlists for known false positives.
+# Keep every allowlist entry specific and explained; never allowlist whole files.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Keyboard shortcuts in VS Code keybinding syntax, e.g. key: 'ctrl+numpad0'"
+regexTarget = "secret"
+regexes = [
+  '''^(?:(?:ctrl|shift|alt|cmd|meta|win|option|super)\+)+[a-z0-9_=\-\[\];',./\\`]+(?: (?:(?:ctrl|shift|alt|cmd|meta|win|option|super)\+)*[a-z0-9_=\-\[\];',./\\`]+)?$''',
+]

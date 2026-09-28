@@ -9,6 +9,13 @@ export const AppErrorCodeSchema = z.enum([
   'IPC_INVALID_REQUEST',
   'IPC_INVALID_RESPONSE',
   'IPC_UNTRUSTED_SENDER',
+  /** A config file has syntax errors, so it can't be edited programmatically. */
+  'CONFIG_INVALID',
+  /** A config file couldn't be read or written. */
+  'CONFIG_IO',
+  'SETTING_UNKNOWN',
+  'SETTING_INVALID_VALUE',
+  'URL_NOT_ALLOWED',
 ]);
 export type AppErrorCode = z.infer<typeof AppErrorCodeSchema>;
 

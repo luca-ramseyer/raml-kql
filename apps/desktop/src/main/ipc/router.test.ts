@@ -1,21 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { fakeHandlers, TEST_APP_INFO as appInfo } from '../../../test/helpers/fake-handlers';
 import { FakeIpcBus } from '../../../test/helpers/fake-ipc';
 import { AppError } from '../../shared/errors';
 import type { IpcHandlers } from '../../shared/ipc/contracts';
 
-import { createIpcHandlers } from './handlers';
 import { registerIpcRouter } from './router';
 
-const appInfo = {
-  name: 'Raml KQL',
-  version: '0.0.0',
-  platform: 'darwin',
-  electronVersion: '44.0.0',
-  demoMode: true,
-} as const;
+/** Base handlers with `app` methods replaced. */
+function withApp(app: Partial<IpcHandlers['app']>): IpcHandlers {
+  const base = fakeHandlers();
+  return { ...base, app: { ...base.app, ...app } };
+}
 
-function setup(handlers: IpcHandlers = createIpcHandlers({ appInfo, now: () => new Date(0) })) {
+function setup(handlers: IpcHandlers = fakeHandlers()) {
   const bus = new FakeIpcBus();
   const onInternalError = vi.fn();
   const dispose = registerIpcRouter({
@@ -30,7 +28,9 @@ function setup(handlers: IpcHandlers = createIpcHandlers({ appInfo, now: () => n
 describe('registerIpcRouter', () => {
   it('registers one handler per contract channel', () => {
     const { bus } = setup();
-    expect([...bus.handlers.keys()].sort()).toEqual(['app:getInfo', 'app:ping']);
+    expect(bus.handlers.has('app:getInfo')).toBe(true);
+    expect(bus.handlers.has('settings:update')).toBe(true);
+    expect(bus.handlers.size).toBeGreaterThan(10);
   });
 
   it('returns the validated handler result in an ok envelope', async () => {
@@ -43,7 +43,7 @@ describe('registerIpcRouter', () => {
 
   it('rejects untrusted senders before running the handler', async () => {
     const ping = vi.fn();
-    const { bus } = setup({ app: { getInfo: () => appInfo, ping } });
+    const { bus } = setup(withApp({ ping }));
     bus.senderUrl = 'https://evil.example/';
     const result = await bus.ipcRenderer.invoke('app:ping', { message: 'hi' });
     expect(result).toMatchObject({ ok: false, error: { code: 'IPC_UNTRUSTED_SENDER' } });
@@ -92,14 +92,13 @@ describe('registerIpcRouter', () => {
       retryable: true,
       source: 'main',
     });
-    const { bus } = setup({
-      app: {
+    const { bus } = setup(
+      withApp({
         getInfo: () => {
           throw error;
         },
-        ping: () => ({ message: '', receivedAt: new Date(0).toISOString() }),
-      },
-    });
+      }),
+    );
     await expect(bus.ipcRenderer.invoke('app:getInfo')).resolves.toEqual({
       ok: false,
       error: error.toData(),
@@ -107,14 +106,13 @@ describe('registerIpcRouter', () => {
   });
 
   it('hides unexpected handler errors behind a generic INTERNAL error', async () => {
-    const { bus, onInternalError } = setup({
-      app: {
+    const { bus, onInternalError } = setup(
+      withApp({
         getInfo: () => {
           throw new Error('stack details with C:\\Users\\someone');
         },
-        ping: () => ({ message: '', receivedAt: new Date(0).toISOString() }),
-      },
-    });
+      }),
+    );
     const result = await bus.ipcRenderer.invoke('app:getInfo');
     expect(result).toEqual({
       ok: false,
@@ -129,12 +127,11 @@ describe('registerIpcRouter', () => {
   });
 
   it('rejects handler responses that break the contract', async () => {
-    const { bus, onInternalError } = setup({
-      app: {
+    const { bus, onInternalError } = setup(
+      withApp({
         getInfo: () => ({ ...appInfo, platform: 'solaris' }) as never,
-        ping: () => ({ message: '', receivedAt: new Date(0).toISOString() }),
-      },
-    });
+      }),
+    );
     const result = await bus.ipcRenderer.invoke('app:getInfo');
     expect(result).toMatchObject({ ok: false, error: { code: 'IPC_INVALID_RESPONSE' } });
     expect(onInternalError).toHaveBeenCalledOnce();
@@ -145,7 +142,7 @@ describe('registerIpcRouter', () => {
     expect(() =>
       registerIpcRouter({
         ipcMain: bus.ipcMain,
-        handlers: { app: { getInfo: () => appInfo } } as unknown as IpcHandlers,
+        handlers: { ...fakeHandlers(), app: { getInfo: () => appInfo } } as unknown as IpcHandlers,
         isTrustedSender: () => true,
       }),
     ).toThrow(/app:ping/);

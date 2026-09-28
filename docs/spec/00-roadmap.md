@@ -26,15 +26,17 @@ Version targets:
 
 ## Phase 1 — Workbench shell (VS Code look)
 
-- [ ] Layout: title bar, activity bar, primary sidebar, editor area with tab strip, bottom panel, status bar (spec 05)
-- [ ] Theme system using VS Code theme JSON format; ships Dark Modern, Light Modern, High Contrast; follows OS by default
-- [ ] Command registry, command palette (`F1`, `Ctrl/Cmd+Shift+P`), quick open (`Ctrl/Cmd+P`)
-- [ ] Keybinding service with defaults and a `keybindings.jsonc` override
-- [ ] Settings service backed by `settings.jsonc`, a Settings UI (search, categories, "Edit in settings.jsonc"), and live reload on file change (spec 09)
-- [ ] Resizable, collapsible sidebar and panel whose sizes persist; `Ctrl/Cmd+B` and `Ctrl/Cmd+J` toggle them
-- [ ] Notifications (toast bottom-right like VS Code) and a status bar item API
+- [x] Layout: title bar, activity bar, primary sidebar, editor area with tab strip, bottom panel, status bar (spec 05)
+- [x] Theme system using VS Code theme JSON format; ships Dark Modern, Light Modern, High Contrast; follows OS by default
+- [x] Command registry, command palette (`F1`, `Ctrl/Cmd+Shift+P`), quick open (`Ctrl/Cmd+P`)
+- [x] Keybinding service with defaults and a `keybindings.jsonc` override
+- [x] Settings service backed by `settings.jsonc`, a Settings UI (search, categories, "Edit in settings.jsonc"), and live reload on file change (spec 09)
+- [x] Resizable, collapsible sidebar and panel whose sizes persist; `Ctrl/Cmd+B` and `Ctrl/Cmd+J` toggle them
+- [x] Notifications (toast bottom-right like VS Code) and a status bar item API
 
 **Acceptance:** side by side with VS Code, the shell is visually near-identical in both themes. e2e: open the palette, run the "Toggle Sidebar" command, change the theme via settings.
+
+> Status: e2e acceptance tests pass (`apps/desktop/e2e/workbench.spec.ts`), plus live reload of settings.jsonc and keybindings.jsonc and layout persistence across restarts. Visual comparison done from screenshots on macOS; a side-by-side check by a human on all three OSes is in `docs/HUMAN-TODO.md`. The in-app JSON editor for settings.jsonc and the visual Keyboard Shortcuts editor come with Monaco in Phase 4 (D-018).
 
 ## Phase 2 — Accounts and authentication
 
@@ -53,6 +55,7 @@ Version targets:
 - [ ] Access-path dedupe when multiple accounts reach the same workspace
 - [ ] Settings → Workspaces page: tree Account/Tenant/Subscription/Workspace, enable/disable, preferred access path, rename alias, refresh
 - [ ] Tenant groups (static and dynamic), editable in the UI and config
+- [ ] Config `extends` for settings.jsonc, groups.jsonc and workspaces.jsonc (spec 09, moved here from Phase 1; see D-018)
 - [ ] Aliasing and presentation privacy (master switch + quick toggle)
 - [ ] "Targets" sidebar view in the KQL view showing only enabled workspaces, with checkboxes, search and groups
 

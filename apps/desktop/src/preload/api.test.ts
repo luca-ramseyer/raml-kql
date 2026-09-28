@@ -3,15 +3,16 @@ import { describe, expect, it, vi } from 'vitest';
 import { createRamlKqlApi, type IpcRendererLike } from './api';
 
 function apiWith(invoke: IpcRendererLike['invoke']) {
-  const renderer = { invoke: vi.fn(invoke) };
+  const renderer = { invoke: vi.fn(invoke), on: vi.fn(), removeListener: vi.fn() };
   return { api: createRamlKqlApi(renderer), renderer };
 }
 
 describe('createRamlKqlApi', () => {
   it('exposes one method per contract entry', () => {
     const { api } = apiWith(() => Promise.resolve(undefined));
-    expect(Object.keys(api)).toEqual(['app']);
-    expect(Object.keys(api.app).sort()).toEqual(['getInfo', 'ping']);
+    expect(Object.keys(api)).toContain('app');
+    expect(Object.keys(api)).toContain('events');
+    expect(Object.keys(api.app).sort()).toEqual(['getInfo', 'ping', 'relaunch', 'showAbout']);
   });
 
   it('sends no argument for channels without a request payload', async () => {
@@ -24,6 +25,7 @@ describe('createRamlKqlApi', () => {
           platform: 'linux',
           electronVersion: '44.0.0',
           demoMode: false,
+          isDevelopment: false,
         },
       }),
     );

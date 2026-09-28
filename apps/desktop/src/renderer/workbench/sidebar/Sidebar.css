@@ -1,0 +1,49 @@
+.sidebar {
+  display: flex;
+  box-sizing: border-box;
+  flex-direction: column;
+  height: 100%;
+  border-right: 1px solid var(--vscode-sideBar-border, transparent);
+  background-color: var(--vscode-sideBar-background);
+  color: var(--vscode-sideBar-foreground);
+}
+
+.composite-title {
+  display: flex;
+  flex: 0 0 35px;
+  align-items: center;
+  height: 35px;
+  padding: 0 8px 0 20px;
+}
+
+.composite-title-label {
+  overflow: hidden;
+  margin: 0;
+  color: var(--vscode-sideBarTitle-foreground);
+  font-size: 11px;
+  font-weight: normal;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sidebar-content {
+  overflow: auto;
+  flex: 1;
+}
+
+/* VS Code's "welcome view" inside an empty sidebar view. */
+.welcome-view {
+  padding: 0 20px 1em;
+  line-height: 1.4em;
+}
+
+.welcome-view p {
+  margin: 1em 0 0;
+}
+
+.welcome-view-button {
+  width: 100%;
+  max-width: 300px;
+  margin-top: 1em;
+}

@@ -1,0 +1,71 @@
+.activitybar {
+  display: flex;
+  flex: 0 0 48px;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 48px;
+  border-right: 1px solid var(--vscode-activityBar-border, transparent);
+  background-color: var(--vscode-activityBar-background);
+}
+
+.activitybar-actions {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activitybar-bottom {
+  padding-bottom: 4px;
+}
+
+.activity-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--vscode-activityBar-inactiveForeground);
+  cursor: pointer;
+}
+
+.activity-item .codicon {
+  font-size: 24px;
+}
+
+.activity-item:hover,
+.activity-item.checked {
+  color: var(--vscode-activityBar-foreground);
+}
+
+.activity-item.checked {
+  background-color: var(--vscode-activityBar-activeBackground, transparent);
+}
+
+.activity-item:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.activity-item .active-item-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  border-left: 2px solid transparent;
+}
+
+.activity-item.checked .active-item-indicator {
+  border-left-color: var(--vscode-activityBar-activeBorder, var(--vscode-activityBar-foreground));
+}
+
+/* High contrast: outline the active item, as VS Code does. */
+.hc-black .activity-item.checked,
+.hc-light .activity-item.checked {
+  outline: 1px solid var(--vscode-contrastActiveBorder);
+  outline-offset: -2px;
+}

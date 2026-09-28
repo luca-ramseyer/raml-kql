@@ -1,0 +1,368 @@
+/*
+ * Workbench base styles. Colours come from the active theme as `--vscode-*` CSS variables
+ * (see platform/theme/theme-service.ts); metrics follow VS Code (spec 05).
+ */
+
+:root {
+  /* We ship our own high contrast themes, so don't let Windows force colours on the UI. */
+  forced-color-adjust: none;
+  --monaco-monospace-font:
+    'SF Mono', Monaco, Menlo, Consolas, 'Ubuntu Mono', 'Liberation Mono', 'DejaVu Sans Mono',
+    'Courier New', monospace;
+}
+
+html,
+body,
+#root,
+.workbench-root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background-color: var(--vscode-editor-background, #1f1f1f);
+  color: var(--vscode-foreground, #cccccc);
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans',
+    sans-serif;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+.platform-win32 {
+  font-family: 'Segoe WPC', 'Segoe UI', sans-serif;
+}
+
+.platform-linux {
+  font-family: system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+}
+
+input,
+textarea,
+select {
+  user-select: text;
+}
+
+::selection {
+  background-color: var(--vscode-selection-background, var(--vscode-editor-selectionBackground));
+}
+
+/* Visible focus rings everywhere (spec 05, accessibility). */
+:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.workbench {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.workbench-main {
+  position: relative;
+  display: flex;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar-container {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.editor-column {
+  display: flex;
+  overflow: hidden;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.panel-container {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+/* Sashes: 4px hit area over the border between parts. */
+.sash {
+  position: relative;
+  z-index: 35;
+  flex: 0 0 0;
+  touch-action: none;
+}
+
+.sash::before {
+  position: absolute;
+  background-color: transparent;
+  content: '';
+  transition: background-color 0.1s ease-out;
+}
+
+.sash-vertical {
+  margin: 0 -2px;
+  width: 4px;
+  cursor: ew-resize;
+}
+
+.sash-vertical::before {
+  top: 0;
+  bottom: 0;
+  left: 1px;
+  width: 2px;
+}
+
+.sash-horizontal {
+  margin: -2px 0;
+  height: 4px;
+  cursor: ns-resize;
+}
+
+.sash-horizontal::before {
+  top: 1px;
+  right: 0;
+  left: 0;
+  height: 2px;
+}
+
+.sash:hover::before,
+.sash.active::before {
+  background-color: var(--vscode-sash-hoverBorder);
+  transition-delay: 0.3s;
+}
+
+.sash.active::before {
+  transition-delay: 0s;
+}
+
+/* Toolbar icon buttons (panel actions, layout controls, ...). */
+.action-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  color: var(--vscode-icon-foreground);
+  cursor: pointer;
+}
+
+.action-item:hover {
+  background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+.action-item .codicon {
+  font-size: 16px;
+}
+
+/* Buttons */
+.button {
+  display: inline-flex;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  padding: 4px 11px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 2px;
+  cursor: pointer;
+  font: inherit;
+  line-height: 18px;
+}
+
+.button-primary {
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.button-primary:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.button-secondary {
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+}
+
+.button-secondary:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.button:focus-visible {
+  outline-offset: 2px;
+}
+
+.link-button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--vscode-textLink-foreground);
+  cursor: pointer;
+  font: inherit;
+}
+
+.link-button:hover {
+  color: var(--vscode-textLink-activeForeground);
+  text-decoration: underline;
+}
+
+/* Inputs */
+.input {
+  box-sizing: border-box;
+  height: 26px;
+  padding: 3px 6px;
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 2px;
+  background-color: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font: inherit;
+}
+
+.input:focus {
+  border-color: var(--vscode-focusBorder);
+  outline: none;
+}
+
+.input.invalid {
+  border-color: var(--vscode-inputValidation-errorBorder);
+}
+
+.input::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+}
+
+.dropdown {
+  box-sizing: border-box;
+  height: 26px;
+  padding: 2px 6px;
+  border: 1px solid var(--vscode-dropdown-border, transparent);
+  border-radius: 2px;
+  background-color: var(--vscode-dropdown-background);
+  color: var(--vscode-dropdown-foreground);
+  font: inherit;
+}
+
+.dropdown:focus {
+  border-color: var(--vscode-focusBorder);
+  outline: none;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin: 0;
+  accent-color: var(--vscode-checkbox-selectBackground, var(--vscode-button-background));
+  cursor: pointer;
+}
+
+/* Context menus and menu bar dropdowns */
+.context-menu {
+  position: fixed;
+  z-index: 2575;
+  min-width: 160px;
+  padding: 4px 0;
+  border: 1px solid var(--vscode-menu-border, var(--vscode-widget-border, transparent));
+  border-radius: 5px;
+  background-color: var(--vscode-menu-background);
+  box-shadow: 0 2px 8px var(--vscode-widget-shadow);
+  color: var(--vscode-menu-foreground);
+  outline: none;
+}
+
+.context-menu-row {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  margin: 0 4px;
+  padding: 0 8px 0 0;
+  border-radius: 3px;
+  cursor: default;
+  white-space: nowrap;
+}
+
+.context-menu-row.active {
+  background-color: var(--vscode-menu-selectionBackground);
+  color: var(--vscode-menu-selectionForeground);
+  outline: 1px solid var(--vscode-menu-selectionBorder, transparent);
+  outline-offset: -1px;
+}
+
+.context-menu-row.disabled {
+  opacity: 0.4;
+}
+
+.context-menu-check {
+  display: inline-flex;
+  justify-content: center;
+  width: 26px;
+}
+
+.context-menu-label {
+  flex: 1;
+}
+
+.context-menu-keybinding {
+  padding-left: 32px;
+  opacity: 0.9;
+}
+
+.context-menu-submenu-indicator {
+  padding-left: 20px;
+}
+
+.context-menu-separator {
+  height: 0;
+  margin: 5px 0;
+  border-bottom: 1px solid var(--vscode-menu-separatorBackground);
+}
+
+/* Scrollbars, close to VS Code's overlay scrollbars. */
+::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--vscode-scrollbarSlider-background);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--vscode-scrollbarSlider-hoverBackground);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background-color: var(--vscode-scrollbarSlider-activeBackground);
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+@keyframes codicon-spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.codicon-modifier-spin {
+  animation: codicon-spin 1.5s steps(30) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .codicon-modifier-spin {
+    animation: none;
+  }
+
+  .sash::before {
+    transition: none;
+  }
+}

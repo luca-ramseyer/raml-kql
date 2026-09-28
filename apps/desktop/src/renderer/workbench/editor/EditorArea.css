@@ -1,0 +1,142 @@
+.editor {
+  display: flex;
+  overflow: hidden;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+}
+
+.tabs-container {
+  display: flex;
+  flex: 0 0 35px;
+  height: 35px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background-color: var(--vscode-editorGroupHeader-tabsBackground);
+  box-shadow: inset 0 -1px 0 var(--vscode-editorGroupHeader-tabsBorder, transparent);
+  scrollbar-width: none;
+}
+
+.tab {
+  position: relative;
+  display: flex;
+  box-sizing: border-box;
+  align-items: center;
+  min-width: fit-content;
+  height: 35px;
+  padding-left: 10px;
+  border-right: 1px solid var(--vscode-tab-border, transparent);
+  background-color: var(--vscode-tab-inactiveBackground);
+  color: var(--vscode-tab-inactiveForeground);
+  cursor: pointer;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  background-color: var(--vscode-tab-hoverBackground, var(--vscode-tab-inactiveBackground));
+}
+
+.tab.active {
+  background-color: var(--vscode-tab-activeBackground);
+  color: var(--vscode-tab-activeForeground);
+  box-shadow: inset 0 -1px 0 var(--vscode-tab-activeBorder, transparent);
+}
+
+/* The accent line at the top of the active tab. */
+.tab.active::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background-color: var(--vscode-tab-activeBorderTop, transparent);
+  content: '';
+}
+
+.hc-black .tab.active,
+.hc-light .tab.active {
+  outline: 1px solid var(--vscode-contrastActiveBorder);
+  outline-offset: -1px;
+}
+
+.tab:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.tab-icon {
+  font-size: 16px;
+}
+
+.tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 22px;
+  margin-right: 4px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  visibility: hidden;
+}
+
+.tab.active .tab-close,
+.tab:hover .tab-close,
+.tab-close:focus-visible {
+  visibility: visible;
+}
+
+.tab-close:hover {
+  background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+.editor-content {
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.editor-watermark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--vscode-editorWatermark-foreground, var(--vscode-descriptionForeground));
+}
+
+.watermark-box {
+  display: table;
+  border-spacing: 12px 17px;
+}
+
+.watermark-entry {
+  display: table-row;
+}
+
+.watermark-entry dt,
+.watermark-entry dd {
+  display: table-cell;
+  margin: 0;
+}
+
+.watermark-entry dt {
+  text-align: right;
+  letter-spacing: 0.04em;
+}
+
+.watermark-link {
+  display: table-caption;
+  caption-side: bottom;
+  border: none;
+  background: none;
+  color: var(--vscode-textLink-foreground);
+  cursor: pointer;
+  font: inherit;
+}

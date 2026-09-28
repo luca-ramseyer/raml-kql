@@ -1,0 +1,95 @@
+.statusbar {
+  display: flex;
+  box-sizing: border-box;
+  flex: 0 0 22px;
+  justify-content: space-between;
+  height: 22px;
+  border-top: 1px solid var(--vscode-statusBar-border, transparent);
+  background-color: var(--vscode-statusBar-background, transparent);
+  color: var(--vscode-statusBar-foreground);
+  font-size: 12px;
+}
+
+.statusbar-left,
+.statusbar-right {
+  display: flex;
+  overflow: hidden;
+  align-items: stretch;
+}
+
+.statusbar-left {
+  padding-left: 0;
+}
+
+.statusbar-right {
+  padding-right: 7px;
+}
+
+.statusbar-item {
+  display: flex;
+  align-items: center;
+  padding: 0 5px;
+  border: none;
+  margin: 0 3px 0 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  gap: 3px;
+  white-space: pre;
+}
+
+.statusbar-left > .statusbar-item:first-child:not(.kind-remote) {
+  margin-left: 7px;
+}
+
+.statusbar-item .codicon {
+  font-size: 14px;
+}
+
+.statusbar-item.has-command {
+  cursor: pointer;
+}
+
+.statusbar-item.has-command:hover {
+  background-color: var(--vscode-statusBarItem-hoverBackground);
+  color: var(--vscode-statusBarItem-hoverForeground, inherit);
+}
+
+.statusbar-item:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+/* The far-left "remote" style indicator, used for demo mode. */
+.statusbar-item.kind-remote {
+  padding: 0 10px;
+  margin-right: 3px;
+  background-color: var(--vscode-statusBarItem-remoteBackground);
+  color: var(--vscode-statusBarItem-remoteForeground);
+}
+
+.statusbar-item.kind-remote.has-command:hover {
+  background-color: var(
+    --vscode-statusBarItem-remoteHoverBackground,
+    var(--vscode-statusBarItem-remoteBackground)
+  );
+  color: var(
+    --vscode-statusBarItem-remoteHoverForeground,
+    var(--vscode-statusBarItem-remoteForeground)
+  );
+}
+
+.statusbar-item.kind-warning {
+  background-color: var(--vscode-statusBarItem-warningBackground);
+  color: var(--vscode-statusBarItem-warningForeground);
+}
+
+.statusbar-item.kind-error {
+  background-color: var(--vscode-statusBarItem-errorBackground);
+  color: var(--vscode-statusBarItem-errorForeground);
+}
+
+.statusbar-item.kind-prominent {
+  background-color: var(--vscode-statusBarItem-prominentBackground);
+  color: var(--vscode-statusBarItem-prominentForeground);
+}

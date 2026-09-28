@@ -1,0 +1,114 @@
+.titlebar {
+  display: grid;
+  box-sizing: border-box;
+  flex: 0 0 35px;
+  align-items: center;
+  height: 35px;
+  border-bottom: 1px solid var(--vscode-titleBar-border, transparent);
+  background-color: var(--vscode-titleBar-activeBackground);
+  color: var(--vscode-titleBar-activeForeground);
+  grid-template-columns: 1fr minmax(0, auto) 1fr;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+/* Room for the macOS traffic lights (hidden in full screen). */
+.titlebar-mac .titlebar-left {
+  padding-left: 78px;
+}
+
+.titlebar-mac.fullscreen .titlebar-left {
+  padding-left: 8px;
+}
+
+/* Room for the native window controls drawn over the title bar on Windows and Linux. */
+.titlebar-custom .titlebar-right {
+  padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
+}
+
+.titlebar-left,
+.titlebar-right {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.titlebar-right {
+  justify-content: flex-end;
+}
+
+.titlebar-center {
+  display: flex;
+  justify-content: center;
+}
+
+.titlebar button,
+.titlebar [role='menu'] {
+  -webkit-app-region: no-drag;
+}
+
+.command-center {
+  display: flex;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  width: 38vw;
+  min-width: 160px;
+  max-width: 600px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--vscode-commandCenter-border, transparent);
+  border-radius: 6px;
+  background-color: var(--vscode-commandCenter-background);
+  color: var(--vscode-commandCenter-foreground);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  gap: 6px;
+}
+
+.command-center:hover {
+  border-color: var(--vscode-commandCenter-activeBorder, var(--vscode-commandCenter-border));
+  background-color: var(--vscode-commandCenter-activeBackground);
+  color: var(--vscode-commandCenter-activeForeground, var(--vscode-commandCenter-foreground));
+}
+
+.command-center .codicon {
+  font-size: 14px;
+}
+
+.command-center-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layout-controls {
+  display: flex;
+  padding-right: 6px;
+  gap: 2px;
+}
+
+.menubar {
+  display: flex;
+  height: 100%;
+  padding-left: 4px;
+}
+
+.menubar-item {
+  height: 100%;
+  padding: 0 8px;
+  border: none;
+  border-radius: 5px;
+  margin: 0;
+  background: none;
+  color: inherit;
+  cursor: default;
+  font: inherit;
+  font-size: 13px;
+}
+
+.menubar-item:hover,
+.menubar-item.open {
+  background-color: var(--vscode-toolbar-hoverBackground);
+}
