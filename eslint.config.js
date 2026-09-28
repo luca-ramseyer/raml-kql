@@ -70,7 +70,11 @@ export default defineConfig(
     settings: {
       'import-x/resolver-next': [
         createTypeScriptImportResolver({
-          project: ['apps/*/tsconfig.*.json', 'packages/*/tsconfig.json'],
+          project: [
+            'apps/*/tsconfig.*.json',
+            'packages/*/tsconfig.json',
+            'examples/extensions/tsconfig.json',
+          ],
           noWarnOnMultipleProjects: true,
         }),
       ],

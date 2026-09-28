@@ -6,6 +6,14 @@ import {
   SettingsSnapshotSchema,
   UserThemesSnapshotSchema,
 } from '../config/config-snapshots';
+import {
+  EnrichmentResultSchema,
+  EntitySchema,
+  ExtensionIdSchema,
+  ExtensionsSnapshotSchema,
+  InstallResultSchema,
+  UiResponseSchema,
+} from '../extensions/models';
 import { LayoutStateSchema } from '../layout/layout-state';
 import { MenuBarModelSchema, MenuRoleSchema } from '../menus/menu-model';
 import {
@@ -301,6 +309,117 @@ export const ipcContracts = {
       'packs:applyUpdate',
       z.object({ sourceId: z.string().max(100), sha: z.string().regex(GIT_SHA) }).strict(),
       PacksSnapshotSchema,
+    ),
+  },
+  extensions: {
+    /** Installed extensions and their grants (spec 07). */
+    list: defineChannel('extensions:list', z.undefined(), ExtensionsSnapshotSchema),
+    /** Pick a `.rkqlx` in the OS dialog and describe it (nothing is installed yet). */
+    installFromFile: defineChannel(
+      'extensions:installFromFile',
+      z.undefined(),
+      InstallResultSchema,
+    ),
+    /** Newest compatible release of a git repository (a release asset or a built tag). */
+    installFromGit: defineChannel(
+      'extensions:installFromGit',
+      z.object({ url: z.string().min(1).max(2000) }).strict(),
+      InstallResultSchema,
+    ),
+    /** Look for newer releases of git-installed extensions. */
+    checkUpdates: defineChannel(
+      'extensions:checkUpdates',
+      z.undefined(),
+      z.object({ updates: z.number().int(), errors: z.array(z.string()) }),
+    ),
+    /** Describe the update of an extension (with its permission diff) before applying it. */
+    update: defineChannel(
+      'extensions:update',
+      z.object({ id: ExtensionIdSchema }).strict(),
+      InstallResultSchema,
+    ),
+    confirmInstall: defineChannel(
+      'extensions:confirmInstall',
+      z.object({ previewId: z.string().min(1).max(100) }).strict(),
+      ExtensionsSnapshotSchema,
+    ),
+    cancelInstall: defineChannel(
+      'extensions:cancelInstall',
+      z.object({ previewId: z.string().min(1).max(100) }).strict(),
+      z.undefined(),
+    ),
+    uninstall: defineChannel(
+      'extensions:uninstall',
+      z.object({ id: ExtensionIdSchema }).strict(),
+      ExtensionsSnapshotSchema,
+    ),
+    setEnabled: defineChannel(
+      'extensions:setEnabled',
+      z.object({ id: ExtensionIdSchema, enabled: z.boolean() }).strict(),
+      ExtensionsSnapshotSchema,
+    ),
+    /** Run a contributed command; `runId` is the active tab's query run (grant scope). */
+    executeCommand: defineChannel(
+      'extensions:executeCommand',
+      z
+        .object({
+          command: z.string().min(1).max(200),
+          args: z.array(z.json()).max(20),
+          runId: z.string().max(100).optional(),
+          /** From a result cell's menu: the arguments are result values (`results.readSelection`). */
+          fromResults: z.boolean().optional(),
+        })
+        .strict(),
+      z.object({ value: z.json().optional() }),
+    ),
+    /** Enrich result values with an extension's enricher (asks for permission first). */
+    enrich: defineChannel(
+      'extensions:enrich',
+      z
+        .object({
+          extensionId: ExtensionIdSchema,
+          enricherId: z.string().max(100),
+          runId: z.string().max(100).optional(),
+          entities: z.array(EntitySchema).min(1).max(500),
+        })
+        .strict(),
+      z.object({ results: z.array(EnrichmentResultSchema) }),
+    ),
+    /** A result renderer asks to read the active result (`results.read`). */
+    resultsAccess: defineChannel(
+      'extensions:resultsAccess',
+      z
+        .object({
+          extensionId: ExtensionIdSchema,
+          runId: z.string().max(100).optional(),
+          rows: z.number().int().nonnegative(),
+        })
+        .strict(),
+      z.object({ allowed: z.boolean() }),
+    ),
+    /** A contributed sidebar view became visible. */
+    resolveView: defineChannel(
+      'extensions:resolveView',
+      z.object({ viewId: z.string().max(200) }).strict(),
+      z.undefined(),
+    ),
+    /** A message from a view's UI to its extension. */
+    webviewMessage: defineChannel(
+      'extensions:webviewMessage',
+      z.object({ viewId: z.string().max(200), message: z.json() }).strict(),
+      z.undefined(),
+    ),
+    /** The workbench's answer to an `extensions.uiRequest` event. */
+    respond: defineChannel('extensions:respond', UiResponseSchema, z.undefined()),
+    revoke: defineChannel(
+      'extensions:revoke',
+      z.object({ id: ExtensionIdSchema, permission: z.string().max(300).optional() }).strict(),
+      ExtensionsSnapshotSchema,
+    ),
+    readme: defineChannel(
+      'extensions:readme',
+      z.object({ id: ExtensionIdSchema }).strict(),
+      z.object({ readme: z.string().optional() }),
     ),
   },
   history: {

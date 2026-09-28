@@ -14,6 +14,7 @@ import { useSetting } from '../platform/settings';
 
 import { ActivityBar } from './activitybar/ActivityBar';
 import { Sash } from './common/Sash';
+import { DialogHost } from './dialogs/DialogHost';
 import { EditorArea } from './editor/EditorArea';
 import { Notifications } from './notifications/Notifications';
 import { Panel } from './panel/Panel';
@@ -127,6 +128,7 @@ export function Workbench({
       {statusBarVisible ? <StatusBar /> : null}
       <QuickInput />
       <Notifications />
+      <DialogHost />
     </div>
   );
 }

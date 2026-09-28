@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'electron-vite';
 import { loadEnv, type Plugin, type UserConfig } from 'vite';
 
-import { buildWorkbenchCsp } from './src/shared/security/csp';
+import { buildExtensionHostCsp, buildWorkbenchCsp } from './src/shared/security/csp';
 
 /**
  * Replaces the `%CSP%` placeholder in index.html with the policy from
@@ -18,6 +18,10 @@ function workbenchCsp(): Plugin {
       mode = config.command === 'serve' ? 'development' : 'production';
     },
     transformIndexHtml(html) {
+      const hostPlaceholder = 'content="%EXTHOST_CSP%"';
+      if (html.includes(hostPlaceholder)) {
+        return html.replaceAll(hostPlaceholder, `content="${buildExtensionHostCsp({ mode })}"`);
+      }
       const placeholder = 'content="%CSP%"';
       if (!html.includes(placeholder)) {
         throw new Error(`index.html must contain a CSP meta tag with ${placeholder}`);
@@ -62,14 +66,26 @@ export default defineConfig({
     build: {
       // Sandboxed preloads can't `require` from node_modules: bundle every dependency (zod).
       externalizeDeps: false,
-      rollupOptions: { input: { index: resolve(__dirname, 'src/preload/index.ts') }, onwarn },
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'src/preload/index.ts'),
+          exthost: resolve(__dirname, 'src/preload/exthost.ts'),
+        },
+        onwarn,
+      },
     },
   },
   renderer: {
     root: resolve(__dirname, 'src/renderer'),
     plugins: [react(), workbenchCsp()],
     build: {
-      rollupOptions: { input: { index: resolve(__dirname, 'src/renderer/index.html') }, onwarn },
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'src/renderer/index.html'),
+          exthost: resolve(__dirname, 'src/renderer/exthost/index.html'),
+        },
+        onwarn,
+      },
     },
   },
 });

@@ -35,6 +35,8 @@ export interface TestRepo {
   name: string;
   /** Commit files (path → text, `null` deletes) and push; returns the new SHA. */
   commit(files: Record<string, string | null>, message: string): string;
+  /** Tag the last commit and push the tag. */
+  tag(name: string): void;
 }
 
 /** A bare repo `<root>/<name>.git` with a working clone to commit from. */
@@ -61,6 +63,10 @@ export function createRepo(root: string, name: string): TestRepo {
       git(work, 'commit', '--quiet', '-m', message);
       git(work, 'push', '--quiet', 'origin', 'HEAD:main');
       return git(work, 'rev-parse', 'HEAD');
+    },
+    tag(name) {
+      git(work, 'tag', '-a', name, '-m', name);
+      git(work, 'push', '--quiet', 'origin', name);
     },
   };
 }

@@ -24,7 +24,18 @@ export type AuditEvent =
       durationMs: number;
       attempt: number;
     }
-  | { kind: 'auth'; event: 'signIn' | 'signOut'; account: string };
+  | { kind: 'auth'; event: 'signIn' | 'signOut'; account: string }
+  | {
+      /** Extension lifecycle and permission decisions (spec 07). */
+      kind: 'extension';
+      event:
+        'install' | 'update' | 'uninstall' | 'enable' | 'disable' | 'grant' | 'deny' | 'revoke';
+      extension: string;
+      version?: string | undefined;
+      permission?: string | undefined;
+      scope?: string | undefined;
+      hosts?: string[] | undefined;
+    };
 
 export interface AuditLogOptions {
   dir: string;

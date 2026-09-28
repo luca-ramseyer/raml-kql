@@ -58,3 +58,14 @@ Raml KQL is an independent open-source project. It is not affiliated with, endor
 sponsored by Microsoft. "Azure", "Microsoft Entra", "Log Analytics", "Microsoft Sentinel",
 "Microsoft Defender" and "Visual Studio Code" are trademarks of the Microsoft group of
 companies and are used only to describe compatibility.
+
+## Example extensions (examples/extensions, not part of the app)
+
+- **[world-atlas](https://github.com/topojson/world-atlas)** (ISC): Natural Earth 110m country
+  shapes (Natural Earth data is in the public domain), bundled into the Country Map example.
+- **[topojson-client](https://github.com/topojson/topojson-client)** (ISC, © Michael Bostock):
+  converts the shapes to GeoJSON in the Country Map example.
+- **[i18n-iso-countries](https://github.com/michaelwittig/node-i18n-iso-countries)** (MIT):
+  ISO 3166 country codes in the Country Map example.
+- **[esbuild](https://github.com/evanw/esbuild)** (MIT): builds the examples and the CLI
+  (development only).

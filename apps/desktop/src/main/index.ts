@@ -3,7 +3,7 @@
  * modules next to it. Anything with logic belongs in its own module with a unit test.
  */
 import { watch } from 'node:fs';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -16,12 +16,14 @@ import {
   dialog,
   ipcMain,
   Menu,
+  nativeTheme,
   net,
   protocol,
   safeStorage,
   session,
   shell,
 } from 'electron';
+import type { z } from 'zod';
 
 import type { QueryRunRequest, RerunRequest } from '../shared/query/models';
 import { buildWorkbenchCsp } from '../shared/security/csp';
@@ -54,6 +56,7 @@ import {
 import { configPaths, ensureConfigDir, resolveConfigDir } from './config/config-dir';
 import { watchDirectory } from './config/config-watcher';
 import { JsoncGroupsStore, MemoryGroupsStore } from './config/groups-config';
+import { JsoncListStore } from './config/jsonc-list-store';
 import { JsoncWorkspacesConfig, MemoryWorkspacesConfig } from './config/workspaces-config';
 import { DemoDataSource } from './demo/demo-data-source';
 import {
@@ -68,9 +71,29 @@ import { DiscoveryService } from './discovery/discovery-service';
 import { GroupsService } from './discovery/groups-service';
 import { FileInventoryCache, MemoryInventoryCache } from './discovery/inventory-cache';
 import { ExportService } from './export/export-service';
+import { ExtensionHostWindow, extensionHostPreload } from './extensions/extension-host';
+import { ExtensionManager, InstalledEntrySchema } from './extensions/extension-manager';
+import { EXTENSION_LIMITS, extensionError, readExtensionZip } from './extensions/extension-package';
+import { ExtensionSecrets, ExtensionStorage } from './extensions/extension-stores';
+import {
+  EXTENSION_UI_SCHEME,
+  extensionUiCsp,
+  resolveExtensionFile,
+} from './extensions/extension-ui-protocol';
+import { resolveGitExtension } from './extensions/git-install';
+import {
+  PermissionBroker,
+  PersistedGrantSchema,
+  type PromptAnswer,
+} from './extensions/permission-broker';
+import { UiBroker } from './extensions/ui-broker';
 import { HistoryService } from './history/history-service';
 import { createEventSender } from './ipc/events';
-import { createIpcHandlers, type WindowOperations } from './ipc/handlers';
+import {
+  createIpcHandlers,
+  type ExtensionsOperations,
+  type WindowOperations,
+} from './ipc/handlers';
 import { registerIpcRouter } from './ipc/router';
 import { KeybindingsService, NEW_KEYBINDINGS_FILE } from './keybindings/keybindings-service';
 import { portalQueryUrl } from './links/portal';
@@ -80,6 +103,7 @@ import { withParameters } from './packs/parameters';
 import { JsoncSourcesStore } from './packs/sources-config';
 import { APP_ENTRY_URL, APP_ORIGIN, APP_SCHEME, resolveAppFile } from './protocol/app-protocol';
 import { QueriesService } from './queries/queries-service';
+import { DataSourceRegistry, LOG_ANALYTICS_SOURCE } from './query/data-sources';
 import { ENGINE_DEFAULTS } from './query/limits';
 import { QueryEngine } from './query/query-engine';
 import { Scheduler } from './query/scheduler';
@@ -150,6 +174,8 @@ protocol.registerSchemesAsPrivileged([
     scheme: APP_SCHEME,
     privileges: { standard: true, secure: true, supportFetchAPI: true, codeCache: true },
   },
+  // Extension UI (views, result renderers) in sandboxed iframes (spec 07).
+  { scheme: EXTENSION_UI_SCHEME, privileges: { standard: true, secure: true } },
 ]);
 
 if (!app.requestSingleInstanceLock()) {
@@ -219,6 +245,7 @@ if (!app.requestSingleInstanceLock()) {
     });
     const queries = createQueryServices(auth, discovery);
     const packs = await createPacks(myQueries);
+    const extensions = await createExtensions(queries.audit);
     await Promise.all([discovery.init(), groups.reload()]);
     void auth.init().then(() => {
       queries.trackSignIns();
@@ -227,6 +254,16 @@ if (!app.requestSingleInstanceLock()) {
     watchDirectory(paths.root, (file) => {
       if (file === undefined || file === 'workspaces.jsonc') void discovery.reloadConfig();
       if (file === undefined || file === 'groups.jsonc') void groups.reload();
+      if (file === undefined || file === 'extensions.jsonc') {
+        void extensions.manager.load().then(() => {
+          emit('extensions.changed', {});
+        });
+      }
+      if (file === undefined || file === 'permissions.jsonc') {
+        void extensions.broker.reload().then(() => {
+          emit('extensions.changed', {});
+        });
+      }
       if (file === undefined || file === 'sources.jsonc') {
         void packs.service.reload().then(() => {
           emit('packs.changed', {});
@@ -281,6 +318,7 @@ if (!app.requestSingleInstanceLock()) {
         history: queries.history,
         queries: myQueries,
         packs: packs.operations,
+        extensions: extensions.operations,
         window: windowOperations(),
         shell: {
           openConfigFile: async (file) => {
@@ -315,6 +353,9 @@ if (!app.requestSingleInstanceLock()) {
     });
 
     mainWindow = createMainWindow();
+    mainWindow.on('closed', () => {
+      extensions.ui.cancelAll();
+    });
   });
 }
 
@@ -475,6 +516,277 @@ function effective<K extends SettingKey>(key: K): SettingValue<K> {
  * The query engine (spec 04): fan-out through AzureHttp to the Log Analytics Query API (or the
  * demo data source), the encrypted session result store and the audit log.
  */
+/** Extensions (spec 07): the sandboxed host, the permission broker and the manager. */
+async function createExtensions(audit: AuditLog) {
+  const host = new ExtensionHostWindow({
+    preload: extensionHostPreload(__dirname),
+    rendererRoot: path.join(__dirname, '../renderer'),
+    devServerUrl,
+  });
+  const ui = new UiBroker((event) => {
+    if (mainWindow === undefined) return false;
+    emit('extensions.uiRequest', event);
+    return true;
+  });
+  let names = new Map<string, string>();
+  const broker = new PermissionBroker({
+    store: new JsoncListStore(
+      paths.permissionsFile,
+      'grants',
+      PersistedGrantSchema,
+      NEW_PERMISSIONS_FILE,
+    ),
+    prompt: async (request) =>
+      (await ui.request({
+        kind: 'permission',
+        extension: names.get(request.extensionId) ?? request.extensionId,
+        ...request,
+      })) as PromptAnswer | undefined,
+    audit: (event) => {
+      void audit.append({ kind: 'extension', ...event });
+    },
+  });
+  // Extension HTTP: a separate in-memory session, so no cookies or cache are shared with Azure.
+  const netSession = session.fromPartition('raml-kql-extnet');
+  const manager = new ExtensionManager({
+    extensionsDir: paths.extensionsDir,
+    store: new JsoncListStore(
+      paths.extensionsFile,
+      'extensions',
+      InstalledEntrySchema,
+      NEW_EXTENSIONS_FILE,
+    ),
+    broker,
+    host: {
+      start: async (id, code) => {
+        const port = await host.start(id, code);
+        return {
+          postMessage: (message) => {
+            port.postMessage(message);
+          },
+          on: (_event, listener) => {
+            port.on('message', (event) => {
+              listener({ data: event.data });
+            });
+          },
+          start: () => {
+            port.start();
+          },
+          close: () => {
+            port.close();
+          },
+        };
+      },
+      stop: (id) => {
+        host.stop(id);
+      },
+    },
+    ui: (request) => ui.request(request),
+    secrets: new ExtensionSecrets(
+      path.join(app.getPath('userData'), 'extension-secrets.json'),
+      safeStorage,
+    ),
+    storage: new ExtensionStorage(paths.extensionStorageDir),
+    settingValue: (key) => settings.rawValue(key),
+    fetch: (url, init) => netSession.fetch(url, init),
+    writeClipboard: (text) => clipboard.writeText(text),
+    env: () => ({
+      appVersion: app.getVersion(),
+      theme: nativeTheme.shouldUseHighContrastColors
+        ? 'high-contrast'
+        : nativeTheme.shouldUseDarkColors
+          ? 'dark'
+          : 'light',
+      presentationMode: effective('privacy.aliasing.activeOnStartup'),
+    }),
+    audit: (event) => {
+      void audit.append({ kind: 'extension', ...event });
+    },
+    onChange: () => {
+      emit('extensions.changed', {});
+      void userThemes.reload();
+    },
+    postToWebview: (_extensionId, viewId, message) => {
+      emit('extensions.webviewPost', { viewId, message: message as z.core.util.JSONType });
+    },
+  });
+  userThemes.setExtensionThemes(() => manager.themes());
+  settings.onDidChangeRaw((keys) => {
+    manager.configurationChanged(keys);
+  });
+  protocol.handle(EXTENSION_UI_SCHEME, async (request) => {
+    const url = new URL(request.url);
+    const folder = manager.folderOf(url.hostname);
+    const file = folder === undefined ? undefined : resolveExtensionFile(folder, url.pathname);
+    if (file === undefined) return new Response('Not found', { status: 404 });
+    const response = await net.fetch(pathToFileURL(file).toString());
+    const headers = new Headers(response.headers);
+    headers.set(
+      'Content-Security-Policy',
+      extensionUiCsp(
+        url.hostname,
+        devServerOrigin === undefined ? [APP_ORIGIN] : [APP_ORIGIN, devServerOrigin],
+      ),
+    );
+    headers.set('X-Content-Type-Options', 'nosniff');
+    return new Response(response.body, { status: response.status, headers });
+  });
+  // Release lookups (GitHub/GitLab APIs) are the app's own traffic, through the OS proxy.
+  const appFetch = (url: string, init?: RequestInit): Promise<Response> => net.fetch(url, init);
+  const checkUpdates = async (): Promise<{ updates: number; errors: string[] }> => {
+    let updates = 0;
+    const errors: string[] = [];
+    for (const source of manager.gitSources()) {
+      try {
+        const newer = await resolveGitExtension({
+          url: source.url,
+          fetch: appFetch,
+          tempRoot: app.getPath('temp'),
+          newerThan: source.version,
+        });
+        manager.setUpdate(
+          source.id,
+          newer === undefined ? undefined : { version: newer.pkg.manifest.version, tag: newer.tag },
+        );
+        if (newer === undefined) continue;
+        updates += 1;
+        // `extensions.autoUpdate`: only updates that ask for no new permissions.
+        if (effective('extensions.autoUpdate')) {
+          const preview = manager.preview(newer.pkg, {
+            type: 'git',
+            url: newer.url,
+            tag: newer.tag,
+            ...(newer.sha === undefined ? {} : { sha: newer.sha }),
+          });
+          if (preview.replaces?.addedPermissions.length === 0)
+            await manager.install(preview.previewId);
+          else manager.cancelPreview(preview.previewId);
+        }
+      } catch (error) {
+        errors.push(`${source.id}: ${error instanceof Error ? error.message : 'the check failed'}`);
+      }
+    }
+    return { updates, errors };
+  };
+  // Daily update check (spec 07); updates are shown, never installed silently.
+  setTimeout(() => {
+    if (!effective('extensions.checkForUpdates') || manager.gitSources().length === 0) return;
+    void checkUpdates().catch(() => undefined);
+  }, 20_000);
+  const refreshNames = async (): Promise<void> => {
+    names = new Map((await manager.snapshot()).extensions.map((e) => [e.id, e.displayName]));
+  };
+  await manager.load().catch(() => undefined);
+  await refreshNames();
+  void userThemes.reload();
+  app.on('will-quit', () => {
+    void manager.dispose();
+    host.dispose();
+  });
+  const operations: ExtensionsOperations = {
+    snapshot: () => manager.snapshot(),
+    installFromFile: async () => {
+      const options: Electron.OpenDialogOptions = {
+        title: 'Install Extension from File',
+        properties: ['openFile'],
+        filters: [{ name: 'Raml KQL extensions', extensions: ['rkqlx', 'zip'] }],
+      };
+      const result =
+        mainWindow === undefined
+          ? await dialog.showOpenDialog(options)
+          : await dialog.showOpenDialog(mainWindow, options);
+      const [file] = result.filePaths;
+      if (result.canceled || file === undefined) return { type: 'cancelled' };
+      const info = await stat(file);
+      if (info.size > EXTENSION_LIMITS.maxTotalBytes)
+        throw extensionError('The file is larger than 50 MB.');
+      const pkg = readExtensionZip(new Uint8Array(await readFile(file)));
+      return {
+        type: 'preview',
+        preview: manager.preview(pkg, { type: 'file', name: path.basename(file) }),
+      };
+    },
+    installFromGit: async (url) => {
+      const resolved = await resolveGitExtension({
+        url,
+        fetch: appFetch,
+        tempRoot: app.getPath('temp'),
+      });
+      if (resolved === undefined) return { type: 'cancelled' };
+      return {
+        type: 'preview',
+        preview: manager.preview(resolved.pkg, {
+          type: 'git',
+          url: resolved.url,
+          tag: resolved.tag,
+          ...(resolved.sha === undefined ? {} : { sha: resolved.sha }),
+        }),
+      };
+    },
+    checkUpdates: () => checkUpdates(),
+    update: async (id) => {
+      const source = manager.gitSources().find((s) => s.id === id);
+      if (source === undefined)
+        throw extensionError('Only extensions installed from git can be updated.');
+      const resolved = await resolveGitExtension({
+        url: source.url,
+        fetch: appFetch,
+        tempRoot: app.getPath('temp'),
+        newerThan: source.version,
+      });
+      if (resolved === undefined) {
+        manager.setUpdate(id, undefined);
+        return { type: 'cancelled' };
+      }
+      return {
+        type: 'preview',
+        preview: manager.preview(resolved.pkg, {
+          type: 'git',
+          url: resolved.url,
+          tag: resolved.tag,
+          ...(resolved.sha === undefined ? {} : { sha: resolved.sha }),
+        }),
+      };
+    },
+    confirmInstall: async (previewId) => {
+      const snapshot = await manager.install(previewId);
+      await refreshNames();
+      return snapshot;
+    },
+    cancelInstall: (previewId) => {
+      manager.cancelPreview(previewId);
+    },
+    uninstall: (id) => manager.uninstall(id),
+    setEnabled: (id, enabled) => manager.setEnabled(id, enabled),
+    executeCommand: (command, args, runId, fromResults) =>
+      manager.executeCommand(command, args, runId, fromResults),
+    enrich: (extensionId, enricherId, runId, entities) =>
+      manager.enrich(extensionId, enricherId, runId, entities),
+    resultsAccess: (extensionId, runId, rows) => manager.resultsAccess(extensionId, runId, rows),
+    resolveView: (viewId) => manager.resolveView(viewId),
+    webviewMessage: (viewId, message) => manager.webviewMessage(viewId, message),
+    respond: (requestId, value) => {
+      ui.respond(requestId, value);
+    },
+    revoke: (id, permission) => manager.revoke(id, permission),
+    readme: (id) => manager.readme(id),
+  };
+  return { manager, broker, ui, operations };
+}
+
+const NEW_EXTENSIONS_FILE = `{
+  // Installed extensions (managed by the Extensions view). Files live in ./extensions/, which is
+  // machine-local; with a shared config, the same set can be reinstalled on another machine.
+  "extensions": []
+}
+`;
+
+const NEW_PERMISSIONS_FILE = `{
+  // "Always allow" grants for extensions. Revoke them in the Extensions view, or delete entries here.
+  "grants": []
+}
+`;
+
 /** Query pack sources (spec 08): load installed packs, then check for updates in the background. */
 async function createPacks(myQueries: QueriesService) {
   const credentials = new CredentialStore(
@@ -557,18 +869,13 @@ function createQueryServices(auth: AuthService, discovery: DiscoveryService) {
       emit('history.changed', {});
     },
   });
-  const accountName = (accountId: string): string =>
-    auth.snapshot().accounts.find((a) => a.id === accountId)?.username ?? accountId;
-  const engine = new QueryEngine({
-    workspace: (resourceId) =>
-      discovery.snapshot().workspaces.find((w) => w.resourceId === resourceId),
-    tenantName: (tenantId) => {
-      const tenant = discovery.snapshot().tenants.find((t) => t.tenantId === tenantId);
-      return tenant?.displayName ?? tenant?.defaultDomain ?? tenantId;
-    },
-    accountName,
-    getToken: (request) => auth.getToken(request),
-    source: mode.demo
+  // The built-in Log Analytics source (or the demo source) behind the same interface as
+  // extension data sources (spec 01).
+  const dataSources = new DataSourceRegistry();
+  dataSources.register(
+    LOG_ANALYTICS_SOURCE,
+    'Log Analytics',
+    mode.demo
       ? new DemoDataSource()
       : {
           execute: (request) =>
@@ -584,6 +891,19 @@ function createQueryServices(auth: AuthService, discovery: DiscoveryService) {
               signal: request.signal,
             }),
         },
+  );
+  const accountName = (accountId: string): string =>
+    auth.snapshot().accounts.find((a) => a.id === accountId)?.username ?? accountId;
+  const engine = new QueryEngine({
+    workspace: (resourceId) =>
+      discovery.snapshot().workspaces.find((w) => w.resourceId === resourceId),
+    tenantName: (tenantId) => {
+      const tenant = discovery.snapshot().tenants.find((t) => t.tenantId === tenantId);
+      return tenant?.displayName ?? tenant?.defaultDomain ?? tenantId;
+    },
+    accountName,
+    getToken: (request) => auth.getToken(request),
+    source: dataSources.router(),
     scheduler: new Scheduler({
       perPrincipal: () => effective('query.maxConcurrentPerAccount'),
       total: () => effective('query.maxConcurrentTotal'),

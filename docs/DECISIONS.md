@@ -497,3 +497,97 @@ Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Con
   - "Export as pack…" (bundle selected My Queries);
   - a Settings → Sources page (the commands and the pack context menu cover add, check, review and remove);
   - the MITRE technique names (D-040).
+
+## D-045 — Extension host and sandbox (2026-09-25)
+
+**Decision:**
+
+- As spec 01 describes, extensions run in a hidden `BrowserWindow` (the extension host), with one **module Web Worker per extension**. The worker gets the bundled code from main and loads it from a blob URL. It talks to main over its own `MessagePort`. The host page has no IPC: its preload only hands ports over.
+- **No network, three layers:**
+  1. The host window uses its own in-memory session, whose `webRequest` cancels everything except its own page (`raml-kql://exthost/…`, a separate origin with its own CSP).
+  2. The page CSP is `default-src 'none'; script-src 'self' blob:; connect-src 'none'`.
+  3. The worker deletes `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `WebTransport` and `importScripts`.
+
+  The e2e test tries three ways to reach a local server directly and all fail. The only way out is `ramlKql.net.fetch`, which main performs after the permission check. It runs in a separate cookie-less session, over https (or http to localhost), with redirects returned rather than followed (a redirect could lead to a host that wasn't granted), a 10 MB limit and a 30 s timeout.
+
+- **Extension UI** (views, result renderers) runs in `<iframe sandbox="allow-scripts">` from a new privileged scheme, `rkql-ext://<extension id>/…`. It serves only that extension's files (never `package.json`), with a CSP that has no network and `frame-ancestors` limited to the workbench. The workbench CSP gained `frame-src rkql-ext:`. Because the frame's origin is opaque, UI scripts must be classic scripts (module scripts would need CORS). The author guide says so.
+- **Limits:** a 10 s activation timeout, invocation timeouts, and 200 calls per second per extension. Every call's arguments are validated with zod in main. A crash only marks the extension "Failed".
+
+## D-046 — Permission broker and grant model (2026-09-25)
+
+**Decision:**
+
+- Checks happen **in main** (`PermissionBroker`), never in the worker.
+  - Undeclared permissions, and hosts outside the declared `network` list, are refused without a prompt.
+  - Declared low-risk permissions (`secrets`, `clipboard.write`, `notifications`) are granted at install.
+  - Medium and high risk are asked at use time.
+- **Scopes:** `run` (the default), `session`, `always` (persisted in `permissions.jsonc` as `{ extension, permission, hosts?, grantedAt }`).
+  - A run grant belongs to the query run of the active tab: the workbench passes its `runId` with every command or enrichment, and calls made during that invocation inherit it.
+  - Calls outside a run (e.g. from the command palette with no results) get "Allow Once", scoped to that invocation.
+  - A denial is remembered for the run, so a loop can't flood the user with prompts.
+  - Concurrent identical checks share one prompt.
+- **One prompt per action:** enrichment asks for `results.readSelection` and `network` together ("wants to send 14 values (IP addresses) from this result to www.virustotal.com").
+- The prompt is a modal dialog, and the dialog component is new. It has the four buttons from spec 07; the focused one follows `extensions.permissions.defaultScope`. With aliasing on, it notes that sent values are real, not aliased.
+- Grants, denials, revocations, installs, updates and uninstalls go to the audit log (a new `extension` event kind).
+- **On update:** always-grants survive only when the new version asks for the same or narrower (network hosts included); the rest are dropped. The install preview shows the new permissions.
+
+## D-047 — Contribution points (2026-09-25)
+
+**Decision:**
+
+- **Commands:** registered in the palette as soon as the extension is enabled, before activation (activation stays lazy). Their titles come from the manifest.
+  - `menus.commandPalette` with `when: "false"` hides a command.
+  - `menus.results/cell/context` adds items to the grid's cell menu. Those items receive the cell value and need `results.readSelection`.
+  - When clauses gained VS Code's `=~ /regex/` for `cellEntityType`.
+- **Keybindings:** a layer between the defaults and the user's `keybindings.jsonc` (the user's own keybindings win).
+- **Enrichers:** entity detection lives in the host (`shared/results/entities.ts`, by column name confirmed by the value's shape). Results become extra grid columns (an in-memory overlay per run: not sortable, never persisted, never written into the result).
+- **Result renderers:** one panel tab each, fed up to 10,000 rows with the names on screen (aliased in presentation mode) once `results.read` is granted. Rows go from the workbench to the frame by `postMessage`; the gate is in main.
+- **Sidebar views:** join the activity bar. Messages go frame ↔ workbench ↔ main ↔ worker (`views.registerWebviewView`, `webview.postMessage`).
+- **Themes:** data only. They join the theme picker like user themes (no `include`).
+- **Configuration:** extension settings live in `settings.jsonc` under keys that must start with the extension's name. `configuration.get` checks the declared type and falls back to the default. The settings service now keeps the raw values and reports raw key changes, for `onDidChangeConfiguration`. The Settings editor doesn't list extension settings yet.
+- **Data sources:** see D-049.
+
+## D-048 — Installing and updating extensions (2026-09-25)
+
+**Decision:**
+
+- **From file:** a `.rkqlx` zip, read with fflate (every file, with a 10 MB/file, 2,000 files and 50 MB limit, path traversal refused).
+- **From git:** `listServerRefs` lists the `vX.Y.Z` tags (prereleases skipped). The newest release whose manifest fits `engines` wins, trying up to 10.
+  - First choice is a GitHub or GitLab **release asset** (`*.rkqlx`, through their REST APIs, unauthenticated; a GitHub rate limit is reported).
+  - Otherwise the tag itself, which must contain a built `dist/`. isomorphic-git can't `clone` a tag with `singleBranch`, so the host inits a repo, fetches the tag shallowly and reads the peeled commit's tree.
+  - `extensions.jsonc` records the URL, tag, commit and the package SHA-256.
+- **Every install shows a preview first:**
+  - "Not verified by Raml KQL — only install extensions you trust";
+  - the permissions with their risk;
+  - the README;
+  - for updates, the permissions the new version adds.
+
+  `verified` is always false for now.
+
+- **Updates:**
+  - checked at startup (`extensions.checkForUpdates`, a new setting, default on) and with "Check for Extension Updates";
+  - shown in the Extensions view with an Update button;
+  - `extensions.autoUpdate` (default off) applies only updates that add no permissions.
+- **Uninstall** removes the files, grants, secrets (OS keychain, in user data) and storage (`state/extension-storage/`).
+
+## D-049 — Data sources behind one interface (2026-09-25)
+
+**Decision:** `DataSourceRegistry` holds the query engine's data sources. The built-in Log Analytics source (or the demo source in demo mode) is registered like any other. Each workspace is routed by its new optional `dataSourceId`, defaulting to Log Analytics. Manifests can declare `contributes.dataSources`. How an extension provides _targets_ (its own inventory) and tokens (`auth:<resource>`) is deferred (D-050), so extension data sources cannot run queries yet.
+
+## D-050 — Extension API: implemented and deferred (2026-09-25)
+
+**Implemented:**
+
+- `commands`, `window` (messages with actions, quick pick, input box with password, progress);
+- `enrichment`, `views` (webviews), `net.fetch`, `secrets`, `storage`, `configuration` (+ change events), `editor` (`getActiveQuery`, `insertText`, `openQueryTab`), `clipboard`, `env`.
+
+**Deferred:**
+
+- `query.run`, `targets.list`, `auth.getToken`, `results.getActive` (renderers get rows from the host instead), and `dataSources.register`. These are the high-risk ones, and each needs its own prompt design.
+- The CLI's `dev` command with `--extensionDevelopmentPath` hot reload.
+- Drag-and-drop install.
+- Offering to reinstall the set from a shared `extensions.jsonc` on another machine.
+- A "restart extension" prompt for a worker that stops answering (invocations time out instead).
+- Listing extension settings in the Settings editor.
+
+The examples are built with esbuild (now a root dev dependency) by `pnpm build:examples`. The country map bundles Natural Earth 110m (public domain, via world-atlas, ISC) with topojson-client (ISC) and i18n-iso-countries codes (MIT).

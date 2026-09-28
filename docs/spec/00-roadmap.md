@@ -161,15 +161,33 @@ Version targets:
 
 ## Phase 9 — Extensions
 
-- [ ] Extension host (sandboxed) + host API + permission broker (spec 07)
-- [ ] Contribution points: commands, menus, keybindings, views/panels, result renderers, enrichers, data sources, themes, configuration
-- [ ] Permission prompts (once / session / always), permissions management UI, revocation
-- [ ] Install from git URL (release asset) or file (`.rkqlx`); enable/disable/uninstall; update with permission diff
-- [ ] `packages/extension-api` and `packages/extension-cli` (scaffold, validate, package)
-- [ ] Example extensions: VirusTotal IP/hash enricher, "Map" result renderer (no external tiles; country aggregation), a theme
-- [ ] The built-in Log Analytics data source is implemented through the same data-source interface
+- [x] Extension host (sandboxed) + host API + permission broker (spec 07)
+- [x] Contribution points: commands, menus, keybindings, views/panels, result renderers, enrichers, data sources, themes, configuration
+- [x] Permission prompts (once / session / always), permissions management UI, revocation
+- [x] Install from git URL (release asset) or file (`.rkqlx`); enable/disable/uninstall; update with permission diff
+- [x] `packages/extension-api` and `packages/extension-cli` (scaffold, validate, package)
+- [x] Example extensions: VirusTotal IP/hash enricher, "Map" result renderer (no external tiles; country aggregation), a theme
+- [x] The built-in Log Analytics data source is implemented through the same data-source interface
 
 **Acceptance:** An example extension can't reach the network without a grant (test). A permission prompt appears per query run by default. "Always allow" persists.
+
+> Status:
+> - `e2e/extensions.spec.ts` checks the acceptance in the running app with a test extension:
+>   - a direct `fetch` (in three different ways) never reaches the local test server;
+>   - `ramlKql.net.fetch` is refused until granted;
+>   - the prompt appears again for each new query run;
+>   - "Always allow" is written to `permissions.jsonc` and holds after a restart, and revoking it in the Extensions view brings the prompt back.
+> - `e2e/example-extensions.spec.ts` covers the three examples in the app:
+>   - the Country Map draws in its sandboxed frame after `results.read` is allowed;
+>   - the theme can be chosen;
+>   - VirusTotal enrichment asks "send 1 value (IP addresses) from this result to www.virustotal.com" before anything leaves.
+> - Unit tests cover:
+>   - the broker (scopes, denial memory, concurrency, combined prompts, updates);
+>   - the manager with the real runtime over a MessageChannel;
+>   - git installs against a local server;
+>   - the manifest schema, semver, entity detection, the `=~` when-clauses and the CLI.
+> - Deferred (D-050): `query.run`, `targets.list`, `auth.getToken` and targets for extension data sources; the `dev` command with `--extensionDevelopmentPath`; drag-and-drop install.
+> - Decisions: D-045 to D-050. The live checks are in `docs/HUMAN-TODO.md`.
 
 ## Phase 10 — Privacy polish and crash reporting
 

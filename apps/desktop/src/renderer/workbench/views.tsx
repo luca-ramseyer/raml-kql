@@ -1,8 +1,13 @@
+import { useMemo } from 'react';
+
+import type { ExtensionInfo } from '../../shared/extensions/models';
 import { tenantsNeedingReauth, useAccounts } from '../features/accounts/accounts-store';
 import { AccountsView } from '../features/accounts/AccountsView';
+import { useExtensions } from '../features/extensions/extensions-store';
+import { ExtensionSidebarView } from '../features/extensions/ExtensionSidebarView';
+import { ExtensionsView } from '../features/extensions/ExtensionsView';
 import { HistoryView } from '../features/history/HistoryView';
 import { LibraryView } from '../features/library/LibraryView';
-import { WelcomeView } from '../features/placeholders/WelcomeView';
 import { TargetsView } from '../features/targets/TargetsView';
 
 /**
@@ -66,9 +71,15 @@ export const VIEWS: readonly ViewDescriptor[] = [
     title: 'Extensions',
     icon: 'extensions',
     position: 'top',
-    component: () => (
-      <WelcomeView paragraphs={['Installed extensions and extension sources will appear here.']} />
-    ),
+    component: ExtensionsView,
+    actions: [
+      {
+        icon: 'desktop-download',
+        title: 'Install from File…',
+        command: 'extensions.installFromFile',
+      },
+      { icon: 'refresh', title: 'Refresh', command: 'extensions.refresh' },
+    ],
   },
   {
     id: 'workbench.view.accounts',
@@ -84,6 +95,47 @@ export const VIEWS: readonly ViewDescriptor[] = [
   },
 ];
 
-export function getView(id: string): ViewDescriptor | undefined {
-  return VIEWS.find((view) => view.id === id);
+const extensionViewComponents = new Map<string, () => React.JSX.Element>();
+
+/** Sidebar views contributed by enabled extensions (spec 07). */
+function extensionViews(extensions: readonly ExtensionInfo[]): ViewDescriptor[] {
+  return extensions
+    .filter((e) => e.enabled && e.state !== 'failed')
+    .flatMap((extension) =>
+      (extension.contributes.views?.sidebar ?? []).map((view): ViewDescriptor => {
+        const key = `${extension.id}|${view.id}|${view.ui}`;
+        let component = extensionViewComponents.get(key);
+        if (component === undefined) {
+          component = () => (
+            <ExtensionSidebarView
+              extensionId={extension.id}
+              viewId={view.id}
+              ui={view.ui}
+              title={view.name}
+            />
+          );
+          extensionViewComponents.set(key, component);
+        }
+        return {
+          id: view.id,
+          title: view.name,
+          icon: view.icon?.slice(2, -1) ?? 'extensions',
+          position: 'top',
+          component,
+        };
+      }),
+    );
+}
+
+/** Built-in views plus extension views, for the activity bar and the sidebar. */
+export function useViews(): readonly ViewDescriptor[] {
+  const extensions = useExtensions((s) => s.snapshot.extensions);
+  return useMemo(() => [...VIEWS, ...extensionViews(extensions)], [extensions]);
+}
+
+export function getView(
+  id: string,
+  views: readonly ViewDescriptor[] = VIEWS,
+): ViewDescriptor | undefined {
+  return views.find((view) => view.id === id);
 }

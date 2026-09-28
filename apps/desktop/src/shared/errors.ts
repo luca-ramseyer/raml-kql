@@ -38,6 +38,10 @@ export const AppErrorCodeSchema = z.enum([
   'SOURCE_ERROR',
   /** A git source needs a token (private repository) or the token was refused. */
   'SOURCE_AUTH_REQUIRED',
+  /** An extension couldn't be installed, started or run; the message says why. */
+  'EXTENSION_ERROR',
+  /** The user (or a missing declaration) refused an extension permission. */
+  'PERMISSION_DENIED',
 ]);
 export type AppErrorCode = z.infer<typeof AppErrorCodeSchema>;
 

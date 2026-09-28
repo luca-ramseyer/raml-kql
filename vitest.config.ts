@@ -36,6 +36,23 @@ export default defineConfig({
       },
       {
         test: {
+          name: 'examples',
+          root: './examples/extensions',
+          environment: 'node',
+          include: ['*/src/**/*.test.ts'],
+          setupFiles: ['../../apps/desktop/test/setup/no-network.ts'],
+        },
+        resolve: {
+          alias: {
+            '@raml-kql/extension-api': new URL(
+              './packages/extension-api/src/index.ts',
+              import.meta.url,
+            ).pathname,
+          },
+        },
+      },
+      {
+        test: {
           name: 'packages',
           root: './packages',
           environment: 'node',

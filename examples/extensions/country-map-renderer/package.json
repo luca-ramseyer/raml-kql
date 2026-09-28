@@ -1,0 +1,27 @@
+{
+  "name": "country-map-renderer",
+  "publisher": "raml",
+  "displayName": "Country Map",
+  "version": "1.0.0",
+  "description": "Draws the active result as a world map: rows per country, from a country code or name column. The map is bundled; nothing is downloaded.",
+  "license": "MIT",
+  "repository": "https://github.com/luca-ramseyer/raml-kql",
+  "engines": {
+    "raml-kql": "^1.0.0"
+  },
+  "permissions": [
+    {
+      "id": "results.read",
+      "reason": "Count the result rows per country to colour the map"
+    }
+  ],
+  "contributes": {
+    "resultRenderers": [
+      {
+        "id": "countryMap.map",
+        "title": "Country Map",
+        "ui": "dist/ui/map.html"
+      }
+    ]
+  }
+}

@@ -90,3 +90,14 @@ Claude Code appends items here when blocked, and keeps working. Tick them off wh
 - [ ] **A real git source.** Put a test pack in a public GitHub repository and add it with "Library: Add Pack Source…". Push a change and run "Check for Pack Updates", then review and apply it.
 - [ ] **A private repository.** Try the same with a private repository and a fine-grained token (read-only "Contents" on that one repository). Check that `~/.raml-kql/sources.jsonc` contains no token.
 - [ ] **Decide where packs are published.** For example a `raml-kql-packs` repository. I'll then point the Welcome page and the docs at it. The GitHub Actions snippet in `docs/guides/query-packs.md` works once `@raml-kql/extension-cli` is published to npm (Phase 12).
+
+## Added during Phase 9
+
+- [ ] **Try the examples.** Run `pnpm build:examples`, then "Extensions: Install from File…" with `examples/extensions/dist/*.rkqlx`:
+  - with the **VirusTotal Enricher** and your VirusTotal key ("VirusTotal: Set API Key…"), right-click an IP in real results → "Enrich Value with VirusTotal";
+  - with the **Country Map**, run `SigninLogs | summarize count() by Country = tostring(LocationDetails.countryOrRegion)` and open the Country Map panel tab.
+
+  Check the prompts read well to you.
+
+- [ ] **Brand colours for Raml Dark.** The example theme uses teal accents I picked. If Raml has brand colours, tell me and I'll use them.
+- [ ] **Publish `@raml-kql/extension-api` and `@raml-kql/extension-cli` to npm** when the repo goes public (Phase 12). The scaffold's `package.json` and the author guide already point at those names.

@@ -1,7 +1,10 @@
 import { create } from 'zustand';
 
 import type { KeybindingsSnapshot } from '../../../shared/config/config-snapshots';
-import { DEFAULT_KEYBINDINGS } from '../../../shared/keybindings/keybindings';
+import {
+  DEFAULT_KEYBINDINGS,
+  type DefaultKeybinding,
+} from '../../../shared/keybindings/keybindings';
 import { formatKeySequence, type KeyPress, type Platform } from '../../../shared/keybindings/keys';
 import { getBridge } from '../../services/ipc';
 import { executeCommand } from '../commands';
@@ -28,10 +31,22 @@ export const useKeybindings = create<KeybindingState>(() => ({
 }));
 
 let lastProblemsSignature = '';
+/** Keybindings contributed by extensions: above the defaults, below the user's own. */
+let extensionKeybindings: readonly DefaultKeybinding[] = [];
+let lastApplied: { platform: Platform; snapshot: KeybindingsSnapshot } = {
+  platform: 'darwin',
+  snapshot: { entries: [], problems: [] },
+};
+
+export function setExtensionKeybindings(bindings: readonly DefaultKeybinding[]): void {
+  extensionKeybindings = bindings;
+  applyKeybindingsSnapshot(lastApplied.platform, lastApplied.snapshot);
+}
 
 export function applyKeybindingsSnapshot(platform: Platform, snapshot: KeybindingsSnapshot): void {
+  lastApplied = { platform, snapshot };
   const { bindings, problems } = resolveKeybindings(
-    DEFAULT_KEYBINDINGS,
+    [...DEFAULT_KEYBINDINGS, ...extensionKeybindings],
     snapshot.entries,
     platform,
   );

@@ -108,12 +108,14 @@ export function viewFromGrid(
   base: Pick<ViewState, 'quickSearch' | 'valueFilters'>,
 ): ViewState {
   return {
-    sort: sortModel.map((s) => ({ column: indexOfField(s.colId), direction: s.sort })),
+    // Enrichment overlay columns (`enrichment:…`) are derived in the renderer: not sortable.
+    sort: sortModel
+      .filter((s) => /^c\d+$/.test(s.colId))
+      .map((s) => ({ column: indexOfField(s.colId), direction: s.sort })),
     filters: Object.fromEntries(
-      Object.entries(filterModel).map(([colId, model]) => [
-        String(indexOfField(colId)),
-        model as ColumnFilter,
-      ]),
+      Object.entries(filterModel)
+        .filter(([colId]) => /^c\d+$/.test(colId))
+        .map(([colId, model]) => [String(indexOfField(colId)), model as ColumnFilter]),
     ),
     quickSearch: base.quickSearch,
     valueFilters: base.valueFilters,

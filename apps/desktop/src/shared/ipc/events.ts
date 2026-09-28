@@ -6,6 +6,7 @@ import {
   SettingsSnapshotSchema,
   UserThemesSnapshotSchema,
 } from '../config/config-snapshots';
+import { UiRequestEventSchema } from '../extensions/models';
 import { RunSnapshotSchema } from '../query/models';
 import { GroupsSnapshotSchema } from '../workspaces/groups';
 import { InventorySchema } from '../workspaces/models';
@@ -37,6 +38,12 @@ export const ipcEvents = {
   'queries.changed': z.object({}),
   /** Pack sources, installed packs or available updates changed. */
   'packs.changed': z.object({}),
+  /** Extensions were installed, removed, enabled, started, or grants changed. */
+  'extensions.changed': z.object({}),
+  /** An extension needs the workbench (a message, a prompt, the editor); answer with `extensions.respond`. */
+  'extensions.uiRequest': UiRequestEventSchema,
+  /** An extension posted a message to its sidebar view. */
+  'extensions.webviewPost': z.object({ viewId: z.string(), message: z.json() }),
 } as const satisfies Record<string, z.ZodType>;
 
 export type IpcEvents = typeof ipcEvents;

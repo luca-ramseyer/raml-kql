@@ -1,9 +1,7 @@
 /**
  * raml-kql-ext — command-line tool for extension and query pack authors (specs 07, 08).
- *
- * `pack validate` works now; the extension commands (`init`, `validate`, `package`) arrive in
- * Phase 9, together with a `bin` entry and a build step.
  */
+import { initExtension, packageExtension, validateExtension } from './extension';
 import { validatePacks } from './pack-validate';
 
 export interface CliIo {
@@ -17,12 +15,12 @@ export const CLI_VERSION = '0.0.0';
 const HELP = `Usage: ${CLI_NAME} <command>
 
 Commands:
+  init <dir> --publisher <p> [--name <n>]
+                        Scaffold a TypeScript extension (bundled with esbuild)
+  validate [dir]        Check an extension the way Raml KQL will when installing it
+  package [dir] [-o <file.rkqlx>]
+                        Validate and build the .rkqlx package
   pack validate [dir]   Validate the query packs in a folder (default: the current folder)
-
-Coming in a later release:
-  init                  Scaffold a new extension
-  validate              Validate an extension manifest
-  package               Build a .rkqlx package
 
 Options:
   -h, --help     Show this help
@@ -38,6 +36,26 @@ export function runCli(argv: readonly string[], io: CliIo): number {
   if (first === '-v' || first === '--version') {
     io.out(CLI_VERSION);
     return 0;
+  }
+  const option = (name: string): string | undefined => {
+    const index = argv.indexOf(name);
+    return index < 0 ? undefined : argv[index + 1];
+  };
+  const positional = argv
+    .slice(1)
+    .filter((arg, i, all) => !arg.startsWith('-') && !all[i - 1]?.startsWith('-'));
+  if (first === 'validate') return validateExtension(positional[0] ?? '.', io);
+  if (first === 'package')
+    return packageExtension(positional[0] ?? '.', option('-o') ?? option('--out'), io);
+  if (first === 'init') {
+    const dir = positional[0];
+    const publisher = option('--publisher');
+    if (dir === undefined || publisher === undefined) {
+      io.err(`Usage: ${CLI_NAME} init <dir> --publisher <publisher> [--name <name>]`);
+      return 2;
+    }
+    const name = option('--name') ?? dir.replace(/\/+$/, '').split(/[\\/]/).at(-1) ?? dir;
+    return initExtension(dir, { name, publisher }, io);
   }
   if (first === 'pack') {
     const [, sub, dir = '.'] = argv;

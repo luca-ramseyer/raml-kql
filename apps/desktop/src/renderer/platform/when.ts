@@ -13,12 +13,14 @@ export type WhenExpression =
   | { type: 'not'; operand: WhenExpression }
   | { type: 'and'; operands: WhenExpression[] }
   | { type: 'or'; operands: WhenExpression[] }
-  | { type: 'equals'; key: string; value: string | number | boolean; negate: boolean };
+  | { type: 'equals'; key: string; value: string | number | boolean; negate: boolean }
+  | { type: 'regex'; key: string; pattern: RegExp };
 
 type Token =
   | { kind: 'word'; text: string }
   | { kind: 'string'; text: string }
-  | { kind: 'op'; text: '!' | '&&' | '||' | '==' | '!=' | '(' | ')' };
+  | { kind: 'op'; text: '!' | '&&' | '||' | '==' | '!=' | '=~' | '(' | ')' }
+  | { kind: 'regex'; pattern: RegExp };
 
 function tokenize(input: string): Token[] {
   const tokens: Token[] = [];
@@ -30,6 +32,17 @@ function tokenize(input: string): Token[] {
       continue;
     }
     const two = input.slice(i, i + 2);
+    if (two === '=~') {
+      // VS Code's regex match: `key =~ /pattern/flags`.
+      i += 2;
+      while (/\s/.test(input.charAt(i))) i++;
+      const literal = /^\/((?:[^/\\\n]|\\.)+)\/([imsu]*)/.exec(input.slice(i));
+      if (literal === null) throw new Error(`Expected a /regex/ at ${String(i)}`);
+      tokens.push({ kind: 'op', text: '=~' });
+      tokens.push({ kind: 'regex', pattern: new RegExp(literal[1] ?? '', literal[2]) });
+      i += literal[0].length;
+      continue;
+    }
     if (two === '&&' || two === '||' || two === '==' || two === '!=') {
       tokens.push({ kind: 'op', text: two });
       i += 2;
@@ -100,11 +113,20 @@ export function parseWhen(input: string): WhenExpression {
     pos++;
     if (token.text === 'true') return { type: 'true' };
     if (token.text === 'false') return { type: 'false' };
+    if (isOp('=~')) {
+      pos++;
+      const regex = peek();
+      if (regex?.kind !== 'regex') throw new Error('Expected a /regex/');
+      pos++;
+      return { type: 'regex', key: token.text, pattern: regex.pattern };
+    }
     if (isOp('==') || isOp('!=')) {
       const negate = isOp('!=');
       pos++;
       const valueToken = peek();
-      if (valueToken === undefined || valueToken.kind === 'op') throw new Error('Expected a value');
+      if (valueToken === undefined || valueToken.kind === 'op' || valueToken.kind === 'regex') {
+        throw new Error('Expected a value');
+      }
       pos++;
       let value: string | number | boolean = valueToken.text;
       if (valueToken.kind === 'word') {
@@ -144,6 +166,13 @@ export function evaluateWhen(expression: WhenExpression, context: ContextValues)
       // VS Code compares loosely, so `count == 1` matches the string '1' too.
       const equal = actual == expression.value;
       return expression.negate ? !equal : equal;
+    }
+    case 'regex': {
+      const actual = context[expression.key];
+      return (
+        (typeof actual === 'string' || typeof actual === 'number') &&
+        expression.pattern.test(String(actual))
+      );
     }
   }
 }

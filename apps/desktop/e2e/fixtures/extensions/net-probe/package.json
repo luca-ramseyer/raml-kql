@@ -1,0 +1,41 @@
+{
+  "name": "net-probe",
+  "publisher": "contoso",
+  "displayName": "Net Probe",
+  "version": "1.0.0",
+  "description": "Test extension: tries to reach a local server directly and through ramlKql.net.fetch.",
+  "license": "MIT",
+  "engines": {
+    "raml-kql": "^1.0.0"
+  },
+  "main": "dist/extension.js",
+  "activationEvents": [
+    "onCommand:netProbe.fetch"
+  ],
+  "permissions": [
+    {
+      "id": "network",
+      "hosts": [
+        "127.0.0.1"
+      ],
+      "reason": "Talk to the test server"
+    }
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "netProbe.fetch",
+        "title": "Fetch",
+        "category": "Net Probe"
+      }
+    ],
+    "configuration": {
+      "properties": {
+        "net-probe.url": {
+          "type": "string",
+          "default": "http://127.0.0.1:9"
+        }
+      }
+    }
+  }
+}

@@ -49,8 +49,10 @@ export function syncTargetsWithInventory(): void {
     targetableWorkspaces(useInventory.getState().inventory.workspaces).map((w) => w.resourceId),
   );
   const state = useTargets.getState();
+  // No workspaces yet (the inventory is still loading): keep the selection, e.g. one just
+  // restored with its tab, instead of filtering it down to nothing.
+  if (usable.size === 0) return;
   if (!state.initialized) {
-    if (usable.size === 0) return;
     useTargets.setState({ selected: usable, initialized: true });
     return;
   }

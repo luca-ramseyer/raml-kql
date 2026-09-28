@@ -508,6 +508,33 @@ export const settingDefinitions = [
     scope: 'user',
   }),
   define({
+    key: 'extensions.permissions.defaultScope',
+    schema: z.enum(['run', 'session', 'always']),
+    default: 'run',
+    description:
+      'The button focused in extension permission prompts: allow for the current query run (default), the session, or always.',
+    category: ['Extensions'],
+    scope: 'user',
+  }),
+  define({
+    key: 'extensions.checkForUpdates',
+    schema: z.boolean(),
+    default: true,
+    description:
+      'Check extensions installed from git for newer releases on startup. Updates are shown, not installed.',
+    category: ['Extensions'],
+    scope: 'user',
+  }),
+  define({
+    key: 'extensions.autoUpdate',
+    schema: z.boolean(),
+    default: false,
+    description:
+      'Update extensions without asking. Off by default: updates show their changelog and any new permissions first.',
+    category: ['Extensions'],
+    scope: 'user',
+  }),
+  define({
     key: 'sources.checkForUpdates',
     schema: z.boolean(),
     default: true,
