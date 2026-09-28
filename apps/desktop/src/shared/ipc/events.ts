@@ -6,6 +6,7 @@ import {
   SettingsSnapshotSchema,
   UserThemesSnapshotSchema,
 } from '../config/config-snapshots';
+import { RunSnapshotSchema } from '../query/models';
 import { GroupsSnapshotSchema } from '../workspaces/groups';
 import { InventorySchema } from '../workspaces/models';
 
@@ -28,6 +29,8 @@ export const ipcEvents = {
   /** Discovery found workspaces it hadn't seen before ("5 new workspaces discovered — Review"). */
   'inventory.newWorkspaces': z.object({ count: z.number().int().positive() }),
   'groups.changed': GroupsSnapshotSchema,
+  /** A query run progressed (workspace states, row counts). Never contains result rows. */
+  'query.runChanged': RunSnapshotSchema,
 } as const satisfies Record<string, z.ZodType>;
 
 export type IpcEvents = typeof ipcEvents;

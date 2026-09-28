@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 
-import { expect, MOD, quickInput, test } from './fixtures';
+import { expect, MOD, quickInput, test, writeSettings } from './fixtures';
 
 /**
  * Phase 4 acceptance: "In demo mode, completions list tables and columns from the fake schema.
@@ -19,6 +19,11 @@ async function newQuery(window: Page): Promise<void> {
   await window.keyboard.press(`${MOD}+N`);
   await expect(window.getByRole('tab', { name: /Query 1/ })).toBeVisible();
   await expect(editor(window)).toBeVisible();
+}
+
+/** Typing never waits for the schema; completion assertions do. */
+async function schemaReady(window: Page): Promise<void> {
+  await expect(window.locator('.query-monaco[data-schema="ready"]')).toBeVisible();
 }
 
 /** Replace the editor text by typing (Monaco reads real key events). */
@@ -45,6 +50,7 @@ test('the first query opens with the sample query and "Set in query"', async ({ 
 
 test('completions list tables and columns from the demo schema', async ({ window }) => {
   await newQuery(window);
+  await schemaReady(window);
   await setText(window, 'Heartb');
   await window.keyboard.press('Control+Space');
   await expect(suggestions(window)).toContainText('Heartbeat');
@@ -57,6 +63,7 @@ test('completions list tables and columns from the demo schema', async ({ window
 
 test('tables missing in some targets show their availability', async ({ window }) => {
   await newQuery(window);
+  await schemaReady(window);
   await setText(window, 'DevicePro');
   await window.keyboard.press('Control+Space');
   const row = suggestions(window).getByRole('option', { name: /DeviceProcessEvents/ });
@@ -83,4 +90,31 @@ test('the time range picker offers presets and a custom range', async ({ window 
   await quickInput(window).fill('7');
   await window.keyboard.press('Enter');
   await expect(window.getByRole('button', { name: 'Time range: Last 7 days' })).toBeVisible();
+});
+
+test('completions follow a schema change for the word being typed', async ({
+  launch,
+  configDir,
+}) => {
+  writeSettings(configDir, { 'privacy.aliasing.activeOnStartup': false });
+  const { window } = await launch();
+  await newQuery(window);
+  await schemaReady(window);
+  await setText(window, 'DevicePro');
+  await window.keyboard.press('Control+Space');
+  await expect(suggestions(window)).toContainText('DeviceProcessEvents');
+  await window.keyboard.press('Escape');
+
+  // Only tenants without the Defender tables stay selected.
+  for (const tenant of ['Contoso', 'Fabrikam', 'Woodgrove Bank']) {
+    await window.getByRole('checkbox', { name: `Select all workspaces in ${tenant}` }).uncheck();
+  }
+  await editor(window).click();
+  await window.keyboard.press('End');
+  // Same word, same line: monaco-kusto would answer from its cache without the reset.
+  await expect(async () => {
+    await window.keyboard.press('Escape');
+    await window.keyboard.press('Control+Space');
+    await expect(suggestions(window)).not.toContainText('DeviceProcessEvents', { timeout: 500 });
+  }).toPass({ timeout: 10_000 });
 });

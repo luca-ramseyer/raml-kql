@@ -1,5 +1,11 @@
-import { lazy, Suspense } from 'react';
+import { useEffect, useState } from 'react';
 
+import {
+  loadedQueryEditor,
+  loadQueryEditor,
+  type QueryEditorComponent,
+} from '../../features/editor/editor-preload';
+import { useRuns } from '../../features/query/run-store';
 import { SettingsEditor } from '../../features/settings/SettingsEditor';
 import { WelcomePage } from '../../features/welcome/WelcomePage';
 import { WorkspacesEditor } from '../../features/workspaces/WorkspacesEditor';
@@ -11,12 +17,33 @@ import { KeybindingLabel } from '../common/KeybindingLabel';
 
 import './EditorArea.css';
 
-// Monaco and the Kusto language service are large: load them with the first query tab.
-const QueryEditor = lazy(() =>
-  import('../../features/editor/QueryEditor').then((m) => ({ default: m.QueryEditor })),
-);
+/**
+ * The query editor is a separate chunk (Monaco and the Kusto language service are large),
+ * usually preloaded at idle time. Loaded without Suspense on purpose: React throttles
+ * revealing a suspended boundary by up to 300 ms, which made every first tab feel slow.
+ */
+function QueryEditorHost({ editorId }: { editorId: string }): React.JSX.Element {
+  const [Editor, setEditor] = useState<QueryEditorComponent | undefined>(() => loadedQueryEditor());
+  useEffect(() => {
+    if (Editor !== undefined) return undefined;
+    let current = true;
+    void loadQueryEditor().then((component) => {
+      if (current) setEditor(() => component);
+    });
+    return () => {
+      current = false;
+    };
+  }, [Editor]);
+  return Editor === undefined ? (
+    <div className="query-editor-message">Loading editor…</div>
+  ) : (
+    <Editor editorId={editorId} />
+  );
+}
 
 function Tab({ editor, active }: { editor: EditorInput; active: boolean }): React.JSX.Element {
+  // A running query tab shows a spinner, like VS Code's `$(loading~spin)` (spec 05).
+  const running = useRuns((s) => s.byTab[editor.id]?.state === 'running');
   return (
     <div
       role="tab"
@@ -35,7 +62,10 @@ function Tab({ editor, active }: { editor: EditorInput; active: boolean }): Reac
         if (event.key === 'Enter' || event.key === ' ') activateEditor(editor.id);
       }}
     >
-      <Codicon name={editor.icon} className="tab-icon" />
+      <Codicon
+        name={running ? 'loading' : editor.icon}
+        className={running ? 'tab-icon codicon-modifier-spin' : 'tab-icon'}
+      />
       <span className="tab-label">{editor.title}</span>
       <button
         type="button"
@@ -105,9 +135,7 @@ export function EditorArea(): React.JSX.Element {
             {active?.kind === 'settings' ? <SettingsEditor /> : null}
             {active?.kind === 'workspaces' ? <WorkspacesEditor /> : null}
             {active?.kind === 'query' ? (
-              <Suspense fallback={null}>
-                <QueryEditor key={active.id} editorId={active.id} />
-              </Suspense>
+              <QueryEditorHost key={active.id} editorId={active.id} />
             ) : null}
           </div>
         </>

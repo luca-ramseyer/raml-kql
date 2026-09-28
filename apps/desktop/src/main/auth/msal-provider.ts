@@ -6,6 +6,7 @@ import {
   type AuthenticationResult,
   type Configuration,
   type ICachePlugin,
+  type INetworkModule,
 } from '@azure/msal-node';
 
 import { authorityFor, scopeFor, type CloudProfile } from './cloud';
@@ -69,6 +70,8 @@ export interface MsalProviderOptions {
   openBrowser: (url: string) => Promise<void>;
   /** Abandoned interactive sign-ins are rejected after this long. */
   interactiveTimeoutMs?: number;
+  /** HTTP for token requests; AzureHttp's module so sign-in follows the OS proxy (D-023). */
+  networkClient?: INetworkModule;
   /** Test seam: build the MSAL client (defaults to `new PublicClientApplication`). */
   createClient?: (configuration: Configuration) => MsalClient;
 }
@@ -105,6 +108,7 @@ export class MsalAuthProvider implements AuthProvider {
       },
       ...(options.cachePlugin === undefined ? {} : { cache: { cachePlugin: options.cachePlugin } }),
       system: {
+        ...(options.networkClient === undefined ? {} : { networkClient: options.networkClient }),
         loggerOptions: {
           // MSAL logs can contain PII and tokens; keep them off.
           piiLoggingEnabled: false,
@@ -207,6 +211,7 @@ export class MsalAuthProvider implements AuthProvider {
     accountId: string,
     tenantId: string,
     scope: string,
+    options: { forceRefresh?: boolean } = {},
   ): Promise<AccessToken> {
     const account = await this.account(accountId);
     try {
@@ -215,6 +220,7 @@ export class MsalAuthProvider implements AuthProvider {
           account,
           scopes: [scope],
           authority: authorityFor(this.options.cloud, tenantId),
+          ...(options.forceRefresh === true ? { forceRefresh: true } : {}),
         }),
       );
     } catch (error) {

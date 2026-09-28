@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { ATTRIBUTION_COLUMNS } from '../query/models';
+
 /**
  * The settings registry (spec 09): every user setting is declared here exactly once. The
  * Settings UI, defaults, validation of `settings.jsonc` and its JSON Schema all derive from it.
@@ -321,6 +323,114 @@ export const settingDefinitions = [
         'The time zone of this computer.',
       ],
     },
+  }),
+  define({
+    key: 'editor.runScope',
+    schema: z.enum(['block', 'all']),
+    default: 'block',
+    description:
+      'What Shift+Enter runs: the query block under the cursor (statements separated by blank lines, like the Log Analytics portal) or the whole editor. A selection always runs as is.',
+    category: ['Text Editor'],
+    scope: 'user',
+    control: {
+      kind: 'enum',
+      options: ['block', 'all'],
+      optionDescriptions: ['The block under the cursor.', 'Everything in the editor.'],
+    },
+  }),
+  define({
+    key: 'query.maxConcurrentPerAccount',
+    schema: z.number().int().min(1).max(5),
+    default: 4,
+    description:
+      'Queries running at once per account. Log Analytics allows 5 per user; 4 leaves one for the portal.',
+    category: ['Query', 'Execution'],
+    scope: 'user',
+  }),
+  define({
+    key: 'query.maxConcurrentTotal',
+    schema: z.number().int().min(1).max(64),
+    default: 16,
+    description: 'Queries running at once across all accounts.',
+    category: ['Query', 'Execution'],
+    scope: 'user',
+  }),
+  define({
+    key: 'query.timeoutSeconds',
+    schema: z.number().int().min(10).max(600),
+    default: 180,
+    description: 'How long each workspace may take (10 to 600 seconds).',
+    category: ['Query', 'Execution'],
+    scope: 'user',
+    commonlyUsed: true,
+  }),
+  define({
+    key: 'query.failFastOnSemanticError',
+    schema: z.boolean(),
+    default: true,
+    description:
+      'Stop the remaining workspaces when the first one reports a query error (except a table or column missing there), and ask before running the rest.',
+    category: ['Query', 'Execution'],
+    scope: 'user',
+  }),
+  define({
+    key: 'query.fallbackAccessPaths',
+    schema: z.boolean(),
+    default: true,
+    description: 'When a workspace refuses access (403), try the next account that can reach it.',
+    category: ['Query', 'Execution'],
+    scope: 'user',
+  }),
+  define({
+    key: 'results.maxMergedRows',
+    schema: z.number().int().min(1000).max(10_000_000),
+    default: 1_000_000,
+    description: 'Maximum rows of one merged result; later rows are dropped with a warning.',
+    category: ['Results'],
+    scope: 'user',
+  }),
+  define({
+    key: 'results.memoryBudgetMB',
+    schema: z.number().int().min(64).max(65_536),
+    default: 1024,
+    description:
+      'Memory for results. Above it, older results move to an encrypted session cache on disk that is deleted on quit.',
+    category: ['Results'],
+    scope: 'user',
+  }),
+  define({
+    key: 'results.attributionColumns',
+    schema: z.array(z.enum(ATTRIBUTION_COLUMNS)).max(6),
+    default: ['_TenantName', '_WorkspaceName'],
+    description:
+      'Attribution columns shown in results: any of `_TenantName`, `_TenantId`, `_SubscriptionName`, `_WorkspaceName`, `_WorkspaceId`, `_Account`.',
+    category: ['Results'],
+    scope: 'user',
+  }),
+  define({
+    key: 'audit.enabled',
+    schema: z.boolean(),
+    default: true,
+    description:
+      'Keep a local, tamper-evident log of which workspaces were queried, when and by which account (never results).',
+    category: ['Privacy', 'Audit'],
+    scope: 'user',
+  }),
+  define({
+    key: 'audit.includeQueryText',
+    schema: z.boolean(),
+    default: true,
+    description: 'Store the query text in the audit log. When off, only its hash is stored.',
+    category: ['Privacy', 'Audit'],
+    scope: 'user',
+  }),
+  define({
+    key: 'audit.retentionMonths',
+    schema: z.number().int().min(1).max(120),
+    default: 12,
+    description: 'Months of audit log to keep.',
+    category: ['Privacy', 'Audit'],
+    scope: 'user',
   }),
 ] as const satisfies readonly SettingDefinition[];
 

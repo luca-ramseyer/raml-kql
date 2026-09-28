@@ -1,3 +1,5 @@
+import { ResultsView } from '../../features/results/ResultsView';
+import { RunView } from '../../features/results/RunView';
 import { executeCommand } from '../../platform/commands';
 import { showPanelTab, togglePanel, useLayout } from '../../platform/layout';
 import { Codicon } from '../common/Codicon';
@@ -67,7 +69,13 @@ export function Panel(): React.JSX.Element {
         </div>
       </div>
       <div className="panel-content" role="tabpanel" aria-label={tab.title}>
-        <p className="panel-empty">{tab.empty}</p>
+        {tab.id === 'results' ? (
+          <ResultsView />
+        ) : tab.id === 'run' ? (
+          <RunView />
+        ) : (
+          <p className="panel-empty">{tab.empty}</p>
+        )}
       </div>
     </section>
   );

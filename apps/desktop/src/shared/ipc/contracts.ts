@@ -8,6 +8,13 @@ import {
 } from '../config/config-snapshots';
 import { LayoutStateSchema } from '../layout/layout-state';
 import { MenuBarModelSchema, MenuRoleSchema } from '../menus/menu-model';
+import {
+  QueryRunRequestSchema,
+  RerunRequestSchema,
+  ResultPageRequestSchema,
+  ResultPageSchema,
+  RunSnapshotSchema,
+} from '../query/models';
 import { MergedSchemaSchema, SchemaRequestSchema } from '../schema/models';
 import { GroupSchema, GroupsSnapshotSchema } from '../workspaces/groups';
 import { InventorySchema, TenantUpdateSchema, WorkspaceUpdateSchema } from '../workspaces/models';
@@ -18,6 +25,16 @@ import type { RamlKqlEventsApi } from './events';
 // ---------------------------------------------------------------------------------------------
 // Schemas
 // ---------------------------------------------------------------------------------------------
+
+const RunIdSchema = z.object({ runId: z.string().min(1).max(100) }).strict();
+
+export const AuditVerificationSchema = z.object({
+  ok: z.boolean(),
+  entries: z.number().int().nonnegative(),
+  files: z.number().int().nonnegative(),
+  problem: z.object({ file: z.string(), line: z.number().int(), reason: z.string() }).optional(),
+});
+export type AuditVerification = z.infer<typeof AuditVerificationSchema>;
 
 export const AppInfoSchema = z.object({
   name: z.string(),
@@ -103,6 +120,24 @@ export const ipcContracts = {
       InventorySchema,
     ),
     updateTenant: defineChannel('inventory:updateTenant', TenantUpdateSchema, InventorySchema),
+  },
+  query: {
+    /** Start a fan-out run (spec 04). Results are fetched with `results.page`. */
+    run: defineChannel('query:run', QueryRunRequestSchema, RunSnapshotSchema),
+    cancel: defineChannel('query:cancel', RunIdSchema, RunSnapshotSchema.nullable()),
+    rerun: defineChannel('query:rerun', RerunRequestSchema, RunSnapshotSchema.nullable()),
+    get: defineChannel('query:get', RunIdSchema, RunSnapshotSchema.nullable()),
+    /** Free a run's results (tab closed). */
+    delete: defineChannel('query:delete', RunIdSchema, z.undefined()),
+    /** "Clear all results". */
+    deleteAll: defineChannel('query:deleteAll', z.undefined(), z.undefined()),
+  },
+  results: {
+    page: defineChannel('results:page', ResultPageRequestSchema, ResultPageSchema),
+  },
+  audit: {
+    /** "Audit: Verify Log Integrity". */
+    verify: defineChannel('audit:verify', z.undefined(), AuditVerificationSchema),
   },
   schema: {
     /** Merged schema (tables, columns, functions; never data) for a set of workspaces. */

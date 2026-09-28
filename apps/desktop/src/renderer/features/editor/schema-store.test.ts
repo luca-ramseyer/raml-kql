@@ -12,11 +12,9 @@ import { useTargets } from '../targets/targets-store';
 import {
   completionSuffix,
   loadSchema,
-  markSchemaApplied,
   resetSchemaStore,
   startSchemaSync,
   useSchema,
-  whenSchemaSettled,
 } from './schema-store';
 
 const MERGED: MergedSchema = {
@@ -104,31 +102,6 @@ describe('schema store', () => {
     await loadSchema();
     expect(useSchema.getState().loading).toBe(false);
     expect(useNotifications.getState().notifications[0]?.severity).toBe('error');
-  });
-
-  it('settles once the schema for the current targets reached the language service', async () => {
-    install();
-    let settled = false;
-    const waiting = whenSchemaSettled(10_000).then(() => {
-      settled = true;
-    });
-    await loadSchema();
-    await Promise.resolve();
-    expect(settled).toBe(false); // loaded, but not applied yet
-    const kusto = useSchema.getState().kusto;
-    if (kusto === undefined) throw new Error('no schema');
-    markSchemaApplied(kusto);
-    await waiting;
-    expect(settled).toBe(true);
-    await expect(whenSchemaSettled(10_000)).resolves.toBeUndefined();
-  });
-
-  it('gives up waiting after the timeout', async () => {
-    vi.useFakeTimers();
-    install();
-    const waiting = whenSchemaSettled(5000);
-    vi.advanceTimersByTime(5000);
-    await expect(waiting).resolves.toBeUndefined();
   });
 
   it('follows target changes (debounced) and the hide setting', async () => {

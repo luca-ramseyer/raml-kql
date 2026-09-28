@@ -41,6 +41,20 @@ export const DEFAULT_KEYBINDINGS: readonly DefaultKeybinding[] = [
 
   // Query editor (spec 05)
   { command: 'query.new', key: 'ctrl+n', mac: 'cmd+n' },
+  // Inside the editor, Monaco commands handle these (QueryEditor); these entries cover the
+  // toolbar and show the shortcut in the palette. Shift+Enter is primary, like the portal.
+  {
+    command: 'query.run',
+    key: 'ctrl+enter',
+    mac: 'cmd+enter',
+    when: "editorLangId == 'kusto' && !inputFocus",
+  },
+  { command: 'query.run', key: 'shift+enter', when: "editorLangId == 'kusto' && !inputFocus" },
+  {
+    command: 'query.cancel',
+    key: 'escape',
+    when: 'queryRunning && !inQuickOpen && (editorTextFocus || !inputFocus)',
+  },
   // Monaco handles these itself while it has focus; the entries show the shortcuts in the
   // palette and work from the query toolbar.
   {

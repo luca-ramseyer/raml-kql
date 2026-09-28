@@ -41,6 +41,11 @@ export class TokenCache {
     return request;
   }
 
+  /** Forget one token (e.g. the API rejected it with 401). */
+  invalidate(key: string): void {
+    this.tokens.delete(key);
+  }
+
   /** Drop every token for an account (sign-out must take effect immediately). */
   clearAccount(accountId: string): void {
     for (const key of [...this.tokens.keys()]) {

@@ -54,6 +54,8 @@ export interface TokenRequest {
   accountId: string;
   tenantId: string;
   resource: AzureResource;
+  /** Skip every cache (after the API rejected the token with 401). */
+  forceRefresh?: boolean;
 }
 
 /**
@@ -299,12 +301,14 @@ export class AuthService {
   async getToken(request: TokenRequest): Promise<AccessToken> {
     const record = this.record(request.accountId);
     const key = TokenCache.key(request.accountId, request.tenantId, request.resource);
+    if (request.forceRefresh === true) this.tokens.invalidate(key);
     try {
       const token = await this.tokens.getOrFetch(key, () =>
         record.provider.acquireTokenSilent(
           request.accountId,
           request.tenantId,
           scopeFor(this.options.cloud, request.resource),
+          { forceRefresh: request.forceRefresh === true },
         ),
       );
       this.setTenantState(record, request.tenantId, 'ok');
