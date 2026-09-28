@@ -8,6 +8,25 @@ like VS Code.
 > **Status:** early development (`0.x`). Not ready for use yet. See
 > [`docs/spec/00-roadmap.md`](docs/spec/00-roadmap.md) for progress.
 
+## Privacy
+
+- **No telemetry.** Raml KQL does not collect usage data, analytics, feature counters or
+  identifiers.
+- Your queries go from your machine straight to Microsoft, with your own identity. No Raml KQL
+  server is involved.
+- Results stay in memory, or in an encrypted session cache that is destroyed when the app
+  closes.
+- The only network traffic the app itself starts goes to the Microsoft identity and Azure
+  endpoints you query, to git hosts of sources you added, and to GitHub for the update check
+  (which you can turn off).
+- Extensions can reach the network only after you allow it.
+- Check it yourself: **Developer: Show Network Activity** lists every host contacted in this
+  session.
+- Crash reports are never sent automatically. After a crash, the app shows you a sanitized
+  report and you decide whether to file it on GitHub.
+
+More in [`SECURITY.md`](SECURITY.md).
+
 ## Development
 
 Requirements: Node.js 24 (see `.nvmrc`) and pnpm 11 (`corepack enable` picks the right version).

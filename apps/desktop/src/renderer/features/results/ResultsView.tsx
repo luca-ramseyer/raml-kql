@@ -36,6 +36,7 @@ export function ResultsView(): React.JSX.Element {
   const namer = useNamer();
   const workspaces = useInventory((s) => s.inventory.workspaces);
   const accounts = useAccounts((s) => s.snapshot.accounts);
+  const masking = useSetting('privacy.maskingRules');
   const shownAttribution = useSetting('results.attributionColumns');
   const zone = useSetting('time.displayZone');
   const [search, setSearch] = useState(ui.view.quickSearch);
@@ -43,8 +44,8 @@ export function ResultsView(): React.JSX.Element {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const display = useMemo(
-    () => buildDisplayNames(namer, workspaces, accounts),
-    [namer, workspaces, accounts],
+    () => buildDisplayNames(namer, workspaces, accounts, masking),
+    [namer, workspaces, accounts, masking],
   );
 
   // Debounced quick search (spec 06, "global quick-search box").

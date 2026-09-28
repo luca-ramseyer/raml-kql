@@ -168,7 +168,8 @@ describe('Targets view', () => {
         w.name === 'la-contoso-apps' ? { ...w, enabled: false } : w,
       ),
     });
-    expect(screen.getByText('2 of 2 selected')).toBeInTheDocument();
+    // The selection is pruned in an effect after the new inventory renders.
+    expect(await screen.findByText('2 of 2 selected')).toBeInTheDocument();
     expect(workspaceItems()).toHaveLength(2);
   });
 

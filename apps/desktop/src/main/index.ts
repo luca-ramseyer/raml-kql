@@ -4,7 +4,7 @@
  */
 import { watch } from 'node:fs';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
-import { homedir } from 'node:os';
+import { homedir, release } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -13,6 +13,7 @@ import {
   BrowserWindow,
   clipboard,
   ClipboardItem,
+  crashReporter,
   dialog,
   ipcMain,
   Menu,
@@ -58,6 +59,9 @@ import { watchDirectory } from './config/config-watcher';
 import { JsoncGroupsStore, MemoryGroupsStore } from './config/groups-config';
 import { JsoncListStore } from './config/jsonc-list-store';
 import { JsoncWorkspacesConfig, MemoryWorkspacesConfig } from './config/workspaces-config';
+import { CrashService } from './crash/crash-service';
+import { CrashStore } from './crash/crash-store';
+import { parseDsn, SentrySink } from './crash/sentry-sink';
 import { DemoDataSource } from './demo/demo-data-source';
 import {
   DEMO_EXTRA_TENANTS,
@@ -97,6 +101,11 @@ import {
 import { registerIpcRouter } from './ipc/router';
 import { KeybindingsService, NEW_KEYBINDINGS_FILE } from './keybindings/keybindings-service';
 import { portalQueryUrl } from './links/portal';
+import {
+  NetworkActivityRecorder,
+  recordNetwork,
+  setNetworkRecorder,
+} from './network/network-activity';
 import { createPacksOperations } from './packs/packs-operations';
 import { PacksService } from './packs/packs-service';
 import { withParameters } from './packs/parameters';
@@ -168,6 +177,62 @@ if (
   app.setPath('userData', userDataOverride);
 }
 
+// Crash reporting (spec 10): native dumps stay local (never uploaded); JavaScript errors are
+// sanitized into state/crashes/ and offered as a report on the next start.
+const crashDir = path.join(paths.stateDir, 'crashes');
+app.setPath('crashDumps', path.join(crashDir, 'dumps'));
+crashReporter.start({ uploadToServer: false, compress: true });
+let crashNames: () => string[] = () => [];
+const sentryDsn = parseDsn(__RAML_KQL_SENTRY_DSN__);
+const crashes = new CrashService({
+  store: new CrashStore(crashDir),
+  env: {
+    appVersion: app.getVersion(),
+    electronVersion: process.versions.electron,
+    os: `${process.platform} ${release()} ${process.arch}`,
+  },
+  sanitizeOptions: () => ({
+    homeDir: homedir(),
+    appDir: path.dirname(app.getAppPath()),
+    names: crashNames(),
+  }),
+  mode: () => effective('crashReporting.mode'),
+  sink:
+    sentryDsn === undefined
+      ? undefined
+      : new SentrySink(sentryDsn, (url, init) => net.fetch(url, init)),
+});
+process.on('uncaughtException', (error) => {
+  console.error('[main] uncaught exception', error.name);
+  void crashes.capture('main', error);
+});
+process.on('unhandledRejection', (reason) => {
+  void crashes.capture('main', reason);
+});
+app.on('render-process-gone', (_event, _contents, details) => {
+  if (details.reason !== 'clean-exit') {
+    void crashes.capture(
+      'renderer-gone',
+      `Renderer gone: ${details.reason} (exit code ${String(details.exitCode)})`,
+    );
+  }
+});
+app.on('child-process-gone', (_event, details) => {
+  if (details.reason !== 'clean-exit' && details.reason !== 'killed') {
+    void crashes.capture(
+      'child-gone',
+      `${details.type} process gone: ${details.reason} (exit code ${String(details.exitCode)})`,
+    );
+  }
+});
+app.on('will-quit', () => {
+  crashes.end();
+});
+
+// "Developer: Show Network Activity" (spec 10): hosts contacted this session.
+const networkActivity = new NetworkActivityRecorder();
+setNetworkRecorder(networkActivity);
+
 // Must run before `ready`.
 protocol.registerSchemesAsPrivileged([
   {
@@ -204,8 +269,19 @@ if (!app.requestSingleInstanceLock()) {
   void app.whenReady().then(async () => {
     denyAllPermissions(session.defaultSession);
     registerAppProtocol();
+    // Everything the app itself fetches (Azure, identity, release lookups) goes through here.
+    session.defaultSession.webRequest.onBeforeRequest(
+      { urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] },
+      (details, callback) => {
+        if (devServerOrigin === undefined || !details.url.startsWith(devServerOrigin)) {
+          recordNetwork(details.url, 'app');
+        }
+        callback({});
+      },
+    );
 
     await ensureConfigDir(paths);
+    await crashes.start();
     await Promise.all([settings.reload(), keybindings.reload(), userThemes.reload()]);
     settings.onDidChange((snapshot) => {
       emit('settings.changed', snapshot);
@@ -225,6 +301,20 @@ if (!app.requestSingleInstanceLock()) {
 
     const auth = createAuthService();
     const discovery = createDiscoveryService(auth);
+    // Names to scrub from crash reports: tenants, subscriptions, workspaces, accounts.
+    crashNames = () => {
+      const inventory = discovery.snapshot();
+      return [
+        ...inventory.tenants.flatMap((t) => [t.displayName, t.defaultDomain, t.alias]),
+        ...inventory.workspaces.flatMap((w) => [
+          w.name,
+          w.subscriptionName,
+          w.resourceGroup,
+          w.alias,
+        ]),
+        ...auth.snapshot().accounts.flatMap((a) => [a.username, a.label]),
+      ].filter((n): n is string => n !== undefined && n.length >= 3);
+    };
     const groups = new GroupsService(
       mode.demo ? new MemoryGroupsStore(DEMO_GROUPS) : new JsoncGroupsStore(paths.groupsFile),
       (snapshot) => {
@@ -293,6 +383,18 @@ if (!app.requestSingleInstanceLock()) {
           app.exit(0);
         },
         showAbout,
+        networkActivity: () => networkActivity.snapshot(),
+        crash: {
+          pending: () => crashes.pending(),
+          report: () => crashes.report(),
+          dismiss: () => crashes.dismiss(),
+          reportError: async (message, stack) => {
+            const error = new Error(message.replace(/^Error: /, ''));
+            error.stack = stack ?? message;
+            await crashes.capture('renderer', error);
+          },
+          openIssue: (report) => shell.openExternal(crashes.issueUrl(report)),
+        },
         accounts: auth,
         inventory: discovery,
         schema,
@@ -605,6 +707,9 @@ async function createExtensions(audit: AuditLog) {
     onChange: () => {
       emit('extensions.changed', {});
       void userThemes.reload();
+    },
+    onError: (extensionId, error) => {
+      void crashes.capture('extension', error, { extensionId });
     },
     postToWebview: (_extensionId, viewId, message) => {
       emit('extensions.webviewPost', { viewId, message: message as z.core.util.JSONType });

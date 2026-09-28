@@ -55,9 +55,17 @@ const clientId = /^[0-9a-f-]{36}$/i.test(buildEnv['RAML_KQL_CLIENT_ID'] ?? '')
   ? (buildEnv['RAML_KQL_CLIENT_ID'] ?? '')
   : '';
 
+/** Optional crash reporting endpoint (spec 10). Public builds ship without one. */
+const sentryDsn = /^https:\/\/[^@\s]+@[^/\s]+\/\d+$/.test(buildEnv['RAML_KQL_SENTRY_DSN'] ?? '')
+  ? (buildEnv['RAML_KQL_SENTRY_DSN'] ?? '')
+  : '';
+
 export default defineConfig({
   main: {
-    define: { __RAML_KQL_CLIENT_ID__: JSON.stringify(clientId) },
+    define: {
+      __RAML_KQL_CLIENT_ID__: JSON.stringify(clientId),
+      __RAML_KQL_SENTRY_DSN__: JSON.stringify(sentryDsn),
+    },
     build: {
       rollupOptions: { input: { index: resolve(__dirname, 'src/main/index.ts') } },
     },

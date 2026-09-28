@@ -97,10 +97,13 @@ export function setMediaMatch(query: string, value: boolean): void {
   );
 }
 
-/** The quick input's text box (the palette, quick open and pickers all use it). */
+/**
+ * The quick input's text box (the palette, quick open and pickers all use it). Waits up to 5 s:
+ * on CI with coverage, a command that opens the next picker can take over a second.
+ */
 export async function findQuickInputBox(): Promise<HTMLInputElement> {
   const { screen, within } = await import('@testing-library/react');
-  const dialog = await screen.findByRole('dialog', { name: 'Quick input' });
+  const dialog = await screen.findByRole('dialog', { name: 'Quick input' }, { timeout: 5000 });
   return within(dialog).getByRole<HTMLInputElement>('combobox');
 }
 

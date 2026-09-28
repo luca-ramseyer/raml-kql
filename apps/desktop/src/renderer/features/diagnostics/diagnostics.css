@@ -1,0 +1,66 @@
+.diagnostics {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 16px 24px;
+  overflow: auto;
+  background-color: var(--vscode-editor-background);
+  gap: 10px;
+}
+
+.diagnostics h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.diagnostics-note,
+.diagnostics-message {
+  margin: 0;
+  color: var(--vscode-descriptionForeground);
+  max-width: 80ch;
+}
+
+.diagnostics-message {
+  padding: 16px 24px;
+}
+
+.diagnostics-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.diagnostics-field.grow {
+  flex: 1;
+  min-height: 200px;
+}
+
+.diagnostics-report {
+  flex: 1;
+  resize: none;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 12px;
+}
+
+.diagnostics-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.diagnostics-table {
+  border-collapse: collapse;
+  max-width: 900px;
+}
+
+.diagnostics-table th,
+.diagnostics-table td {
+  padding: 4px 12px 4px 0;
+  border-bottom: 1px solid var(--vscode-editorGroup-border, transparent);
+  text-align: left;
+}
+
+.diagnostics-table .numeric {
+  text-align: right;
+}

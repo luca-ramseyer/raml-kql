@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { MaskingRulesSchema, maskingFunction } from '../privacy/masking';
 import type { ResultColumn } from '../query/models';
 
 import { valueText } from './values';
@@ -19,6 +20,8 @@ export const DisplayNamesSchema = z.object({
   ),
   /** By username (`_Account`). */
   accounts: z.record(z.string().max(300), z.string().max(300)),
+  /** `privacy.maskingRules`, applied to every other cell (spec 03). */
+  masking: MaskingRulesSchema.optional(),
 });
 export type DisplayNames = z.infer<typeof DisplayNamesSchema>;
 
@@ -28,6 +31,8 @@ export function displayNameMapper(
   names: DisplayNames | undefined,
 ): (row: unknown[]) => unknown[] {
   if (names === undefined) return (row) => row;
+  const mask = maskingFunction(names.masking ?? []);
+  const plain = columns.flatMap((c, i) => (c.attribution === true ? [] : [i]));
   const at = (name: string): number =>
     columns.findIndex((c) => c.attribution === true && c.name === name);
   const tenantName = at('_TenantName');
@@ -46,6 +51,9 @@ export function displayNameMapper(
       out[subscriptionName] = workspace?.subscription ?? 'Unlisted subscription';
     }
     if (account >= 0) out[account] = names.accounts[valueText(row[account])] ?? 'Account';
+    if (names.masking !== undefined && names.masking.length > 0) {
+      for (const index of plain) out[index] = mask(out[index]);
+    }
     return out;
   };
 }

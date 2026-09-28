@@ -12,7 +12,13 @@ describe('createRamlKqlApi', () => {
     const { api } = apiWith(() => Promise.resolve(undefined));
     expect(Object.keys(api)).toContain('app');
     expect(Object.keys(api)).toContain('events');
-    expect(Object.keys(api.app).sort()).toEqual(['getInfo', 'ping', 'relaunch', 'showAbout']);
+    expect(Object.keys(api.app).sort()).toEqual([
+      'getInfo',
+      'networkActivity',
+      'ping',
+      'relaunch',
+      'showAbout',
+    ]);
   });
 
   it('sends no argument for channels without a request payload', async () => {

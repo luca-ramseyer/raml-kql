@@ -5,8 +5,12 @@
 useDefault = true
 
 [allowlist]
-description = "Keyboard shortcuts in VS Code keybinding syntax, e.g. key: 'ctrl+numpad0'"
+description = "Known false positives: VS Code keybinding strings (e.g. key: 'ctrl+numpad0') and one fake test JWT"
 regexTarget = "secret"
 regexes = [
   '''^(?:(?:ctrl|shift|alt|cmd|meta|win|option|super)\+)+[a-z0-9_=\-\[\];',./\\`]+(?: (?:(?:ctrl|shift|alt|cmd|meta|win|option|super)\+)*[a-z0-9_=\-\[\];',./\\`]+)?$''',
+  # The fake JWT in commit 7a1797e's crash sanitizer test corpus (sanitize.test.ts): payload
+  # {"tid":"00000000-0000-0000-0000-000000000001"}, signature "signature-fake-that-is-long-enough".
+  # The test now builds its token at runtime; this exact string stays in history.
+  '''^eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9\.eyJ0aWQiOiIwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDEifQ\.c2lnbmF0dXJlLWZha2UtdGhhdC1pcy1sb25nLWVub3VnaA$''',
 ]

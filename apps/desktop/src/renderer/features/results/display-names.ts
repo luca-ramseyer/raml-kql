@@ -1,5 +1,6 @@
 import type { Account } from '../../../shared/auth/models';
 import type { DisplayNamer } from '../../../shared/privacy/aliasing';
+import type { MaskingRule } from '../../../shared/privacy/masking';
 import type { DisplayNames } from '../../../shared/results/display-names';
 import type { Workspace } from '../../../shared/workspaces/models';
 
@@ -11,6 +12,7 @@ export function buildDisplayNames(
   namer: DisplayNamer,
   workspaces: readonly Workspace[],
   accounts: readonly Pick<Account, 'id' | 'username' | 'label'>[],
+  masking: readonly MaskingRule[] = [],
 ): DisplayNames | undefined {
   if (!namer.active) return undefined;
   const tenants: Record<string, string> = {};
@@ -28,5 +30,6 @@ export function buildDisplayNames(
     accounts: Object.fromEntries(
       accounts.map((a) => [a.username, namer.account(a.id, a.label ?? a.username)]),
     ),
+    ...(masking.length === 0 ? {} : { masking: [...masking] }),
   };
 }

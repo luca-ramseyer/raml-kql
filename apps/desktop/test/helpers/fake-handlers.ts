@@ -125,6 +125,14 @@ export function fakeHandlerDependencies(
       list: vi.fn(() => Promise.resolve([])),
       clear: vi.fn(() => Promise.resolve()),
     },
+    networkActivity: () => ({ since: '2026-01-01T00:00:00.000Z', hosts: [] }),
+    crash: {
+      pending: vi.fn(() => Promise.resolve({ unclean: false, records: [] })),
+      report: vi.fn(() => Promise.resolve({ title: 'Crash', body: 'body' })),
+      dismiss: vi.fn(() => Promise.resolve()),
+      reportError: vi.fn(() => Promise.resolve()),
+      openIssue: vi.fn(() => Promise.resolve()),
+    },
     extensions: {
       snapshot: vi.fn(() => Promise.resolve({ extensions: [], grants: [], problems: [] })),
       installFromFile: vi.fn(() => Promise.resolve({ type: 'cancelled' as const })),

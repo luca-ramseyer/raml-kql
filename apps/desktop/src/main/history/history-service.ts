@@ -19,6 +19,7 @@ export interface HistoryServiceOptions {
 export class HistoryService {
   private readonly pending = new Map<string, QueryRunRequest>();
   private cache: HistoryEntry[] | undefined;
+  private loading: Promise<HistoryEntry[]> | undefined;
   private queue: Promise<unknown> = Promise.resolve();
 
   constructor(private readonly options: HistoryServiceOptions) {}
@@ -83,8 +84,18 @@ export class HistoryService {
     return run;
   }
 
-  private async load(): Promise<HistoryEntry[]> {
-    if (this.cache !== undefined) return this.cache;
+  /** One shared load: concurrent callers (a list and an append) must share one cache array. */
+  private load(): Promise<HistoryEntry[]> {
+    if (this.cache !== undefined) return Promise.resolve(this.cache);
+    this.loading ??= this.read().then((entries) => {
+      this.cache ??= entries;
+      this.loading = undefined;
+      return this.cache;
+    });
+    return this.loading;
+  }
+
+  private async read(): Promise<HistoryEntry[]> {
     let text = '';
     try {
       text = await readFile(this.options.file, 'utf8');
@@ -101,7 +112,6 @@ export class HistoryService {
         // A damaged line (e.g. a crash mid-write) is skipped.
       }
     }
-    this.cache = entries;
     return entries;
   }
 

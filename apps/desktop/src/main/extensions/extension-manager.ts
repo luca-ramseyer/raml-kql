@@ -29,6 +29,7 @@ import {
 } from '../../shared/extensions/models';
 import { ENTITY_LABELS } from '../../shared/results/entities';
 import type { ListStore } from '../config/jsonc-list-store';
+import { recordNetwork } from '../network/network-activity';
 
 import { ExtensionConnection, type ConnectionPort } from './extension-connection';
 import {
@@ -93,6 +94,8 @@ export interface ExtensionManagerOptions {
   env: () => { appVersion: string; theme: string; presentationMode: boolean };
   audit: (event: ExtensionAuditEvent) => void;
   onChange: () => void;
+  /** An extension failed (crash reporting attributes it, spec 10). */
+  onError?: (extensionId: string, error: unknown) => void;
   /** A worker posted to its webview (sidebar view). */
   postToWebview?: (extensionId: string, webviewId: string, message: unknown) => void;
   now?: () => Date;
@@ -592,6 +595,7 @@ export class ExtensionManager {
         this.options.host.stop(ext.entry.id);
         ext.state = 'failed';
         ext.error = error instanceof Error ? error.message : String(error);
+        this.options.onError?.(ext.entry.id, error);
         void this.options
           .ui({
             kind: 'message',
@@ -1019,6 +1023,7 @@ export class ExtensionManager {
     if (url.username !== '' || url.password !== '')
       throw denied('URLs with credentials are not allowed.');
     await this.require(ext, 'network', `connect to ${url.host}`, url.hostname);
+    recordNetwork(url.toString(), `extension:${ext.entry.id}`);
     const response = await this.options.fetch(url.toString(), {
       method: init.method ?? 'GET',
       ...(init.headers === undefined ? {} : { headers: init.headers }),

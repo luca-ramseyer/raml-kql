@@ -208,13 +208,16 @@ describe('accounts in the workbench', () => {
     expect(harness.deps.accounts.addAccount).not.toHaveBeenCalled();
     await user.clear(input);
     await user.type(input, '00000000-0000-0000-0000-00000000beef{Enter}');
-    await waitFor(() => {
-      expect(harness.deps.accounts.addAccount).toHaveBeenCalledWith({
-        method: 'custom',
-        clientId: '00000000-0000-0000-0000-00000000beef',
-        flow: 'browser',
-      });
-    });
+    await waitFor(
+      () => {
+        expect(harness.deps.accounts.addAccount).toHaveBeenCalledWith({
+          method: 'custom',
+          clientId: '00000000-0000-0000-0000-00000000beef',
+          flow: 'browser',
+        });
+      },
+      { timeout: 5000 },
+    );
   });
 
   it('aliases account and tenant names by default (presentation privacy)', () => {

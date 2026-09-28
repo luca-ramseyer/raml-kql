@@ -591,3 +591,57 @@ Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Con
 - Listing extension settings in the Settings editor.
 
 The examples are built with esbuild (now a root dev dependency) by `pnpm build:examples`. The country map bundles Natural Earth 110m (public domain, via world-atlas, ISC) with topojson-client (ISC) and i18n-iso-countries codes (MIT).
+
+## D-051 — Masking rules ride on the display-name mapping (2026-09-27)
+
+**Decision:**
+
+- `privacy.maskingRules` (`{ match, isRegex?, replace, caseSensitive? }`) travels in the `DisplayNames` mapping the workbench already sends to main while aliasing is on.
+  - Main applies it to every non-attribution cell, including string leaves and keys of `dynamic` values.
+  - It therefore works everywhere aliasing does, with no extra code path: the grid, search and filters (searching for the real text finds nothing), charts, details, renderer extensions and aliased exports.
+  - With real names shown, no mapping is sent and nothing is masked.
+- Replacement text is literal: `$&` stays `$&`.
+- Invalid regexes, and patterns that match the empty string, are skipped instead of breaking cells.
+- **"Privacy: Generate Masking Rules from Tenant Domains"** turns each tenant's default domain into a rule, `fabrikam.com → customer02.example` (`onmicrosoft.com` is skipped), plus display names of at least 4 characters. The confirmation lists only the aliases, since the user may be sharing their screen.
+- Values sent to an enricher are what the grid shows. With a masking rule, that is the masked value.
+
+## D-052 — Crash reporting (2026-09-27)
+
+**Decision:**
+
+- **Capture:**
+  - main (`uncaughtException`, `unhandledRejection`);
+  - workbench errors (sent to main; at most 10 per session; `AppError`s, which the user already sees, and ResizeObserver noise are skipped);
+  - extensions (activation failures, attributed to the extension);
+  - `render-process-gone` and `child-process-gone`.
+
+  Native dumps come from `crashReporter` with `uploadToServer: false`, into `state/crashes/dumps/`.
+
+- **Sanitize before writing:** each record in `state/crashes/*.json` (0600, newest 50) is already sanitized. The sanitizer (`shared/crash/sanitize.ts`) replaces:
+  - JWTs and bearer/basic tokens, secret-looking URL parameters;
+  - e-mails and UPNs, GUIDs, ARM resource paths, IPv4 and IPv6 (times like `10:20:30` are kept);
+  - long hex and base64 blobs;
+  - home directories (→ `~`) and other users' profile paths;
+  - the app path (→ `<app>`);
+  - KQL (`Table | operator…`, `let x = …`) and long quoted text;
+  - known tenant, subscription, workspace, resource group and account names from the inventory.
+
+  A corpus test proves every sensitive token is removed.
+
+- **Next start:** a session marker (`state/crashes/.session`, removed on normal quit) detects an unclean exit. With `crashReporting.mode: "ask"`, the next start shows the notification from spec 10: "Preview & Report on GitHub", "Copy Report", "Don't Ask Again" (which sets `off`).
+  - It appears after an unclean exit or a crash, or when three or more errors have accumulated; a single survived error doesn't nag.
+  - The preview is an editable editor tab.
+  - "Open GitHub Issue" sanitizes the (possibly edited) text again in main, then opens a prefilled `issues/new` URL (label `crash`, shortened to stay under about 7,500 characters). The user submits it.
+- **`auto` mode:** a `CrashSink` interface with a Sentry adapter. It posts the sanitized record to Sentry's envelope API directly **instead of `@sentry/electron`** (a deviation from spec 10), so there are no breadcrumbs, user, device or server data to strip. The SDK is also large for a code path public builds never use. The DSN comes from `RAML_KQL_SENTRY_DSN` at build time; public builds have none.
+
+## D-053 — Network Activity (2026-09-27)
+
+**Decision:** "Developer: Show Network Activity" lists, for the current session only, every host contacted and how often. Only the host is kept: never a path or query string, and nothing is written to disk. Three sources feed it:
+
+- a default-session `webRequest` listener (everything the app itself fetches through Chromium's network stack: Azure, identity, release lookups), tagged `app`;
+- a wrapper around isomorphic-git's HTTP client, tagged `git`;
+- extensions' `net.fetch`, tagged `extension:<id>`.
+
+The extension host's own session blocks all requests, so it never appears. README and the new `SECURITY.md` carry the privacy stance from spec 10 and point to this view.
+
+**Also fixed:** `HistoryService` could lose an entry when a list and an append loaded the file at the same time (two cache arrays); loading is now shared. It showed up as a flaky test under load.

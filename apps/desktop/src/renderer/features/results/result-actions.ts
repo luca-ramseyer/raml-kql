@@ -51,6 +51,7 @@ export function currentDisplayNames(): DisplayNames | undefined {
     currentNamer(),
     useInventory.getState().inventory.workspaces,
     useAccounts.getState().snapshot.accounts,
+    getSetting('privacy.maskingRules'),
   );
 }
 
@@ -158,6 +159,7 @@ async function exportNames(
       buildNamer(true),
       useInventory.getState().inventory.workspaces,
       useAccounts.getState().snapshot.accounts,
+      getSetting('privacy.maskingRules'),
     );
   switch (getSetting('privacy.aliasing.applyToExports')) {
     case 'always':
