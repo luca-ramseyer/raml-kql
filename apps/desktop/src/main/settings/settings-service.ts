@@ -5,6 +5,7 @@ import { AppError } from '../../shared/errors';
 import { describeIssues } from '../../shared/ipc/channel';
 import type { SettingsUpdateRequest } from '../../shared/ipc/contracts';
 import { getSettingDefinition } from '../../shared/settings/registry';
+import { loadExtendedLayers } from '../config/extends';
 import { parseJsonc, propertyLine, readTextFile, writeTextFileAtomic } from '../config/jsonc';
 import { setTopLevelProperty } from '../config/jsonc-edit';
 
@@ -66,6 +67,8 @@ export const NEW_SETTINGS_FILE = `{
 /** Owns settings.jsonc: loads, validates, edits (preserving comments) and notifies. */
 export class SettingsService {
   private snapshot: SettingsSnapshot = { values: {}, problems: [] };
+  /** Valid values from the user's own file (without `extends` layers). */
+  private userValues: SettingsSnapshot['values'] = {};
   private readonly listeners = new Set<(snapshot: SettingsSnapshot) => void>();
   /** Serialises writes so two quick edits can't overwrite each other. */
   private writeQueue: Promise<unknown> = Promise.resolve();
@@ -81,11 +84,18 @@ export class SettingsService {
     return () => this.listeners.delete(listener);
   }
 
-  /** Re-read the file. Notifies listeners only when something changed. */
+  /** Re-read the file (and any `extends` files). Notifies listeners only when something changed. */
   async reload(): Promise<SettingsSnapshot> {
     let next: SettingsSnapshot;
     try {
-      next = evaluateSettingsText(await readTextFile(this.filePath), this.snapshot.values);
+      const text = await readTextFile(this.filePath);
+      const user = evaluateSettingsText(text, this.userValues);
+      this.userValues = user.values;
+      const base = await this.extendedValues(text);
+      next = {
+        values: { ...base.values, ...user.values },
+        problems: [...user.problems, ...base.problems],
+      };
     } catch (error) {
       next = {
         values: this.snapshot.values,
@@ -103,6 +113,22 @@ export class SettingsService {
       for (const listener of this.listeners) listener(next);
     }
     return this.snapshot;
+  }
+
+  /** Settings from files listed in `"extends"`, earliest first (the user's file wins). */
+  private async extendedValues(text: string | undefined): Promise<SettingsSnapshot> {
+    if (text === undefined) return { values: {}, problems: [] };
+    const { tree, problems } = parseJsonc(text, 'settings.jsonc');
+    if (problems.length > 0 || tree?.type !== 'object') return { values: {}, problems: [] };
+    const layers = await loadExtendedLayers(this.filePath, getNodeValue(tree));
+    let values: SettingsSnapshot['values'] = {};
+    const layerProblems = [...layers.problems];
+    for (const layer of layers.layers) {
+      const evaluated = evaluateSettingsText(JSON.stringify(layer.value), {}, layer.file);
+      values = { ...values, ...evaluated.values };
+      layerProblems.push(...evaluated.problems.map((p) => ({ ...p, line: 0 })));
+    }
+    return { values, problems: layerProblems };
   }
 
   update(request: SettingsUpdateRequest): Promise<SettingsSnapshot> {

@@ -5,8 +5,9 @@ import { executeCommand } from '../../platform/commands';
 import { updateSetting, useSetting } from '../../platform/settings';
 import { getBridge } from '../../services/ipc';
 import { Codicon } from '../../workbench/common/Codicon';
+import { useNamer } from '../privacy/privacy';
 
-import { accountName, reauthenticate, tenantName, useAccounts } from './accounts-store';
+import { accountName, reauthenticate, useAccounts } from './accounts-store';
 import './AccountsView.css';
 
 const STATE_ICON: Record<TenantInfo['state'], { icon: string; label: string }> = {
@@ -38,20 +39,23 @@ function TenantRow({
 }): React.JSX.Element {
   const state = STATE_ICON[tenant.state];
   const signingIn = useAccounts((s) => s.signingIn);
+  const namer = useNamer();
   return (
     <div
       role="treeitem"
       aria-level={2}
       aria-selected={false}
       className={`accounts-row tenant-row state-${tenant.state}`}
-      title={[tenant.tenantId, tenant.detail].filter(Boolean).join('\n')}
+      title={
+        namer.active ? tenant.detail : [tenant.tenantId, tenant.detail].filter(Boolean).join('\n')
+      }
     >
       <Codicon
         name={tenant.state === 'unknown' && account.refreshing ? 'loading' : state.icon}
         className={`tenant-state${tenant.state === 'unknown' && account.refreshing ? ' codicon-modifier-spin' : ''}`}
         title={state.label}
       />
-      <span className="accounts-label">{tenantName(tenant)}</span>
+      <span className="accounts-label">{namer.tenant(tenant.tenantId, tenant)}</span>
       <span className="accounts-description">{RELATION[tenant.relation]}</span>
       {tenant.state === 'needsReauth' ? (
         <button
@@ -72,6 +76,8 @@ function AccountRow({ account }: { account: Account }): React.JSX.Element {
   const showNoAccess = useSetting('accounts.showTenantsWithoutAccess');
   const tenants = account.tenants.filter((t) => showNoAccess || t.state !== 'noAccess');
   const hidden = account.tenants.length - tenants.length;
+  const namer = useNamer();
+  const name = namer.account(account.id, accountName(account));
   return (
     <div role="none">
       <div
@@ -79,7 +85,7 @@ function AccountRow({ account }: { account: Account }): React.JSX.Element {
         aria-level={1}
         aria-expanded={expanded}
         aria-selected={false}
-        aria-label={accountName(account)}
+        aria-label={name}
         tabIndex={0}
         className="accounts-row account-row"
         onClick={() => {
@@ -93,9 +99,9 @@ function AccountRow({ account }: { account: Account }): React.JSX.Element {
       >
         <Codicon name={expanded ? 'chevron-down' : 'chevron-right'} className="twistie" />
         <Codicon name="account" />
-        <span className="accounts-label">{accountName(account)}</span>
+        <span className="accounts-label">{name}</span>
         <span className="accounts-description">
-          {account.label === undefined
+          {account.label === undefined || namer.active
             ? PROVIDER[account.provider]
             : `${account.username} · ${PROVIDER[account.provider]}`}
         </span>
@@ -110,7 +116,7 @@ function AccountRow({ account }: { account: Account }): React.JSX.Element {
             type="button"
             className="action-item"
             title="Refresh"
-            aria-label={`Refresh ${accountName(account)}`}
+            aria-label={`Refresh ${name}`}
             onClick={() => void executeCommand('accounts.refresh', account.id)}
           >
             <Codicon name="refresh" />
@@ -119,7 +125,7 @@ function AccountRow({ account }: { account: Account }): React.JSX.Element {
             type="button"
             className="action-item"
             title="Set Label"
-            aria-label={`Set label for ${accountName(account)}`}
+            aria-label={`Set label for ${name}`}
             onClick={() => void executeCommand('accounts.rename', account.id)}
           >
             <Codicon name="edit" />
@@ -128,7 +134,7 @@ function AccountRow({ account }: { account: Account }): React.JSX.Element {
             type="button"
             className="action-item"
             title="Sign Out"
-            aria-label={`Sign out ${accountName(account)}`}
+            aria-label={`Sign out ${name}`}
             onClick={() => void executeCommand('accounts.signOut', account.id)}
           >
             <Codicon name="sign-out" />

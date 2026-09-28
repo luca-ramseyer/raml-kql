@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import type { Page } from '@playwright/test';
 
-import { expect, MOD, test } from './fixtures';
+import { expect, MOD, quickInput, test } from './fixtures';
 
 /** Phase 1 acceptance (docs/spec/00-roadmap.md). */
 
@@ -18,12 +18,12 @@ test('command palette runs "Toggle Primary Side Bar"', async ({ window }) => {
   await expect(sidebar).toBeVisible();
 
   await window.keyboard.press(`${MOD}+Shift+P`);
-  const input = window.getByRole('combobox');
+  const input = quickInput(window);
   await expect(input).toHaveValue('>');
   await input.pressSequentially('toggle primary side bar');
-  await expect(window.getByRole('option').first()).toContainText(
-    'View: Toggle Primary Side Bar Visibility',
-  );
+  await expect(
+    window.getByRole('dialog', { name: 'Quick input' }).getByRole('option').first(),
+  ).toContainText('View: Toggle Primary Side Bar Visibility');
   await window.keyboard.press('Enter');
 
   await expect(input).toBeHidden();
@@ -32,9 +32,9 @@ test('command palette runs "Toggle Primary Side Bar"', async ({ window }) => {
 
 test('F1 opens the palette and Escape closes it', async ({ window }) => {
   await window.keyboard.press('F1');
-  await expect(window.getByRole('combobox')).toBeVisible();
+  await expect(quickInput(window)).toBeVisible();
   await window.keyboard.press('Escape');
-  await expect(window.getByRole('combobox')).toBeHidden();
+  await expect(quickInput(window)).toBeHidden();
 });
 
 test('changes the theme via the Settings UI and writes settings.jsonc', async ({
@@ -137,5 +137,5 @@ test('application menu: native on macOS, custom menu bar elsewhere', async ({
   const menubar = window.getByRole('menubar', { name: 'Application menu' });
   await menubar.getByRole('menuitem', { name: 'View' }).click();
   await window.getByRole('menuitem', { name: /Command Palette/ }).click();
-  await expect(window.getByRole('combobox')).toHaveValue('>');
+  await expect(quickInput(window)).toHaveValue('>');
 });

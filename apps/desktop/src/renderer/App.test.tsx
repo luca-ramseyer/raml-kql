@@ -3,7 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  findQuickInputBox,
   installWorkbenchHarness,
+  queryQuickInputBox,
   resetWorkbenchState,
   setMediaMatch,
 } from '../../test/helpers/workbench-harness';
@@ -36,7 +38,7 @@ describe('Workbench', () => {
     // Welcome page opens on startup by default.
     expect(screen.getByRole('tab', { name: /Welcome/ })).toHaveAttribute('aria-selected', 'true');
     // Demo mode indicator in the status bar.
-    expect(screen.getByRole('button', { name: /Demo mode/ })).toHaveTextContent('Demo Mode');
+    expect(screen.getByRole('button', { name: 'Demo Mode' })).toHaveTextContent('Demo Mode');
   });
 
   it('toggles the sidebar and panel with Cmd+B and Cmd+J', async () => {
@@ -53,14 +55,14 @@ describe('Workbench', () => {
     const user = userEvent.setup();
     await renderWorkbench();
     fireEvent.keyDown(window, { key: 'F1', code: 'F1' });
-    const input = await screen.findByRole('combobox');
+    const input = await findQuickInputBox();
     expect(input).toHaveValue('>');
     await user.type(input, 'toggle primary side');
     const options = screen.getAllByRole('option');
     expect(options[0]).toHaveTextContent('View: Toggle Primary Side Bar Visibility');
     expect(within(options[0]!).getByLabelText('⌘B')).toBeInTheDocument();
     await user.keyboard('{Enter}');
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(await queryQuickInputBox()).not.toBeInTheDocument();
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
   });
 
@@ -68,13 +70,13 @@ describe('Workbench', () => {
     const user = userEvent.setup();
     await renderWorkbench();
     fireEvent.keyDown(window, { key: 'p', code: 'KeyP', metaKey: true });
-    const input = await screen.findByRole('combobox');
+    const input = await findQuickInputBox();
     expect(input).toHaveValue('');
     expect(screen.getByRole('option', { name: /Welcome/ })).toBeInTheDocument();
     await user.type(input, '?');
     expect(screen.getByRole('option', { name: /Show and Run Commands/ })).toBeInTheDocument();
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(await queryQuickInputBox()).not.toBeInTheDocument();
   });
 
   it('follows the OS appearance and applies theme colours as CSS variables', async () => {

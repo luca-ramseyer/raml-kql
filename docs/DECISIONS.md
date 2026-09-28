@@ -153,3 +153,36 @@ Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Con
 **Context:** SOC analysts often sit behind corporate proxies. Node's `fetch` ignores OS proxy settings; Electron's `net.fetch` uses Chromium's network stack, which honours them.
 
 **Decision:** ARM calls (and future Azure calls) go through `net.fetch`. MSAL still uses its own Node HTTP client for token requests, so sign-in doesn't follow the OS proxy yet. Phase 5 (AzureHttp) adds a custom MSAL network module on top of `net.fetch`; tracked in the roadmap.
+
+## D-024 — Resource Graph and Sentinel API versions (2026-09-25)
+
+**Context:** spec 03 named Resource Graph `2022-10-01` and asked to verify it.
+
+**Decision:** the current REST reference lists **`2024-04-01`** for Resource Graph `resources` (same request shape; paging via `options.$skipToken`, `$top` ≤ 1000) and **`2025-09-01`** for Sentinel `onboardingStates`. Both are used, and spec 03 is updated. The fake Azure server rejects other versions, so a regression shows up in tests.
+
+## D-025 — Discovery behaviour details (2026-09-25)
+
+**Decision:**
+
+- Discovery queries each (account, tenant) that is signed in (`ok`) with relation home or guest. Lighthouse customers come through the home tenant's token. Access paths are `home` (workspace in the token's tenant), `lighthouse` (home token, other tenant), `guest` or `azureCli`. Duplicates are merged by the lowercase resource ID, keeping every path in discovery order.
+- A workspace is marked `missing` only after a discovery with no errors, so one failing tenant can't make its workspaces look deleted.
+- New workspaces get their enabled state from `workspaces.newWorkspaceDefault` once, and it is written to workspaces.jsonc. Changing the default later doesn't flip workspaces the user has already seen.
+- Every tenant an account knows gets a stable alias number as soon as the accounts service reports it (`syncTenants`), before discovery finishes. Main-process listeners run before the renderer is notified, so no name is ever shown without an alias.
+- The Sentinel fallback (`onboardingStates`) runs only for workspaces the solution query didn't flag, 8 at a time.
+- Discovery re-runs (debounced) whenever the set of signed-in (account, tenant) pairs changes.
+- Demo mode keeps workspaces.jsonc, groups.jsonc and the inventory in memory.
+- Config `extends` is implemented for settings.jsonc, workspaces.jsonc and groups.jsonc (local paths only; remote URLs are refused). Extended files outside the config folder aren't watched; edits to them apply on the next change to the user's file or on restart.
+
+## D-026 — Aliasing (presentation privacy) details (2026-09-25)
+
+**Decision:**
+
+- Aliasing is a render-layer `DisplayNamer` built from the inventory, accounts and settings. Tenants use the user's alias or `privacy.aliasing.autoAliasFormat` with their stable number. Workspaces and subscriptions without a user alias become `<tenant alias> · Workspace NN` / `Subscription NN`, numbered by resource ID within the tenant. Accounts become `Account N`, because labels and usernames often contain customer names.
+- A tenant the inventory doesn't know yet is shown as "Unlisted tenant", never its real name.
+- Search in Targets and the Workspaces page matches only what is displayed, so typing a customer's real name while aliased reveals nothing.
+- Revealing real names asks for confirmation (a quick pick, keyboard-first) when `privacy.aliasing.confirmReveal` is on. The status bar item turns into a warning-coloured "Real names" while names are revealed.
+- `privacy.aliasing.scope` is edited in settings.jsonc (it is a list).
+
+## D-027 — Targets selection until query tabs exist (2026-09-25)
+
+**Decision:** until query tabs arrive (Phase 4/7), the Targets selection is one session-wide selection. The first inventory selects every enabled workspace; disabled or missing workspaces drop out of the selection automatically. Choosing a group filters the tree to that group and selects exactly its (enabled) workspaces. "Save Selection as Group…" creates a static group. The selection becomes per-tab state in Phase 7.

@@ -53,15 +53,17 @@ Version targets:
 
 ## Phase 3 — Discovery and workspace management
 
-- [ ] Discovery via Azure Resource Graph per account (workspaces, subscriptions, tenants, Sentinel flag)
-- [ ] Access-path dedupe when multiple accounts reach the same workspace
-- [ ] Settings → Workspaces page: tree Account/Tenant/Subscription/Workspace, enable/disable, preferred access path, rename alias, refresh
-- [ ] Tenant groups (static and dynamic), editable in the UI and config
-- [ ] Config `extends` for settings.jsonc, groups.jsonc and workspaces.jsonc (spec 09, moved here from Phase 1; see D-018)
-- [ ] Aliasing and presentation privacy (master switch + quick toggle)
-- [ ] "Targets" sidebar view in the KQL view showing only enabled workspaces, with checkboxes, search and groups
+- [x] Discovery via Azure Resource Graph per account (workspaces, subscriptions, tenants, Sentinel flag)
+- [x] Access-path dedupe when multiple accounts reach the same workspace
+- [x] Settings → Workspaces page: tree Account/Tenant/Subscription/Workspace, enable/disable, preferred access path, rename alias, refresh
+- [x] Tenant groups (static and dynamic), editable in the UI and config
+- [x] Config `extends` for settings.jsonc, groups.jsonc and workspaces.jsonc (spec 09, moved here from Phase 1; see D-018)
+- [x] Aliasing and presentation privacy (master switch + quick toggle)
+- [x] "Targets" sidebar view in the KQL view showing only enabled workspaces, with checkboxes, search and groups
 
 **Acceptance:** In demo mode, disabled workspaces disappear from Targets. Toggling aliasing updates every visible name instantly. Groups select correctly.
+
+> Status: e2e (`apps/desktop/e2e/workspaces.spec.ts`) covers all three, plus rediscovery after signing in to a tenant. Discovery, dedupe, groups, aliasing and `extends` are unit-tested; Resource Graph and `/tenants` are integration-tested against the fake Azure server. The Targets selection is session-wide until query tabs exist (D-027). The live discovery test is in `docs/HUMAN-TODO.md`.
 
 ## Phase 4 — Editor and IntelliSense
 

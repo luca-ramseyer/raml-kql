@@ -186,6 +186,67 @@ export const settingDefinitions = [
     category: ['Accounts'],
     scope: 'user',
   }),
+  define({
+    key: 'workspaces.newWorkspaceDefault',
+    schema: z.enum(['enabled', 'disabled']),
+    default: 'enabled',
+    description: 'Whether newly discovered workspaces are enabled (shown in Targets) or disabled.',
+    category: ['Workspaces'],
+    scope: 'user',
+  }),
+  define({
+    key: 'targets.groupBySubscription',
+    schema: z.boolean(),
+    default: false,
+    description: 'Show subscriptions as a level in the Targets tree instead of as secondary text.',
+    category: ['Workspaces'],
+    scope: 'user',
+  }),
+  define({
+    key: 'privacy.aliasing.enabled',
+    schema: z.boolean(),
+    default: true,
+    description:
+      'Master switch for aliasing (presentation privacy). When off, real names are always shown and the quick toggle is hidden.',
+    category: ['Privacy'],
+    scope: 'user',
+    commonlyUsed: true,
+  }),
+  define({
+    key: 'privacy.aliasing.activeOnStartup',
+    schema: z.boolean(),
+    default: true,
+    description:
+      'Start with customer names aliased, so opening the app on a call is safe by default.',
+    category: ['Privacy'],
+    scope: 'user',
+  }),
+  define({
+    key: 'privacy.aliasing.confirmReveal',
+    schema: z.boolean(),
+    default: true,
+    description: 'Ask for confirmation before switching from aliases to real names.',
+    category: ['Privacy'],
+    scope: 'user',
+  }),
+  define({
+    key: 'privacy.aliasing.autoAliasFormat',
+    schema: z.string().min(1).max(100),
+    default: 'Customer {nn}',
+    description:
+      'Alias for tenants without one you set. `{nn}` is a stable two-digit number (`{n}`, `{nnn}` also work).',
+    category: ['Privacy'],
+    scope: 'user',
+  }),
+  define({
+    key: 'privacy.aliasing.scope',
+    schema: z.array(z.enum(['tenant', 'subscription', 'workspace', 'account'])).max(4),
+    default: ['tenant', 'subscription', 'workspace', 'account'],
+    description:
+      'Which names are aliased: any of `tenant`, `subscription`, `workspace`, `account`.',
+    category: ['Privacy'],
+    scope: 'user',
+  }),
 ] as const satisfies readonly SettingDefinition[];
 
 export type SettingKey = (typeof settingDefinitions)[number]['key'];

@@ -1,5 +1,6 @@
 import { SettingsEditor } from '../../features/settings/SettingsEditor';
 import { WelcomePage } from '../../features/welcome/WelcomePage';
+import { WorkspacesEditor } from '../../features/workspaces/WorkspacesEditor';
 import { executeCommand } from '../../platform/commands';
 import { activateEditor, closeEditor, useEditors, type EditorInput } from '../../platform/editors';
 import { useKeybindingLabel } from '../../platform/keybindings/keybinding-service';
@@ -94,6 +95,7 @@ export function EditorArea(): React.JSX.Element {
           <div className="editor-content" role="tabpanel" aria-label={active?.title}>
             {active?.kind === 'welcome' ? <WelcomePage /> : null}
             {active?.kind === 'settings' ? <SettingsEditor /> : null}
+            {active?.kind === 'workspaces' ? <WorkspacesEditor /> : null}
           </div>
         </>
       )}

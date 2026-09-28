@@ -4,6 +4,8 @@ import { createIpcHandlers, type HandlerDependencies } from '../../src/main/ipc/
 import type { AppInfo, IpcHandlers } from '../../src/shared/ipc/contracts';
 import { DEFAULT_LAYOUT_STATE } from '../../src/shared/layout/layout-state';
 
+export const EMPTY_INVENTORY = { workspaces: [], tenants: [], refreshing: false, problems: [] };
+
 export const TEST_APP_INFO: AppInfo = {
   name: 'Raml KQL',
   version: '0.0.0',
@@ -59,6 +61,17 @@ export function fakeHandlerDependencies(
           persistence: 'encrypted' as const,
         }),
       ),
+    },
+    inventory: {
+      snapshot: () => EMPTY_INVENTORY,
+      refresh: vi.fn(() => Promise.resolve(EMPTY_INVENTORY)),
+      updateWorkspaces: vi.fn(() => Promise.resolve(EMPTY_INVENTORY)),
+      updateTenant: vi.fn(() => Promise.resolve(EMPTY_INVENTORY)),
+    },
+    groups: {
+      snapshot: () => ({ groups: [], problems: [] }),
+      save: vi.fn(() => Promise.resolve({ groups: [], problems: [] })),
+      delete: vi.fn(() => Promise.resolve({ groups: [], problems: [] })),
     },
     settings: {
       current: { values: {}, problems: [] },
