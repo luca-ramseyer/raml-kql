@@ -97,4 +97,11 @@ describe('sanitize', () => {
       ),
     ).toBe('user <email> from <ip> tenant <guid>');
   });
+
+  it('masks e-mail addresses whole even when their domain is a known name', () => {
+    expect(sanitize('boom for alice@contoso.com at Contoso', { names: ['Contoso'] })).toBe(
+      'boom for <email> at <name>',
+    );
+    expect(sanitize('x@contoso.com', { names: ['email'] })).toBe('<email>');
+  });
 });

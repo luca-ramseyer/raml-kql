@@ -47,6 +47,9 @@ function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+const PLACEHOLDER = /(<[a-z]+>)/;
+const PLACEHOLDER_EXACT = /^<[a-z]+>$/;
+
 export function sanitize(text: string, options: SanitizeOptions = {}): string {
   let out = text;
   if (options.appDir !== undefined && options.appDir.length > 3) {
@@ -60,12 +63,18 @@ export function sanitize(text: string, options: SanitizeOptions = {}): string {
   out = out.replace(/([A-Za-z]:\\Users\\|\/Users\/|\/home\/)[^\\/\s"'<>]+/g, '~');
   out = out.replace(KQL, '<query>');
   out = out.replace(QUOTED, '$1<text>$1');
+  // Patterns first: a known name inside an e-mail address must not break the e-mail match.
+  for (const [pattern, replacement] of RULES) out = out.replace(pattern, replacement);
+  out = out.replace(IPV6, (match) => (/::|[a-f]/i.test(match) ? '<ip>' : match));
   for (const name of [...(options.names ?? [])].sort((a, b) => b.length - a.length)) {
     const trimmed = name.trim();
     if (trimmed.length < 3) continue;
-    out = out.replace(new RegExp(escapeRegex(trimmed), 'gi'), '<name>');
+    const pattern = new RegExp(escapeRegex(trimmed), 'gi');
+    // Leave the placeholders alone (a name like "email" must not turn "<email>" into "<<name>>").
+    out = out
+      .split(PLACEHOLDER)
+      .map((part) => (PLACEHOLDER_EXACT.test(part) ? part : part.replace(pattern, '<name>')))
+      .join('');
   }
-  for (const [pattern, replacement] of RULES) out = out.replace(pattern, replacement);
-  out = out.replace(IPV6, (match) => (/::|[a-f]/i.test(match) ? '<ip>' : match));
   return out;
 }
