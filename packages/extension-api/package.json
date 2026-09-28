@@ -1,0 +1,14 @@
+{
+  "name": "@raml-kql/extension-api",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Public TypeScript types and runtime shim for Raml KQL extension authors.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

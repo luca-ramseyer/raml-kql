@@ -1,0 +1,14 @@
+{
+  "name": "@raml-kql/extension-cli",
+  "version": "0.0.0",
+  "private": true,
+  "description": "raml-kql-ext: scaffold, validate and package Raml KQL extensions.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}

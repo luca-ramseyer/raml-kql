@@ -11,16 +11,18 @@ Version targets:
 
 ## Phase 0 — Scaffold and quality gates
 
-- [ ] pnpm workspace monorepo with the layout from `CLAUDE.md`
-- [ ] `apps/desktop` scaffolded with electron-vite (main / preload / renderer), React, strict TS
-- [ ] ESLint (typescript-eslint, react-hooks, import order) and Prettier set up, with `pnpm lint` and `pnpm format`
-- [ ] Vitest configured for main, renderer and packages; Playwright configured for Electron
-- [ ] Typed IPC skeleton (`src/shared/ipc/`) with zod-validated contracts, and one example round trip covered by a test
-- [ ] `--demo` flag / `RAML_KQL_DEMO=1` plumbing (empty for now)
-- [ ] GitHub Actions `ci.yml` (see `11-quality-ci-release.md`)
-- [ ] `docs/DECISIONS.md`, `docs/HUMAN-TODO.md`, `LICENSE` (MIT), `THIRD_PARTY_NOTICES.md` exist
+- [x] pnpm workspace monorepo with the layout from `CLAUDE.md`
+- [x] `apps/desktop` scaffolded with electron-vite (main / preload / renderer), React, strict TS
+- [x] ESLint (typescript-eslint, react-hooks, import order) and Prettier set up, with `pnpm lint` and `pnpm format`
+- [x] Vitest configured for main, renderer and packages; Playwright configured for Electron
+- [x] Typed IPC skeleton (`src/shared/ipc/`) with zod-validated contracts, and one example round trip covered by a test
+- [x] `--demo` flag / `RAML_KQL_DEMO=1` plumbing (empty for now)
+- [x] GitHub Actions `ci.yml` (see `11-quality-ci-release.md`)
+- [x] `docs/DECISIONS.md`, `docs/HUMAN-TODO.md`, `LICENSE` (MIT), `THIRD_PARTY_NOTICES.md` exist
 
 **Acceptance:** `pnpm dev` opens an empty window. All scripts run. CI passes on a PR. An e2e smoke test launches the app and asserts the window title.
+
+> Status: all acceptance criteria verified locally (lint, typecheck, unit tests, e2e, `pnpm dev`, `pnpm dist` on macOS). "CI passes on a PR" is pending until the GitHub repo exists (see `docs/HUMAN-TODO.md`).
 
 ## Phase 1 — Workbench shell (VS Code look)
 
