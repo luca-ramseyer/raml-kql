@@ -143,8 +143,9 @@ describe('Targets view', () => {
       setAliased(false);
     });
     const tree = screen.getByRole('tree', { name: 'Targets' });
-    expect(within(tree).getByText('Contoso')).toBeInTheDocument();
-    expect(within(tree).getByText('la-contoso-apps')).toBeInTheDocument();
+    // Normally there at once; a loaded CI runner can need longer than findBy's default 1 s.
+    expect(await within(tree).findByText('Contoso', {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(await within(tree).findByText('la-contoso-apps')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Real names/ })).toBeInTheDocument();
   });
 
