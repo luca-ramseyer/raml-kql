@@ -20,6 +20,9 @@
  */
 export function createConfig(env = process.env) {
   const azure = azureSigning(env);
+  // macOS signing is on when a certificate is provided as CSC_LINK (electron-builder imports
+  // it), or already sits in the keychain (the release workflow sets RAML_KQL_SIGN_MAC).
+  const macSigning = Boolean(env['CSC_LINK'] || env['RAML_KQL_SIGN_MAC']);
   return {
     appId: 'ch.raml.kql',
     productName: 'Raml KQL',
@@ -45,7 +48,7 @@ export function createConfig(env = process.env) {
       // Flipping fuses invalidates the ad-hoc signature Electron ships with, and Apple Silicon
       // kills an app whose signature is invalid. Unsigned builds re-sign ad hoc; signed builds
       // are signed by electron-builder afterwards.
-      ...(env['CSC_LINK'] ? {} : { resetAdHocDarwinSignature: true }),
+      ...(macSigning ? {} : { resetAdHocDarwinSignature: true }),
     },
 
     mac: {
@@ -57,7 +60,7 @@ export function createConfig(env = process.env) {
       ],
       // Unsigned unless a certificate is provided: without this, a developer's own Apple
       // certificate in the keychain would be picked up by a plain `pnpm dist`.
-      ...(env['CSC_LINK'] ? {} : { identity: null }),
+      ...(macSigning ? {} : { identity: null }),
       hardenedRuntime: true,
       gatekeeperAssess: false,
       // The minimum Electron needs under the hardened runtime: V8 compiles JavaScript at run

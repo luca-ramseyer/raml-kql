@@ -116,9 +116,33 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install --yes rpm
 
+      # We set up the signing keychain ourselves (the recipe from Apple's and GitHub's docs)
+      # instead of letting electron-builder do it: its own temporary keychain failed here with
+      # "SecKeychainUnlock: the passphrase is not correct". A wrong .p12 password shows up as a
+      # clear error from `security import` below. Nothing secret is printed.
+      - name: Import signing certificate (macOS)
+        if: runner.os == 'macOS' && env.CSC_LINK != ''
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          echo "$CSC_LINK" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/certificate.p12" -P "$CSC_KEY_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
+          rm -f "$RUNNER_TEMP/certificate.p12"
+          # The certificate type only (never the name): must be a Developer ID Application one.
+          security find-identity -v -p codesigning "$KEYCHAIN" | grep -c "Developer ID Application" | xargs echo "Developer ID Application identities found:"
+          # electron-builder now finds the identity in the keychain; it must not import CSC_LINK again.
+          echo "RAML_KQL_SIGN_MAC=1" >> "$GITHUB_ENV"
+          echo "CSC_LINK=" >> "$GITHUB_ENV"
+          echo "CSC_KEY_PASSWORD=" >> "$GITHUB_ENV"
+
       # electron-builder wants the notarization key as a file path, not as base64 text.
       - name: Prepare notarization key (macOS)
-        if: runner.os == 'macOS' && env.CSC_LINK != '' && env.APPLE_KEY_B64 != ''
+        if: env.RAML_KQL_SIGN_MAC == '1' && env.APPLE_KEY_B64 != ''
         run: |
           echo "$APPLE_KEY_B64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
           echo "APPLE_API_KEY=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
@@ -127,7 +151,7 @@ jobs:
 
       # No certificate: stop electron-builder from searching for one (it would only warn).
       - name: Build unsigned when there is no certificate
-        if: env.CSC_LINK == '' && env.WIN_CSC_LINK == '' && env.AZURE_CLIENT_ID == ''
+        if: env.CSC_LINK == '' && env.RAML_KQL_SIGN_MAC != '1' && env.WIN_CSC_LINK == '' && env.AZURE_CLIENT_ID == ''
         run: echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
         shell: bash
 
