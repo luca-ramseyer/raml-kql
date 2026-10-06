@@ -135,10 +135,9 @@ jobs:
           rm -f "$RUNNER_TEMP/certificate.p12"
           # The certificate type only (never the name): must be a Developer ID Application one.
           security find-identity -v -p codesigning "$KEYCHAIN" | grep -c "Developer ID Application" | xargs echo "Developer ID Application identities found:"
-          # electron-builder now finds the identity in the keychain; it must not import CSC_LINK again.
+          # electron-builder now finds the identity in the keychain. The build step below removes
+          # CSC_LINK from its environment (an empty value would be read as a path).
           echo "RAML_KQL_SIGN_MAC=1" >> "$GITHUB_ENV"
-          echo "CSC_LINK=" >> "$GITHUB_ENV"
-          echo "CSC_KEY_PASSWORD=" >> "$GITHUB_ENV"
 
       # electron-builder wants the notarization key as a file path, not as base64 text.
       - name: Prepare notarization key (macOS)
@@ -156,7 +155,14 @@ jobs:
         shell: bash
 
       # Builds, signs when it can, and uploads to the draft release for $TAG.
-      - run: pnpm --filter @raml-kql/desktop dist:publish
+      # On macOS the certificate is already in the keychain, so CSC_LINK and its password are
+      # removed from the environment: electron-builder would import them a second time.
+      - name: Build and upload (macOS)
+        if: runner.os == 'macOS'
+        run: env -u CSC_LINK -u CSC_KEY_PASSWORD pnpm --filter @raml-kql/desktop dist:publish
+      - name: Build and upload
+        if: runner.os != 'macOS'
+        run: pnpm --filter @raml-kql/desktop dist:publish
 
       - name: Smoke test the packaged app
         if: runner.os != 'Linux'
