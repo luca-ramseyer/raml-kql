@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.1.0](https://github.com/luca-ramseyer/raml-kql/compare/v1.0.0...v1.1.0) (2026-10-06)
+
+
+### Features
+
+* **extensions:** signed packages and the Verified by Raml KQL badge ([#19](https://github.com/luca-ramseyer/raml-kql/issues/19)) ([48a53f5](https://github.com/luca-ramseyer/raml-kql/commit/48a53f57f41708a21a453a47cff6e69adabf55e9))
+* make the extension packages publishable ([#14](https://github.com/luca-ramseyer/raml-kql/issues/14)) ([bf696e3](https://github.com/luca-ramseyer/raml-kql/commit/bf696e3e39d6dbbc0fdad1296eb1c8e91db5c025))
+
+
+### Bug Fixes
+
+* **deps:** override vulnerable transitive dependencies; longer node test timeouts ([#12](https://github.com/luca-ramseyer/raml-kql/issues/12)) ([603312d](https://github.com/luca-ramseyer/raml-kql/commit/603312dcb5b5719ab256b60c53a2e163c827c6cb))
+* **examples:** VirusTotal column enrichment respects the API rate limit ([#16](https://github.com/luca-ramseyer/raml-kql/issues/16)) ([6ff6e36](https://github.com/luca-ramseyer/raml-kql/commit/6ff6e365249762729593b0024b9f41de419f667a))
+
 ## 1.0.0 (2026-10-06)
 
 
