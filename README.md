@@ -76,7 +76,7 @@ You need at least the **Log Analytics Reader** role (or `Microsoft.OperationalIn
 - Check it yourself: **Developer: Show Network Activity** lists every host contacted in this session.
 - Crash reports are never sent automatically. After a crash, the app shows you a sanitized report and you decide whether to file it on GitHub.
 
-More in [`SECURITY.md`](SECURITY.md). To report a vulnerability, use the repository's **Security** tab (private reporting).
+More in the [privacy policy](docs/privacy-policy.md), the [terms of use](docs/terms-of-use.md) and [`SECURITY.md`](SECURITY.md). To report a vulnerability, use the repository's **Security** tab (private reporting).
 
 ## Documentation
 

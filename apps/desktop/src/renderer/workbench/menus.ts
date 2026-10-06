@@ -98,6 +98,7 @@ function menuDefinitions(platform: Platform): MenuDef[] {
         { command: 'workbench.action.showWelcomePage', label: 'Welcome' },
         { command: 'workbench.action.showCommands', label: 'Show All Commands' },
         { command: 'workbench.action.openDocumentation', label: 'Documentation' },
+        { command: 'workbench.action.openPrivacyPolicy', label: 'Privacy Policy' },
         'separator',
         { command: 'workbench.action.openIssueReporter', label: 'Report Issue' },
         'separator',

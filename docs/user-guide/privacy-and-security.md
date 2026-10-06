@@ -5,7 +5,7 @@ description: What Raml KQL stores, what it sends, how results are protected, the
 
 # Privacy and security
 
-Raml KQL handles access tokens and customer security data, so it is built to keep both on your machine.
+Raml KQL handles access tokens and customer security data, so it is built to keep both on your machine. This page explains how; the formal statement is the [privacy policy](../privacy-policy.md).
 
 ## What leaves your machine
 

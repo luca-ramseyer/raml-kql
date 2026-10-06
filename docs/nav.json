@@ -4,36 +4,81 @@
     {
       "title": "Start",
       "pages": [
-        { "title": "Overview", "path": "index.md" },
-        { "title": "Getting started", "path": "getting-started.md" }
+        {
+          "title": "Overview",
+          "path": "index.md"
+        },
+        {
+          "title": "Getting started",
+          "path": "getting-started.md"
+        }
       ]
     },
     {
       "title": "User guide",
       "pages": [
-        { "title": "Accounts and tenants", "path": "user-guide/accounts.md" },
-        { "title": "Workspaces and targets", "path": "user-guide/workspaces-and-targets.md" },
-        { "title": "Writing and running queries", "path": "user-guide/running-queries.md" },
-        { "title": "Working with results", "path": "user-guide/results.md" },
-        { "title": "Saved queries, history and packs", "path": "user-guide/query-library.md" },
-        { "title": "Using extensions", "path": "user-guide/extensions.md" },
-        { "title": "Privacy and security", "path": "user-guide/privacy-and-security.md" },
-        { "title": "Troubleshooting", "path": "user-guide/troubleshooting.md" }
+        {
+          "title": "Accounts and tenants",
+          "path": "user-guide/accounts.md"
+        },
+        {
+          "title": "Workspaces and targets",
+          "path": "user-guide/workspaces-and-targets.md"
+        },
+        {
+          "title": "Writing and running queries",
+          "path": "user-guide/running-queries.md"
+        },
+        {
+          "title": "Working with results",
+          "path": "user-guide/results.md"
+        },
+        {
+          "title": "Saved queries, history and packs",
+          "path": "user-guide/query-library.md"
+        },
+        {
+          "title": "Using extensions",
+          "path": "user-guide/extensions.md"
+        },
+        {
+          "title": "Privacy and security",
+          "path": "user-guide/privacy-and-security.md"
+        },
+        {
+          "title": "Troubleshooting",
+          "path": "user-guide/troubleshooting.md"
+        }
       ]
     },
     {
       "title": "Reference",
       "pages": [
-        { "title": "Settings", "path": "reference/settings.md" },
-        { "title": "Keyboard shortcuts", "path": "reference/keyboard-shortcuts.md" },
-        { "title": "Configuration folder and files", "path": "reference/config-files.md" }
+        {
+          "title": "Settings",
+          "path": "reference/settings.md"
+        },
+        {
+          "title": "Keyboard shortcuts",
+          "path": "reference/keyboard-shortcuts.md"
+        },
+        {
+          "title": "Configuration folder and files",
+          "path": "reference/config-files.md"
+        }
       ]
     },
     {
       "title": "Guides",
       "pages": [
-        { "title": "Writing extensions", "path": "guides/writing-extensions.md" },
-        { "title": "Writing query packs", "path": "guides/writing-query-packs.md" },
+        {
+          "title": "Writing extensions",
+          "path": "guides/writing-extensions.md"
+        },
+        {
+          "title": "Writing query packs",
+          "path": "guides/writing-query-packs.md"
+        },
         {
           "title": "Registering your own Entra app",
           "path": "guides/register-your-own-entra-app.md"
@@ -43,30 +88,88 @@
     {
       "title": "Contributing",
       "pages": [
-        { "title": "Architecture overview", "path": "contributing/architecture.md" },
-        { "title": "Testing and CI", "path": "contributing/testing-and-ci.md" },
-        { "title": "Releasing", "path": "contributing/releasing.md" }
+        {
+          "title": "Architecture overview",
+          "path": "contributing/architecture.md"
+        },
+        {
+          "title": "Testing and CI",
+          "path": "contributing/testing-and-ci.md"
+        },
+        {
+          "title": "Releasing",
+          "path": "contributing/releasing.md"
+        }
       ]
     },
     {
       "title": "Design",
       "pages": [
-        { "title": "Design documents", "path": "design/index.md" },
-        { "title": "Architecture", "path": "design/01-architecture.md" },
-        { "title": "Accounts and authentication", "path": "design/02-accounts-auth.md" },
+        {
+          "title": "Design documents",
+          "path": "design/index.md"
+        },
+        {
+          "title": "Architecture",
+          "path": "design/01-architecture.md"
+        },
+        {
+          "title": "Accounts and authentication",
+          "path": "design/02-accounts-auth.md"
+        },
         {
           "title": "Discovery, workspaces and aliasing",
           "path": "design/03-workspaces-discovery.md"
         },
-        { "title": "Query execution", "path": "design/04-query-execution.md" },
-        { "title": "Workbench, editor and IntelliSense", "path": "design/05-workbench-ui.md" },
-        { "title": "Results", "path": "design/06-results.md" },
-        { "title": "Extensions", "path": "design/07-extensions.md" },
-        { "title": "Query packs", "path": "design/08-query-packs.md" },
-        { "title": "Configuration directory", "path": "design/09-config-dotfiles.md" },
-        { "title": "Privacy and crash reporting", "path": "design/10-privacy-crash-reporting.md" },
-        { "title": "Quality, CI, signing and release", "path": "design/11-quality-ci-release.md" },
-        { "title": "Decision log", "path": "design/decisions.md" }
+        {
+          "title": "Query execution",
+          "path": "design/04-query-execution.md"
+        },
+        {
+          "title": "Workbench, editor and IntelliSense",
+          "path": "design/05-workbench-ui.md"
+        },
+        {
+          "title": "Results",
+          "path": "design/06-results.md"
+        },
+        {
+          "title": "Extensions",
+          "path": "design/07-extensions.md"
+        },
+        {
+          "title": "Query packs",
+          "path": "design/08-query-packs.md"
+        },
+        {
+          "title": "Configuration directory",
+          "path": "design/09-config-dotfiles.md"
+        },
+        {
+          "title": "Privacy and crash reporting",
+          "path": "design/10-privacy-crash-reporting.md"
+        },
+        {
+          "title": "Quality, CI, signing and release",
+          "path": "design/11-quality-ci-release.md"
+        },
+        {
+          "title": "Decision log",
+          "path": "design/decisions.md"
+        }
+      ]
+    },
+    {
+      "title": "Legal",
+      "pages": [
+        {
+          "title": "Privacy policy",
+          "path": "privacy-policy.md"
+        },
+        {
+          "title": "Terms of use",
+          "path": "terms-of-use.md"
+        }
       ]
     }
   ]
