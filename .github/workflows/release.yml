@@ -11,7 +11,7 @@
 # GITHUB_TOKEN don't trigger other workflows, so a separate workflow would never start.
 #
 # Signing is optional: every step below that needs a secret skips itself when the secret is
-# missing, and you get unsigned installers. Secrets to add are listed in project/HUMAN-TODO.md.
+# missing, and you get unsigned installers. Which secrets to add is described in docs/contributing/releasing.md.
 name: Release
 
 on:
