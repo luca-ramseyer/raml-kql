@@ -105,9 +105,10 @@ Claude Code appends items here when blocked, and keeps working. Tick them off wh
 
 ## Added during Phase 10
 
-- [ ] **Turn on private vulnerability reporting** in the GitHub repository: Settings → Code security → Private vulnerability reporting → Enable. `SECURITY.md` tells people to use it.
-- [ ] **Decide on automatic crash reports.** By default, users review and file crash reports themselves (`crashReporting.mode: "ask"`). If you ever want reports sent automatically for your own builds, create a Sentry project and set the `RAML_KQL_SENTRY_DSN` secret for the build. Public builds should stay without it; tell me first and I'll document it in the privacy stance.
-- [ ] **Look at a crash report once.** Run "Developer: Show Crash Report" after a real error (or kill the app while it runs) and check the preview hides everything you'd consider sensitive. Tell me about anything that slips through; the sanitizer's test corpus grows with each case.
+- [x] **Turn on private vulnerability reporting** in the GitHub repository: Settings → Code security → Private vulnerability reporting → Enable. `SECURITY.md` tells people to use it.
+- [x] **Decide on automatic crash reports.** Decided 2026-10-06: never send anything automatically, always ask (`crashReporting.mode: "ask"`, the default). Public builds have no Sentry endpoint anyway.
+      Original note: By default, users review and file crash reports themselves (`crashReporting.mode: "ask"`). If you ever want reports sent automatically for your own builds, create a Sentry project and set the `RAML_KQL_SENTRY_DSN` secret for the build. Public builds should stay without it; tell me first and I'll document it in the privacy stance.
+- [x] **Look at a crash report once.** Run "Developer: Show Crash Report" after a real error (or kill the app while it runs) and check the preview hides everything you'd consider sensitive. Tell me about anything that slips through; the sanitizer's test corpus grows with each case.
 
 ## Added during Phase 11
 
