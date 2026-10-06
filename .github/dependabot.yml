@@ -9,6 +9,20 @@ updates:
     groups:
       minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # @kusto/monaco-kusto peers on monaco-editor ^0.55; 0.57 moved the esm entry points and
+      # breaks the editor. Lift this when monaco-kusto supports a newer monaco-editor.
+      - dependency-name: monaco-editor
+        update-types: [version-update:semver-minor]
+      # electron-vite (latest 5.0) supports vite up to ^7, and @vitejs/plugin-react 6 needs
+      # vite 8. Move both together once electron-vite supports vite 8.
+      - dependency-name: vite
+        update-types: [version-update:semver-major]
+      - dependency-name: '@vitejs/plugin-react'
+        update-types: [version-update:semver-major]
+      # Keep @types/node on the Node major the app and CI run (.nvmrc, Electron's bundled Node).
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
     commit-message:
       prefix: chore
       include: scope
