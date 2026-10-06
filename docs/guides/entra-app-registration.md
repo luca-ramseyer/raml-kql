@@ -1,6 +1,6 @@
 # Creating the Raml KQL multi-tenant app registration
 
-This takes about 10 minutes. You need Application Developer (or higher) rights in a tenant you control. Use your **personal tenant**, not the an employer tenant: the app should belong to the open-source project, not to an employer.
+This takes about 10 minutes. You need Application Developer (or higher) rights in a tenant you control. Use a tenant that belongs to you or to the project, not an employer's tenant: the app registration should belong to the open-source project.
 
 ## Why an app registration at all?
 

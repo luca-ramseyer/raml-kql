@@ -12,7 +12,14 @@ Claude Code appends items here when blocked, and keeps working. Tick them off wh
 - [ ] **Windows signing:** after going public, apply to SignPath Foundation (OSS program), or evaluate Microsoft's cloud signing service eligibility.
 - [x] **Live test:** sign in with two accounts, verify Lighthouse workspaces are listed, run a query across them, and verify the guest-tenant re-auth prompt.
 - [x] **Work approval:** before using Raml KQL on customer tenants at work, get it approved internally (it uses your delegated access, but it's still a new tool touching customer data).
-- [ ] **Going public (Phase 12):** flip repo visibility, enable private vulnerability reporting, CodeQL and branch protection.
+- [ ] **Going public (Phase 12).** Do in this order, on the day:
+  1. Decide about the git history (see below), then run `gitleaks detect` one last time.
+  2. Settings → General → Danger zone → **Change visibility → Public**. Add a description and topics (`kql`, `azure`, `log-analytics`, `sentinel`, `electron`, `security`).
+  3. Settings → Security: enable **private vulnerability reporting**, **CodeQL** (default setup) and **secret scanning with push protection**.
+  4. Settings → Branches/Rulesets: protect `main` (require the `Lint, typecheck, unit tests`, `End-to-end tests (demo mode)` and `conventional-title` checks; squash merge only).
+  5. Settings → Actions → General: allow Actions to create pull requests (release-please).
+  6. Merge the first release PR and check the draft release.
+  7. Publish `@raml-kql/extension-api` and `@raml-kql/extension-cli` to npm.
 
 ## Added during Phase 0
 

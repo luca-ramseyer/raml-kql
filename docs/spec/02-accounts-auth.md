@@ -61,7 +61,7 @@ The provider is chosen per account, so a user can mix a `builtin` account and an
 - Actions:
   - Add account, with a provider picker: Microsoft sign-in (browser), device code, Azure CLI, custom client ID.
   - Sign out (removes the account from the MSAL cache), re-authenticate, and refresh.
-  - Set a display label for the account ("Work – an employer", "Customer X guest").
+  - Set a display label for the account ("Work – Contoso", "Fabrikam guest").
 - The label and ordering are stored in `accounts.jsonc` (no secrets; spec 09).
 
 ## Security rules
