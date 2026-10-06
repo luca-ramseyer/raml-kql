@@ -1,0 +1,40 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Please don't include real tenant or subscription IDs, customer names, e-mail addresses, tokens or query results.** Replace them with fake values. Security problems go through the **Security** tab (private reporting), never here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: If it also happens in demo mode (`Restart in Demo Mode` in the Command Palette), say so. That makes it much easier to reproduce.
+  - type: input
+    id: version
+    attributes:
+      label: Raml KQL version
+      description: Help → About
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [macOS, Windows, Linux]
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Crash report or logs (optional)
+      description: 'Use "Developer: Show Crash Report" and paste the sanitized report. Read it first.'
+      render: text

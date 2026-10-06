@@ -227,13 +227,17 @@ Version targets:
 
 ## Phase 12 — Public readiness (1.0.0)
 
-- [ ] README with screenshots from demo mode, install instructions, and "how it compares to MTO"
-- [ ] CONTRIBUTING.md, SECURITY.md (private vulnerability reporting), CODE_OF_CONDUCT.md, issue/PR templates
-- [ ] `docs/guides/` complete; extension author guide; query pack author guide
-- [ ] gitleaks scan of the full history is clean
-- [ ] Dependency license check is clean (no GPL in the bundled app)
+- [x] README with screenshots from demo mode, install instructions, and "how it compares to MTO"
+- [x] CONTRIBUTING.md, SECURITY.md (private vulnerability reporting), CODE_OF_CONDUCT.md, issue/PR templates
+- [x] `docs/guides/` complete; extension author guide; query pack author guide
+- [x] gitleaks scan of the full history is clean
+- [x] Dependency license check is clean (no GPL in the bundled app)
 
 ---
+
+**Done (2026-10-06):** README with demo-mode screenshots (regenerate with `RAML_KQL_SCREENSHOTS=1 pnpm --filter @raml-kql/desktop test:e2e e2e/screenshots.spec.ts`), CONTRIBUTING, CODE_OF_CONDUCT (Contributor Covenant 2.1, reports through GitHub private reporting), issue and PR templates. gitleaks over the full history and the licence check are clean.
+
+Left for the flip itself (HUMAN-TODO): repository visibility, private vulnerability reporting, CodeQL, secret scanning, branch protection, npm publishing.
 
 ## Post-1.0 backlog (not now)
 
