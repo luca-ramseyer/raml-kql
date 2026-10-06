@@ -41,6 +41,12 @@ describe('electron-builder config (spec 11)', () => {
     expect(config.electronFuses).not.toHaveProperty('resetAdHocDarwinSignature');
   });
 
+  it('signs on macOS when the certificate is already in the keychain', () => {
+    const config = createConfig({ RAML_KQL_SIGN_MAC: '1' });
+    expect(config.mac).not.toHaveProperty('identity');
+    expect(config.electronFuses).not.toHaveProperty('resetAdHocDarwinSignature');
+  });
+
   it('enables Windows cloud signing only when every setting is present', () => {
     const all = {
       AZURE_SIGNING_ENDPOINT: 'https://eus.codesigning.azure.net',
