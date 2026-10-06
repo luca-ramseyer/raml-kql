@@ -43,4 +43,4 @@ Raml KQL is a free, open-source desktop app for macOS, Windows and Linux. It run
 - [Testing and CI](contributing/testing-and-ci.md) and [releasing](contributing/releasing.md)
 - [Design documents](design/index.md): the detailed specifications and the decision log.
 
-Raml KQL is MIT-licensed and not affiliated with, endorsed by or sponsored by Microsoft. Source code, releases and issues are on [GitHub](https://github.com/luca-ramseyer/raml-kql).
+[Privacy policy](privacy-policy.md) and [terms of use](terms-of-use.md). Raml KQL is MIT-licensed and not affiliated with, endorsed by or sponsored by Microsoft. Source code, releases and issues are on [GitHub](https://github.com/luca-ramseyer/raml-kql).

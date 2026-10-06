@@ -36,8 +36,9 @@ import { getBridge, unwrap } from '../services/ipc';
 
 import { VIEWS } from './views';
 
-const DOCS_URL = 'https://github.com/luca-ramseyer/raml-kql#readme';
+const DOCS_URL = 'https://github.com/luca-ramseyer/raml-kql/blob/main/docs/index.md';
 const ISSUES_URL = 'https://github.com/luca-ramseyer/raml-kql/issues/new';
+const PRIVACY_URL = 'https://github.com/luca-ramseyer/raml-kql/blob/main/docs/privacy-policy.md';
 
 /** Register every built-in command. Returns a function that unregisters them. */
 export function registerBuiltinCommands(): () => void {
@@ -234,6 +235,12 @@ export function registerBuiltinCommands(): () => void {
       title: 'Documentation',
       category: 'Help',
       run: () => unwrap(getBridge().shell.openExternal({ url: DOCS_URL })),
+    }),
+    registerCommand({
+      id: 'workbench.action.openPrivacyPolicy',
+      title: 'Privacy Policy',
+      category: 'Help',
+      run: () => unwrap(getBridge().shell.openExternal({ url: PRIVACY_URL })),
     }),
     registerCommand({
       id: 'workbench.action.openIssueReporter',

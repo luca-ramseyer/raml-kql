@@ -1,5 +1,7 @@
 # Security and privacy
 
+This page describes the security design and how to report vulnerabilities. The formal statement of what data is handled is the [privacy policy](docs/privacy-policy.md).
+
 Raml KQL handles access tokens and customer security data, so it is built to keep both on your
 machine.
 
