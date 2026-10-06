@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -6,13 +6,23 @@ import path from 'node:path';
 import { MessageChannel } from 'node:worker_threads';
 
 import { createExtensionRuntime, type ExtensionModule } from '@raml-kql/extension-api/runtime';
+import {
+  SIGNATURE_FILE,
+  generateSigningKeyPair,
+  signFiles,
+} from '@raml-kql/pack-schema/extension-signature';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import type { UiRequest } from '../../shared/extensions/models';
 import { MemoryListStore } from '../config/jsonc-list-store';
 
 import type { ConnectionPort } from './extension-connection';
-import { ExtensionManager, type ExtensionHost, type InstalledEntry } from './extension-manager';
+import {
+  ExtensionManager,
+  type ExtensionHost,
+  type ExtensionManagerOptions,
+  type InstalledEntry,
+} from './extension-manager';
 import { toPackage } from './extension-package';
 import { ExtensionStorage } from './extension-stores';
 import { PermissionBroker, type PersistedGrant, type PromptAnswer } from './permission-broker';
@@ -127,7 +137,11 @@ describe('ExtensionManager', () => {
     hits = 0;
   });
 
-  function create(answers: PromptAnswer[] = [], settings: Record<string, unknown> = {}) {
+  function create(
+    answers: PromptAnswer[] = [],
+    settings: Record<string, unknown> = {},
+    extra: Partial<ExtensionManagerOptions> = {},
+  ) {
     const dir = mkdtempSync(path.join(tmpdir(), 'rk-ext-'));
     dirs.push(dir);
     const grants = new MemoryListStore<PersistedGrant>();
@@ -149,9 +163,10 @@ describe('ExtensionManager', () => {
       set: vi.fn(() => Promise.resolve()),
       delete: vi.fn(() => Promise.resolve()),
     };
+    const store = new MemoryListStore<InstalledEntry>();
     const manager = new ExtensionManager({
       extensionsDir: path.join(dir, 'extensions'),
-      store: new MemoryListStore<InstalledEntry>(),
+      store,
       broker,
       host: new InProcessHost(),
       ui,
@@ -163,8 +178,9 @@ describe('ExtensionManager', () => {
       env: () => ({ appVersion: '0.9.0', theme: 'dark', presentationMode: true }),
       audit: vi.fn(),
       onChange: vi.fn(),
+      ...extra,
     });
-    return { manager, dir, prompts, grants, secrets };
+    return { manager, dir, prompts, grants, secrets, store };
   }
 
   async function installProbe(manager: ExtensionManager) {
@@ -248,5 +264,84 @@ describe('ExtensionManager', () => {
     expect(snapshot.grants).toEqual([]);
     expect(secrets.delete).toHaveBeenCalledWith('contoso.net-probe');
     expect(existsSync(path.join(dir, 'extensions', 'contoso.net-probe-1.0.0'))).toBe(false);
+  });
+
+  describe('signed packages ("Verified by Raml KQL")', () => {
+    const key = generateSigningKeyPair();
+    const trustedKeys = [{ name: 'Raml KQL', publicKeyPem: key.publicKeyPem }];
+
+    function signedProbe(privateKeyPem = key.privateKeyPem) {
+      const files = new Map(probeExtension(port).files);
+      files.set(SIGNATURE_FILE, signFiles(files, privateKeyPem));
+      return toPackage(files);
+    }
+
+    it('is not verified when nothing signed it, or when an unknown key did', () => {
+      const { manager } = create([], {}, { trustedKeys });
+      const unsigned = manager.preview(probeExtension(port), { type: 'file', name: 'x.rkqlx' });
+      expect(unsigned.extension.verified).toBe(false);
+      const stranger = generateSigningKeyPair();
+      const foreign = manager.preview(signedProbe(stranger.privateKeyPem), {
+        type: 'file',
+        name: 'x.rkqlx',
+      });
+      expect(foreign.extension.verified).toBe(false);
+      expect(foreign.extension.verifiedBy).toBeUndefined();
+    });
+
+    it('shows the badge before and after installing a package signed with a trusted key', async () => {
+      const { manager } = create([], {}, { trustedKeys });
+      const preview = manager.preview(signedProbe(), { type: 'file', name: 'x.rkqlx' });
+      expect(preview.extension).toMatchObject({ verified: true, verifiedBy: 'Raml KQL' });
+      const snapshot = await manager.install(preview.previewId);
+      expect(snapshot.extensions[0]).toMatchObject({ verified: true, verifiedBy: 'Raml KQL' });
+    });
+
+    it('checks the installed files again at the next start, and drops the badge when they changed', async () => {
+      const first = create([], {}, { trustedKeys });
+      const preview = first.manager.preview(signedProbe(), { type: 'file', name: 'x.rkqlx' });
+      await first.manager.install(preview.previewId);
+
+      const unchanged = create(
+        [],
+        {},
+        {
+          trustedKeys,
+          store: first.store,
+          extensionsDir: path.join(first.dir, 'extensions'),
+        },
+      );
+      await unchanged.manager.load();
+      expect((await unchanged.manager.snapshot()).extensions[0]?.verified).toBe(true);
+
+      writeFileSync(
+        path.join(first.dir, 'extensions', 'contoso.net-probe-1.0.0', 'dist', 'extension.js'),
+        'export function activate() { /* edited after install */ }',
+      );
+      const tampered = create(
+        [],
+        {},
+        {
+          trustedKeys,
+          store: first.store,
+          extensionsDir: path.join(first.dir, 'extensions'),
+        },
+      );
+      await tampered.manager.load();
+      expect((await tampered.manager.snapshot()).extensions[0]?.verified).toBe(false);
+
+      // The same files with the key no longer trusted (a revoked key): no badge either.
+      const revoked = create(
+        [],
+        {},
+        {
+          trustedKeys: [],
+          store: first.store,
+          extensionsDir: path.join(first.dir, 'extensions'),
+        },
+      );
+      await revoked.manager.load();
+      expect((await revoked.manager.snapshot()).extensions[0]?.verified).toBe(false);
+    });
   });
 });

@@ -157,7 +157,7 @@ namespace ramlKql {
 - **Pinning and integrity:**
   - Record the source URL, tag, commit SHA and the SHA-256 of the installed package in `extensions.jsonc`.
   - The update check (daily, and on command) shows available updates with changelog and permission diff. Updates are never automatic unless `extensions.autoUpdate` is `true` (default `false`).
-- **Unverified warning:** all third-party extensions show "Not verified by Raml KQL — only install extensions you trust" on first install. There is no verified-publisher program yet; keep a `verified` field in the model for later.
+- **Verified badge and unverified warning:** a package signed with a key the app trusts, and unchanged since, shows "Verified by Raml KQL" (D-057). Everything else, including packages signed with an unknown key, shows "Not verified by Raml KQL — only install extensions you trust" on install. Verification means _this package is the one the project published_; it is not a security review of other people's code, and there is no program yet for third-party publishers.
 - **Storage:** installed extensions live in `<config>/extensions/<publisher.name>-<version>/`. Only the installed set is recorded in `extensions.jsonc`, so a shared dotfile config reinstalls the same set on another machine (after confirmation).
 
 ## Developer experience

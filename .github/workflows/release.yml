@@ -173,10 +173,50 @@ jobs:
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           xvfb-run --auto-servernum pnpm smoke:packaged
 
-  publish:
-    name: Checksums and publish
+  # The two example extensions are signed with the project's extension signing key, so the app
+  # shows them as "Verified by Raml KQL" (D-057). Skipped when the secret is not set.
+  sign-extensions:
+    name: Sign the example extensions
     needs: [release-please, build]
     if: always() && needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write # upload assets to the draft release
+    env:
+      TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      RAML_KQL_SIGNING_KEY: ${{ secrets.EXTENSION_SIGNING_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-please.outputs.sha || inputs.ref }}
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build, sign, check and upload the example extensions
+        if: env.RAML_KQL_SIGNING_KEY != ''
+        run: |
+          pnpm build:examples
+          cli=packages/extension-cli/dist/cli.cjs
+          # The public half of the key, to check each signature before anything is uploaded.
+          node -e "const c=require('node:crypto');process.stdout.write(c.createPublicKey(c.createPrivateKey(process.env.RAML_KQL_SIGNING_KEY)).export({type:'spki',format:'pem'}))" > "$RUNNER_TEMP/signing.pub"
+          for name in country-map-renderer virustotal-enricher; do
+            file="examples/extensions/dist/$name.rkqlx"
+            node "$cli" sign "$file"
+            node "$cli" verify "$file" --key "$RUNNER_TEMP/signing.pub"
+          done
+          gh release upload "$TAG" examples/extensions/dist/country-map-renderer.rkqlx examples/extensions/dist/virustotal-enricher.rkqlx --clobber
+
+  publish:
+    name: Checksums and publish
+    needs: [release-please, build, sign-extensions]
+    if: always() && needs.build.result == 'success' && needs.sign-extensions.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -189,7 +229,7 @@ jobs:
         run: |
           mkdir assets && cd assets
           gh release download "$TAG" --pattern '*.dmg' --pattern '*.zip' --pattern '*.exe' \
-            --pattern '*.AppImage' --pattern '*.deb' --pattern '*.rpm'
+            --pattern '*.AppImage' --pattern '*.deb' --pattern '*.rpm' --pattern '*.rkqlx'
           sha256sum * > SHA256SUMS
           cat SHA256SUMS
           gh release upload "$TAG" SHA256SUMS --clobber

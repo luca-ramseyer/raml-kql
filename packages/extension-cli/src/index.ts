@@ -3,6 +3,7 @@
  */
 import { initExtension, packageExtension, validateExtension } from './extension';
 import { validatePacks } from './pack-validate';
+import { keygenCommand, signCommand, verifyCommand } from './signing';
 
 export interface CliIo {
   out: (line: string) => void;
@@ -21,6 +22,11 @@ Commands:
   package [dir] [-o <file.rkqlx>]
                         Validate and build the .rkqlx package
   pack validate [dir]   Validate the query packs in a folder (default: the current folder)
+  keygen --out <dir>    Create an Ed25519 signing key pair (keep the private key secret)
+  sign <file.rkqlx> [--key <file>] [-o <out>]
+                        Sign a package. The key comes from --key or $RAML_KQL_SIGNING_KEY
+  verify <file.rkqlx> --key <public-key.pub>
+                        Check a package's signature against a public key
 
 Options:
   -h, --help     Show this help
@@ -56,6 +62,38 @@ export function runCli(argv: readonly string[], io: CliIo): number {
     }
     const name = option('--name') ?? dir.replace(/\/+$/, '').split(/[\\/]/).at(-1) ?? dir;
     return initExtension(dir, { name, publisher }, io);
+  }
+  if (first === 'keygen') {
+    const out = option('--out');
+    if (out === undefined) {
+      io.err(`Usage: ${CLI_NAME} keygen --out <dir>`);
+      return 2;
+    }
+    return keygenCommand(out, io);
+  }
+  if (first === 'sign') {
+    const file = positional[0];
+    if (file === undefined) {
+      io.err(`Usage: ${CLI_NAME} sign <file.rkqlx> [--key <file>] [-o <out>]`);
+      return 2;
+    }
+    return signCommand(
+      file,
+      {
+        keyFile: option('--key'),
+        keyEnv: process.env['RAML_KQL_SIGNING_KEY'],
+        out: option('-o') ?? option('--out'),
+      },
+      io,
+    );
+  }
+  if (first === 'verify') {
+    const file = positional[0];
+    if (file === undefined) {
+      io.err(`Usage: ${CLI_NAME} verify <file.rkqlx> --key <public-key.pub>`);
+      return 2;
+    }
+    return verifyCommand(file, option('--key'), io);
   }
   if (first === 'pack') {
     const [, sub, dir = '.'] = argv;
