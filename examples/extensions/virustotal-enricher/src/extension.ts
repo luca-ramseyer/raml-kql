@@ -1,11 +1,6 @@
-import {
-  ramlKql,
-  type Entity,
-  type EnrichmentResult,
-  type ExtensionContext,
-} from '@raml-kql/extension-api';
+import { ramlKql, type EnrichmentResult, type ExtensionContext } from '@raml-kql/extension-api';
 
-import { endpoints, toResult } from './virustotal';
+import { enrichEntities, type StopReason } from './virustotal';
 
 /**
  * VirusTotal Enricher (example extension). Everything it does goes through the host: the API
@@ -14,6 +9,9 @@ import { endpoints, toResult } from './virustotal';
  * allowed it for the query run.
  */
 const KEY = 'apiKey';
+
+/** Answers found so far, kept while the extension runs so a second run continues the first. */
+const cache = new Map<string, EnrichmentResult>();
 
 async function apiKey(): Promise<string | undefined> {
   const stored = await ramlKql.secrets.get(KEY);
@@ -26,26 +24,6 @@ async function apiKey(): Promise<string | undefined> {
   if (entered === undefined || entered.trim() === '') return undefined;
   await ramlKql.secrets.set(KEY, entered.trim());
   return entered.trim();
-}
-
-async function lookUp(entity: Entity, key: string): Promise<EnrichmentResult | undefined> {
-  const target = endpoints(entity);
-  if (target === undefined) return undefined;
-  const response = await ramlKql.net.fetch(target.api, {
-    headers: { 'x-apikey': key, accept: 'application/json' },
-  });
-  if (response.status === 404)
-    return {
-      entity,
-      fields: { verdict: 'unknown to VirusTotal', malicious: null },
-      url: target.gui,
-    };
-  if (response.status === 401)
-    throw new Error('VirusTotal refused the API key. Run "VirusTotal: Set API Key…".');
-  if (response.status === 429) throw new Error('VirusTotal quota exceeded; try again later.');
-  if (!response.ok)
-    return { entity, fields: { verdict: `error ${String(response.status)}`, malicious: null } };
-  return toResult(entity, await response.json(), target.gui);
 }
 
 export function activate(context: ExtensionContext): void {
@@ -63,21 +41,50 @@ export function activate(context: ExtensionContext): void {
       async enrich(entities, token) {
         const key = await apiKey();
         if (key === undefined) return [];
-        const limit =
-          (await ramlKql.configuration.get<number>('virustotal-enricher.maxLookupsPerRun')) ?? 25;
-        const results: EnrichmentResult[] = [];
+        const setting = async (name: string, fallback: number): Promise<number> =>
+          (await ramlKql.configuration.get<number>(`virustotal-enricher.${name}`)) ?? fallback;
+        const limit = await setting('maxLookupsPerRun', 25);
+        const requestsPerMinute = await setting('requestsPerMinute', 4);
+        const budgetMs = (await setting('maxSecondsPerRun', 90)) * 1000;
         return ramlKql.window.withProgress(
-          { title: `VirusTotal: looking up ${String(Math.min(entities.length, limit))} values` },
+          {
+            title: `VirusTotal: looking up up to ${String(Math.min(entities.length, limit))} values`,
+          },
           async () => {
-            for (const entity of entities.slice(0, limit)) {
-              if (token.isCancellationRequested) break;
-              const result = await lookUp(entity, key);
-              if (result !== undefined) results.push(result);
-            }
-            return results;
+            const outcome = await enrichEntities(
+              entities,
+              key,
+              cache,
+              {
+                fetch: (url, init) => ramlKql.net.fetch(url, init),
+                sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+                now: () => Date.now(),
+                isCancelled: () => token.isCancellationRequested,
+              },
+              { limit, requestsPerMinute, budgetMs },
+            );
+            const note = noteFor(outcome.stopped, outcome.remaining, requestsPerMinute);
+            if (note !== undefined) await ramlKql.window.showInformationMessage(note);
+            return outcome.results;
           },
         );
       },
     }),
   );
+}
+
+/** Why a run stopped early, and what to do. Undefined when everything was looked up. */
+function noteFor(stopped: StopReason, remaining: number, rate: number): string | undefined {
+  if (remaining === 0) return undefined;
+  const more = `${String(remaining)} ${remaining === 1 ? 'value is' : 'values are'} still missing: choose Enrich again to continue (answers you already have are kept).`;
+  switch (stopped) {
+    case 'quota':
+      return `VirusTotal's quota for your key is used up for now. ${more}`;
+    case 'budget':
+      return `VirusTotal looks up ${String(rate)} values per minute, so this run stopped after about a minute and a half. ${more}`;
+    case 'limit':
+      return `Stopped at the limit of virustotal-enricher.maxLookupsPerRun. ${more}`;
+    default:
+      return undefined;
+  }
 }

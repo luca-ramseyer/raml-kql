@@ -19,5 +19,19 @@ the session or always, and revoke it in the Extensions view.
 
 ## Setup
 
-Run **VirusTotal: Set API Key…** with your key from virustotal.com. The public API allows 4
-lookups per minute; `virustotal-enricher.maxLookupsPerRun` (default 25) caps one enrichment.
+Run **VirusTotal: Set API Key…** with your key from virustotal.com.
+
+## Rate limits and enriching a whole column
+
+The public VirusTotal API allows **4 lookups per minute** (and 500 per day). The extension paces
+its requests to the key's rate, so **Enrich Column** on a long column takes a while: one value
+every 15 seconds with a public key. A run stops after about a minute and a half and shows what it
+found; the answers are kept, so choosing **Enrich Column** again continues with the values that are
+still missing. If VirusTotal reports that your quota is used up, the run stops the same way
+instead of failing, and keeps everything it already has.
+
+| Setting                                 | Default | Meaning                                             |
+| --------------------------------------- | ------- | --------------------------------------------------- |
+| `virustotal-enricher.requestsPerMinute` | 4       | Lookup pace. Premium keys allow far more: raise it. |
+| `virustotal-enricher.maxLookupsPerRun`  | 25      | At most this many new values per run.               |
+| `virustotal-enricher.maxSecondsPerRun`  | 90      | A run stops starting new lookups after this long.   |
