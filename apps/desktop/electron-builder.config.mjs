@@ -10,7 +10,7 @@
  *            and APPLE_API_ISSUER also notarize. Without them the app is unsigned.
  *   Windows  AZURE_* variables (Microsoft's cloud signing service) or WIN_CSC_LINK +
  *            WIN_CSC_KEY_PASSWORD (a certificate) sign. SignPath Foundation signs the finished
- *            installer in a separate workflow step instead (see project/HUMAN-TODO.md).
+ *            installer in a separate workflow step instead (see docs/contributing/releasing.md).
  *   Linux    not signed by the OS; releases ship a SHA256SUMS file.
  */
 

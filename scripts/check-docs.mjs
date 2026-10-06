@@ -131,7 +131,7 @@ for (const file of linkChecked) {
 }
 
 // --- nothing maintainer-only in the public docs ---------------------------------------------
-const FORBIDDEN = [/HUMAN-TODO/, /CLAUDE\.md/, /project\/roadmap/];
+const FORBIDDEN = [/HUMAN-TODO/, /CLAUDE\.md/, /project\/roadmap/, /\b(for|only) Luca\b/i];
 for (const page of pages) {
   const text = readFileSync(page, 'utf8');
   for (const pattern of FORBIDDEN) {

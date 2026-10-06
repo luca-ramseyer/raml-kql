@@ -4,7 +4,7 @@ Raml KQL is an open-source, cross-platform desktop app (macOS, Windows, Linux) f
 
 It exists for analysts who work across multiple customer tenants but have no Microsoft Defender multi-tenant organization (MTO) / multi-tenant advanced hunting. It is a tool in the analyst's toolbelt. It must look and feel like VS Code so it feels familiar from the first second.
 
-The project owner is Luca (security analyst, not a full-time software engineer). The project is long-lived and will be maintained and eventually opened to outside contributors. Optimise for **correctness, security, maintainability and clarity** over cleverness.
+The maintainer is a security analyst rather than a full-time software engineer. The project is long-lived and will be maintained and eventually opened to outside contributors. Optimise for **correctness, security, maintainability and clarity** over cleverness.
 
 ---
 
@@ -15,7 +15,7 @@ You are building this project **autonomously, end to end**. Follow these rules:
 1. **Build order:** follow `project/roadmap.md` phase by phase. Do not start a phase before the previous phase's acceptance criteria pass. When a phase is done, tick its checkboxes in the roadmap file and commit.
 2. **Read the relevant spec before you build a feature.** The specs in `docs/design/` are the source of truth. This file only holds the rules that apply everywhere.
 3. **Record decisions.** Whenever you pick between real alternatives (library, data format, API shape), or deviate from a spec because reality differs, append an entry to `docs/design/decisions.md` (ADR-lite: context, decision, consequences). Update the spec if the deviation is permanent.
-4. **Blocked by something only Luca can provide?** Examples: an Entra client ID, Apple/Windows signing credentials, GitHub secrets. Do not stop. Stub it behind an env var or config value, add an item to `project/HUMAN-TODO.md` explaining exactly what he must do and where, and continue.
+4. **Blocked by something only the maintainer can provide?** Examples: an Entra client ID, signing credentials, GitHub secrets. Do not stop. Stub it behind an env var or config value, say exactly what is needed and where in the pull request description, and continue.
 5. **Verify external APIs against current docs.** Azure REST APIs, MSAL, Electron and npm packages change. If a package name, API version or limit in these specs looks outdated, check the official docs or npm, use the current correct one, and log it in `DECISIONS.md`.
 6. **Quality gates must be green before every commit that finishes a task:** `pnpm lint && pnpm typecheck && pnpm test`. Run `pnpm test:e2e` at the end of every phase.
 7. **Commits:** small and logical, using Conventional Commits (`feat(query): …`, `fix(auth): …`, `chore(ci): …`, `docs: …`, `test: …`). This drives automated changelogs and versioning later.
@@ -88,12 +88,12 @@ docs/                         PUBLIC documentation, also the source of the proje
   contributing/               architecture, testing and CI, releasing
   design/                     design specs (source of truth) and the decision log
   nav.json                    navigation for the website; every page has front matter
-project/                      maintainer-only: roadmap.md, HUMAN-TODO.md (not part of the website)
+project/                      maintainer-only: roadmap.md (the build plan; not part of the website)
 ```
 
 ## Documentation rules
 
-- Everything under `docs/` is public and may be shown on the website: write for readers, not for the maintainer. No internal to-do lists, no secrets, no real customer data. The roadmap and the to-do list live in `project/`.
+- Everything under `docs/` is public and may be shown on the website: write for readers, not for the maintainer. No internal to-do lists, no secrets, no real customer data. The roadmap lives in `project/`.
 - Every page needs front matter (`title`, `description`) and an entry in `docs/nav.json`. `pnpm check:docs` verifies that, and every relative link and image.
 - `docs/reference/settings.md` and `docs/reference/keyboard-shortcuts.md` are generated: run `pnpm docs:generate` after changing the settings registry or default keybindings. CI fails when they are stale.
 

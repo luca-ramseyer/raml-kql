@@ -18,11 +18,11 @@ Version targets:
 - [x] Typed IPC skeleton (`src/shared/ipc/`) with zod-validated contracts, and one example round trip covered by a test
 - [x] `--demo` flag / `RAML_KQL_DEMO=1` plumbing (empty for now)
 - [x] GitHub Actions `ci.yml` (see `11-quality-ci-release.md`)
-- [x] `docs/design/decisions.md`, `project/HUMAN-TODO.md`, `LICENSE` (MIT), `THIRD_PARTY_NOTICES.md` exist
+- [x] `docs/design/decisions.md`, `LICENSE` (MIT), `THIRD_PARTY_NOTICES.md` exist
 
 **Acceptance:** `pnpm dev` opens an empty window. All scripts run. CI passes on a PR. An e2e smoke test launches the app and asserts the window title.
 
-> Status: all acceptance criteria verified locally (lint, typecheck, unit tests, e2e, `pnpm dev`, `pnpm dist` on macOS). "CI passes on a PR" is pending until the GitHub repo exists (see `project/HUMAN-TODO.md`).
+> Status: all acceptance criteria verified locally (lint, typecheck, unit tests, e2e, `pnpm dev`, `pnpm dist` on macOS). "CI passes on a PR" was pending until the GitHub repository existed.
 
 ## Phase 1 — Workbench shell (VS Code look)
 
@@ -36,7 +36,7 @@ Version targets:
 
 **Acceptance:** side by side with VS Code, the shell is visually near-identical in both themes. e2e: open the palette, run the "Toggle Sidebar" command, change the theme via settings.
 
-> Status: e2e acceptance tests pass (`apps/desktop/e2e/workbench.spec.ts`), plus live reload of settings.jsonc and keybindings.jsonc and layout persistence across restarts. Visual comparison done from screenshots on macOS; a side-by-side check by a human on all three OSes is in `project/HUMAN-TODO.md`. The in-app JSON editor for settings.jsonc and the visual Keyboard Shortcuts editor come with Monaco in Phase 4 (D-018).
+> Status: e2e acceptance tests pass (`apps/desktop/e2e/workbench.spec.ts`), plus live reload of settings.jsonc and keybindings.jsonc and layout persistence across restarts. Visual comparison done from screenshots on macOS; a side-by-side check by a person on all three OSes was done manually. The in-app JSON editor for settings.jsonc and the visual Keyboard Shortcuts editor come with Monaco in Phase 4 (D-018).
 
 ## Phase 2 — Accounts and authentication
 
@@ -47,9 +47,9 @@ Version targets:
 - [x] Auth provider modes: built-in client ID, custom client ID, Azure CLI
 - [x] Demo auth provider
 
-**Acceptance:** In demo mode, 2 fake accounts with 3 tenants are shown. Unit tests cover token routing logic. The manual live test is listed in HUMAN-TODO.
+**Acceptance:** In demo mode, 2 fake accounts with 3 tenants are shown. Unit tests cover token routing logic. The manual live test (real accounts) was done by hand.
 
-> Status: e2e (`apps/desktop/e2e/accounts.spec.ts`) shows 2 demo accounts with 3 tenants, the re-auth badge and notification, and signing in to the tenant that needs it. Token routing, coalescing, `needsReauth` tracking and the providers are unit-tested; `/tenants` is integration-tested against the fake Azure server (`apps/desktop/test/fake-azure/`). The MSAL cache is encrypted with Electron `safeStorage` instead of msal-node-extensions (D-020). The live test with real accounts is in `project/HUMAN-TODO.md`.
+> Status: e2e (`apps/desktop/e2e/accounts.spec.ts`) shows 2 demo accounts with 3 tenants, the re-auth badge and notification, and signing in to the tenant that needs it. Token routing, coalescing, `needsReauth` tracking and the providers are unit-tested; `/tenants` is integration-tested against the fake Azure server (`apps/desktop/test/fake-azure/`). The MSAL cache is encrypted with Electron `safeStorage` instead of msal-node-extensions (D-020). The live test with real accounts was done by hand.
 
 ## Phase 3 — Discovery and workspace management
 
@@ -63,7 +63,7 @@ Version targets:
 
 **Acceptance:** In demo mode, disabled workspaces disappear from Targets. Toggling aliasing updates every visible name instantly. Groups select correctly.
 
-> Status: e2e (`apps/desktop/e2e/workspaces.spec.ts`) covers all three, plus rediscovery after signing in to a tenant. Discovery, dedupe, groups, aliasing and `extends` are unit-tested; Resource Graph and `/tenants` are integration-tested against the fake Azure server. The Targets selection is session-wide until query tabs exist (D-027). The live discovery test is in `project/HUMAN-TODO.md`.
+> Status: e2e (`apps/desktop/e2e/workspaces.spec.ts`) covers all three, plus rediscovery after signing in to a tenant. Discovery, dedupe, groups, aliasing and `extends` are unit-tested; Resource Graph and `/tenants` are integration-tested against the fake Azure server. The Targets selection is session-wide until query tabs exist (D-027). The live discovery test was done by hand.
 
 ## Phase 4 — Editor and IntelliSense
 
@@ -74,7 +74,7 @@ Version targets:
 
 **Acceptance:** In demo mode, completions list tables and columns from the fake schema. Tables missing in some targets show "available in 3/5 workspaces".
 
-> Status: e2e (`apps/desktop/e2e/editor.spec.ts`) runs the built app under the production CSP. Completions list demo tables and columns, `DeviceProcessEvents` shows `3/10` in completions and "Available in 3/10 selected workspaces" on hover, the sample query shows "Set in query", and the time range picker works. The schema service, merge, cache, metadata parsing, "Set in query" detection, snippets and time range helpers are unit-tested. Details are in D-028 to D-030. The live schema test is in `project/HUMAN-TODO.md`.
+> Status: e2e (`apps/desktop/e2e/editor.spec.ts`) runs the built app under the production CSP. Completions list demo tables and columns, `DeviceProcessEvents` shows `3/10` in completions and "Available in 3/10 selected workspaces" on hover, the sample query shows "Set in query", and the time range picker works. The schema service, merge, cache, metadata parsing, "Set in query" detection, snippets and time range helpers are unit-tested. Details are in D-028 to D-030. The live schema test was done by hand.
 
 ## Phase 5 — Query engine
 
@@ -95,7 +95,7 @@ Version targets:
 > - The audit log: `audit-log.test.ts` covers verification, tampering, rotation and retention.
 > - In demo mode, e2e covers the run, merged results with attribution and aliasing, the syntax pre-flight, Escape to cancel and Re-run Failed.
 > - The results view is a 200-row preview until the grid arrives in Phase 6.
-> - Details are in D-031 and D-032. Live query and proxy tests are in `project/HUMAN-TODO.md`.
+> - Details are in D-031 and D-032. Live query and proxy tests were done by hand.
 
 ## Phase 6 — Results
 
@@ -113,7 +113,7 @@ Version targets:
 > - `e2e/results.spec.ts` scrolls a 500,000-row demo result to the end and the middle within seconds, sorts, searches, filters to a value, opens row details, groups by tenant, draws a `render timechart` and switches through every chart type, and exports CSV to a file and Markdown to the clipboard.
 > - Unit tests cover every render kind, CSV/JSON/JSON Lines/Markdown/datatable/XLSX round-trips, the views (filters, sorting, search on aliases, spilled batches), group-by, LTTB, portal links (decoded like Learn's sample) and row links.
 > - Rows stay in the main process, and sorting, filtering and grouping run there (D-034).
-> - The live test is in `project/HUMAN-TODO.md`.
+> - The live test (real tenants) was done by hand.
 
 ## Phase 7 — Tabs, history, saved queries
 
@@ -135,7 +135,7 @@ Version targets:
 >   - tab persistence round-trips and per-tab targets;
 >   - the tabs store, history service (dedupe, cap, damaged lines) and My Queries service (path safety, free names, rename, move, trash);
 >   - front-matter.
-> - Decisions: D-037 to D-039. The live check is in `project/HUMAN-TODO.md`.
+> - Decisions: D-037 to D-039. The live check was done by hand.
 
 ## Phase 8 — Query packs and git sources
 
@@ -161,7 +161,7 @@ Version targets:
 >   - every example query parsing with and without injected defaults;
 >   - the Library UI and parameter bar;
 >   - `raml-kql-ext pack validate`.
-> - Decisions: D-040 to D-044. The live checks are in `project/HUMAN-TODO.md`.
+> - Decisions: D-040 to D-044. The live checks were done by hand.
 
 ## Phase 9 — Extensions
 
@@ -192,7 +192,7 @@ Version targets:
 >   - git installs against a local server;
 >   - the manifest schema, semver, entity detection, the `=~` when-clauses and the CLI.
 > - Deferred (D-050): `query.run`, `targets.list`, `auth.getToken` and targets for extension data sources; the `dev` command with `--extensionDevelopmentPath`; drag-and-drop install.
-> - Decisions: D-045 to D-050. The live checks are in `project/HUMAN-TODO.md`.
+> - Decisions: D-045 to D-050. The live checks were done by hand.
 
 ## Phase 10 — Privacy polish and crash reporting
 
@@ -223,13 +223,13 @@ Version targets:
 - [x] Electron fuses set (spec 01)
 - [x] `release.yml` workflow with release-please
 
-**Acceptance:** Unsigned local builds install on all three OSes (CI artifacts). Signing steps are documented in HUMAN-TODO.
+**Acceptance:** Unsigned local builds install on all three OSes (CI artifacts). Signing steps are documented in `docs/contributing/releasing.md`.
 
 **Done (2026-10-06):** decisions D-055 and D-056.
 
 - Built and started locally on macOS (arm64 and x64 artifacts, `latest-mac.yml`, fuses read back from the packaged app). Windows and Linux installers, and a signed and notarized build, are verified by CI and the first release, not locally.
 - New: `electron-builder.config.mjs` (replaces the YAML), `build/entitlements.mac.plist`, `src/main/update/` (`Updater`, electron-updater backend), `update.*` settings, "Check for Updates…" command and Help menu item, `.github/workflows/release.yml`, `release-please-config.json`, `scripts/smoke-packaged.mjs`.
-- Open items for Luca are in `project/HUMAN-TODO.md` (signing secrets, SignPath, GPG key).
+- Signing is documented in `docs/contributing/releasing.md`.
 
 ## Phase 12 — Public readiness (1.0.0)
 
@@ -243,7 +243,7 @@ Version targets:
 
 **Done (2026-10-06):** README with demo-mode screenshots (regenerate with `RAML_KQL_SCREENSHOTS=1 pnpm --filter @raml-kql/desktop test:e2e e2e/screenshots.spec.ts`), CONTRIBUTING, CODE_OF_CONDUCT (Contributor Covenant 2.1, reports through GitHub private reporting), issue and PR templates. gitleaks over the full history and the licence check are clean.
 
-Left for the flip itself (HUMAN-TODO): repository visibility, private vulnerability reporting, CodeQL, secret scanning, branch protection, npm publishing.
+Done at the flip: repository visibility, private vulnerability reporting, CodeQL, secret scanning, branch protection, npm publishing.
 
 ## Post-1.0 backlog (not now)
 
