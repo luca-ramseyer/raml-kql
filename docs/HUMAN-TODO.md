@@ -112,7 +112,7 @@ Claude Code appends items here when blocked, and keeps working. Tick them off wh
 
 ## Added during Phase 11
 
-- [ ] **GitHub Actions secrets for signing** (all optional: without them the release workflow builds unsigned installers). Repository → Settings → Secrets and variables → Actions:
+- [ ] **GitHub Actions secrets for signing** (all optional: without them the release workflow builds unsigned installers). Create an **environment** named `release` (Settings → Environments → New environment), limit it to the `main` branch (Deployment branches and tags → Selected branches), and add the signing secrets there as _environment secrets_, not repository secrets. Only `RAML_KQL_CLIENT_ID` stays a repository secret (CI uses it too):
   - macOS: `CSC_LINK` (the Developer ID Application certificate as a base64 `.p12`: `base64 -i cert.p12 | pbcopy`), `CSC_KEY_PASSWORD`, `APPLE_API_KEY` (the App Store Connect `.p8` as base64), `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`. The notarization step runs only when all of them exist.
   - Windows, either a certificate (`WIN_CSC_LINK` as base64 `.pfx`, `WIN_CSC_KEY_PASSWORD`), or Microsoft's cloud signing service: secrets `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` and _variables_ (not secrets) `AZURE_SIGNING_ENDPOINT`, `AZURE_SIGNING_ACCOUNT`, `AZURE_SIGNING_PROFILE`, `AZURE_SIGNING_PUBLISHER`. Check the service's current name and whether it accepts individuals in Switzerland.
 - [ ] **Allow GitHub Actions to create pull requests**: Settings → Actions → General → Workflow permissions → tick "Allow GitHub Actions to create and approve pull requests". release-please needs it to open the Release PR.

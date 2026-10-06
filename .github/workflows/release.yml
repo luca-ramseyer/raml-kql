@@ -51,6 +51,12 @@ jobs:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    # The signing secrets live in the "release" environment (Settings → Environments), which
+    # is limited to the main branch. Only jobs that name it can read them: a workflow edited
+    # on any other branch can never reach the certificate. Create the environment and its
+    # secrets BEFORE the first release; if it's missing, GitHub makes an empty one and the
+    # build silently comes out unsigned.
+    environment: release
     permissions:
       contents: write # upload assets to the draft release
     env:
