@@ -30,13 +30,20 @@ body {
 }
 
 .country {
-  stroke: var(--vscode-panel-border, #2b2b2b);
+  /* Visible on both light and dark panels: a tint of the text colour, not of the background. */
+  stroke: color-mix(in srgb, var(--vscode-foreground, #cccccc) 35%, transparent);
   stroke-width: 0.4;
-  fill: var(--vscode-editorWidget-background, #2a2a2a);
+  fill: color-mix(in srgb, var(--vscode-foreground, #cccccc) 14%, transparent);
 }
 
 .country.hit {
   fill: var(--vscode-charts-blue, #3794ff);
+}
+
+.marker {
+  fill: none;
+  stroke: var(--vscode-charts-blue, #3794ff);
+  stroke-width: 1.5;
 }
 
 .side {

@@ -4,6 +4,7 @@ import type { GeometryCollection, Topology } from 'topojson-specification';
 import world from 'world-atlas/countries-110m.json';
 
 import { countryColumn, numericCode } from './countries';
+import { unwrap } from './geometry';
 
 /**
  * The Country Map result renderer. It runs in a sandboxed iframe with no network: the world
@@ -34,30 +35,64 @@ const names = new Map(countries.map((c) => [c.properties.name.toLowerCase(), Str
 const WIDTH = 960;
 const HEIGHT = 500;
 
-function project([lon = 0, lat = 0]: Position): string {
-  // Equirectangular, cropped to 60°S–84°N.
-  const x = ((lon + 180) / 360) * WIDTH;
-  const y = ((84 - lat) / 144) * HEIGHT;
-  return `${x.toFixed(1)},${y.toFixed(1)}`;
+/** Equirectangular, cropped to 60°S–84°N. Longitudes outside −180…180 are fine (see `unwrap`). */
+function project([lon = 0, lat = 0]: Position): [number, number] {
+  return [((lon + 180) / 360) * WIDTH, ((84 - lat) / 144) * HEIGHT];
 }
 
-function pathOf(geometry: Geometry | null): string {
-  if (geometry === null) return '';
+const SHIFTS = [-360, 0, 360];
+
+function ringPath(ring: Position[], shift: number): string {
+  const points = ring.map(([lon = 0, lat = 0]) => project([lon + shift, lat]));
+  return `M${points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join('L')}Z`;
+}
+
+interface Shape {
+  id: string;
+  name: string;
+  d: string;
+  /** Centre of the biggest part, for the marker that keeps tiny countries visible. */
+  marker: [number, number] | undefined;
+}
+
+function shapeOf(geometry: Geometry | null): { d: string; marker: [number, number] | undefined } {
+  if (geometry === null) return { d: '', marker: undefined };
   const polygons =
     geometry.type === 'Polygon'
       ? [geometry.coordinates]
       : geometry.type === 'MultiPolygon'
         ? geometry.coordinates
         : [];
-  return polygons
-    .flatMap((polygon) => polygon.map((ring) => `M${ring.map(project).join('L')}Z`))
-    .join('');
+  let d = '';
+  let marker: [number, number] | undefined;
+  let largest = -1;
+  for (const polygon of polygons) {
+    const rings = polygon.map(unwrap);
+    for (const ring of rings) for (const shift of SHIFTS) d += ringPath(ring, shift);
+    const outer = rings[0];
+    if (outer === undefined) continue;
+    const lons = outer.map((p) => p[0] ?? 0);
+    const lats = outer.map((p) => p[1] ?? 0);
+    const width = Math.max(...lons) - Math.min(...lons);
+    const height = Math.max(...lats) - Math.min(...lats);
+    if (width * height > largest) {
+      largest = width * height;
+      marker = project([
+        (Math.max(...lons) + Math.min(...lons)) / 2,
+        (Math.max(...lats) + Math.min(...lats)) / 2,
+      ]);
+      // Keep the marker inside the map for parts that were shifted past an edge.
+      if (marker[0] < 0) marker = [marker[0] + WIDTH, marker[1]];
+      if (marker[0] > WIDTH) marker = [marker[0] - WIDTH, marker[1]];
+    }
+  }
+  return { d, marker };
 }
 
-const shapes = countries.map((c) => ({
+const shapes: Shape[] = countries.map((c) => ({
   id: String(c.id),
   name: c.properties.name,
-  d: pathOf(c.geometry),
+  ...shapeOf(c.geometry),
 }));
 
 function element<K extends keyof HTMLElementTagNameMap>(
@@ -108,6 +143,19 @@ function render({ table }: RenderMessage): void {
   svg.setAttribute('viewBox', `0 0 ${String(WIDTH)} ${String(HEIGHT)}`);
   svg.setAttribute('role', 'img');
   svg.setAttribute('aria-label', `Rows per country (${table.columns[column]?.name ?? ''})`);
+  const clipId = 'map-clip';
+  const defs = document.createElementNS(svgNs, 'defs');
+  const clip = document.createElementNS(svgNs, 'clipPath');
+  clip.setAttribute('id', clipId);
+  const clipRect = document.createElementNS(svgNs, 'rect');
+  clipRect.setAttribute('width', String(WIDTH));
+  clipRect.setAttribute('height', String(HEIGHT));
+  clip.append(clipRect);
+  defs.append(clip);
+  const group = document.createElementNS(svgNs, 'g');
+  group.setAttribute('clip-path', `url(#${clipId})`);
+  svg.append(defs, group);
+  const markers = document.createElementNS(svgNs, 'g');
   for (const shape of shapes) {
     const path = document.createElementNS(svgNs, 'path');
     path.setAttribute('d', shape.d);
@@ -118,8 +166,19 @@ function render({ table }: RenderMessage): void {
     const title = document.createElementNS(svgNs, 'title');
     title.textContent = `${shape.name}: ${String(count ?? 0)}`;
     path.append(title);
-    svg.append(path);
+    group.append(path);
+    if (count !== undefined && shape.marker !== undefined) {
+      // A ring around the country: at world scale, Switzerland is a pixel or two wide.
+      const ring = document.createElementNS(svgNs, 'circle');
+      ring.setAttribute('cx', shape.marker[0].toFixed(1));
+      ring.setAttribute('cy', shape.marker[1].toFixed(1));
+      ring.setAttribute('r', '5');
+      ring.setAttribute('class', 'marker');
+      ring.append(title.cloneNode(true));
+      markers.append(ring);
+    }
   }
+  svg.append(markers);
   const map = element('div');
   map.className = 'map';
   map.append(svg);
