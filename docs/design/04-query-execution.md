@@ -1,4 +1,9 @@
-# 04 — Query execution, result cache, audit log, demo mode
+---
+title: Query execution
+description: The fan-out engine, limits, retries, merging, the encrypted result cache, the audit log and demo mode.
+---
+
+# Query execution, result cache, audit log, demo mode
 
 ## Request
 
@@ -114,7 +119,7 @@ A panel tab "Run" next to "Results", like VS Code's Output/Problems, with a tabl
 
 ```json
 {"ts":"2026-09-24T09:12:03.123Z","runId":"01J...","seq":1842,
- "account":"luca@contoso.com","via":"lighthouse","tenantId":"...","workspaceId":"...",
+ "account":"analyst@contoso.com","via":"lighthouse","tenantId":"...","workspaceId":"...",
  "workspaceResourceId":"...","queryHash":"sha256:...","query":"SigninLogs | ...",
  "timespan":"P1D","state":"succeeded","rows":1234,"durationMs":5120,"attempt":1,
  "appVersion":"1.0.0","prev":"sha256:<hash of previous line>"}

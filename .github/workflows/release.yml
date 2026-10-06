@@ -1,4 +1,4 @@
-# Releases (spec 11). Explained for humans in docs/guides/testing-and-ci-explained.md.
+# Releases (spec 11). Explained for humans in docs/contributing/testing-and-ci.md.
 #
 # 1. Every push to main runs release-please. It keeps a "Release PR" open that bumps the version
 #    and writes CHANGELOG.md from the Conventional Commit messages.
@@ -11,7 +11,7 @@
 # GITHUB_TOKEN don't trigger other workflows, so a separate workflow would never start.
 #
 # Signing is optional: every step below that needs a secret skips itself when the secret is
-# missing, and you get unsigned installers. Secrets to add are listed in docs/HUMAN-TODO.md.
+# missing, and you get unsigned installers. Secrets to add are listed in project/HUMAN-TODO.md.
 name: Release
 
 on:

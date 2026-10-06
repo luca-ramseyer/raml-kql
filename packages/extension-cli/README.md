@@ -14,6 +14,6 @@ npx raml-kql-ext pack validate ./packs                          # validate query
 Install a `.rkqlx` in the app with **Extensions: Install from File…**.
 
 - Guide: [Writing extensions](https://github.com/luca-ramseyer/raml-kql/blob/main/docs/guides/writing-extensions.md)
-- Query packs: [Writing query packs](https://github.com/luca-ramseyer/raml-kql/blob/main/docs/guides/query-packs.md)
+- Query packs: [Writing query packs](https://github.com/luca-ramseyer/raml-kql/blob/main/docs/guides/writing-query-packs.md)
 
 MIT licence.

@@ -1,4 +1,9 @@
-# 01 — Architecture
+---
+title: Architecture
+description: Processes, IPC, security hardening, the technology stack and the data flow.
+---
+
+# Architecture
 
 ## Process model
 

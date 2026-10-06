@@ -21,7 +21,9 @@
     "test:watch": "vitest",
     "test:e2e": "pnpm --filter @raml-kql/desktop test:e2e",
     "check:licenses": "node scripts/check-licenses.mjs",
-    "build:examples": "node scripts/build-examples.mjs"
+    "build:examples": "node scripts/build-examples.mjs",
+    "docs:generate": "node scripts/generate-docs.mjs",
+    "check:docs": "node scripts/generate-docs.mjs --check && node scripts/check-docs.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

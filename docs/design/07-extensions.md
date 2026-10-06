@@ -1,4 +1,9 @@
-# 07 — Extensions
+---
+title: Extensions
+description: The extension model, sandbox, permissions, API and distribution.
+---
+
+# Extensions
 
 ## Goals
 

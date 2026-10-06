@@ -1,3 +1,8 @@
+---
+title: Writing query packs
+description: How to write, validate and share a query pack.
+---
+
 # Writing query packs
 
 A query pack is a folder of `.kql` files plus a small manifest, usually kept in a git
@@ -5,8 +10,8 @@ repository. People add it in Raml KQL with **Library: Add Pack Source…** (a gi
 **Import Pack or Queries from File…** (a `.rkqlpack` zip). Packs are data only: they never
 contain code, and a query never runs until the user presses Run.
 
-The full format is in [`docs/spec/08-query-packs.md`](../spec/08-query-packs.md). This guide
-is the short version. [`examples/packs/raml.starter`](../../examples/packs/raml.starter) is a
+The full format is in [the query pack design](../design/08-query-packs.md). This guide
+is the short version. [`examples/packs/raml.starter`](https://github.com/luca-ramseyer/raml-kql/tree/main/examples/packs/raml.starter) is a
 complete example.
 
 ## Layout
@@ -33,7 +38,7 @@ packs:
 ## The manifest
 
 ```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/<owner>/raml-kql/main/packages/pack-schema/schemas/rkqlpack.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/luca-ramseyer/raml-kql/main/packages/pack-schema/schemas/rkqlpack.schema.json
 schemaVersion: 1
 id: contoso.identity-hunting # publisher.name, lowercase
 name: Identity Hunting
@@ -91,7 +96,7 @@ raml-kql-ext pack validate path/to/my-pack
 This runs the same checks the app runs before it adds a source. It exits with code 1 when
 something is wrong and prints the file and the problem for each one. Your editor can also
 validate `rkqlpack.yaml` with the JSON Schema in
-[`packages/pack-schema/schemas/`](../../packages/pack-schema/schemas/).
+[`packages/pack-schema/schemas/`](https://github.com/luca-ramseyer/raml-kql/tree/main/packages/pack-schema/schemas).
 
 ### In GitHub Actions
 

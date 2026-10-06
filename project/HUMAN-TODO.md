@@ -4,7 +4,7 @@ Claude Code appends items here when blocked, and keeps working. Tick them off wh
 
 ## Known upfront
 
-- [x] **Entra multi-tenant app registration.** Follow `docs/guides/entra-app-registration.md`, then put the client ID in a local `.env` (`RAML_KQL_CLIENT_ID=...`) and later in the GitHub Actions secret `RAML_KQL_CLIENT_ID`.
+- [x] **Entra multi-tenant app registration.** Follow `docs/guides/register-your-own-entra-app.md`, then put the client ID in a local `.env` (`RAML_KQL_CLIENT_ID=...`) and later in the GitHub Actions secret `RAML_KQL_CLIENT_ID`.
   - Done: the local `.env` and the GitHub secret exist. The CI installer build passes the secret to the build (Phase 10 follow-up).
 - [x] **Branding:** a 1024×1024 app icon (`apps/desktop/build/icon.png`). Done (1080×1080, committed).
 - [x] **Raml colour values** for the optional Raml theme. Done: the built-in Raml Dark and Raml Light themes use the brand style guide (D-054).
@@ -98,7 +98,7 @@ Claude Code appends items here when blocked, and keeps working. Tick them off wh
 - [x] **Starter pack against real data.** The example queries in `examples/packs/raml.starter` parse cleanly, but only a real workspace shows whether columns and values (e.g. `ResultType == "500121"`, the `AuditLogs` role fields) behave as intended. Import the folder ("Library: Import Pack from Folder…"), run each query on a Sentinel workspace, and tell me which ones return nothing useful or fail.
 - [x] **A real git source.** Put a test pack in a public GitHub repository and add it with "Library: Add Pack Source…". Push a change and run "Check for Pack Updates", then review and apply it.
 - [x] **A private repository.** Try the same with a private repository and a fine-grained token (read-only "Contents" on that one repository). Check that `~/.raml-kql/sources.jsonc` contains no token.
-- [x] **Decide where packs are published.** For example a `raml-kql-packs` repository. I'll then point the Welcome page and the docs at it. The GitHub Actions snippet in `docs/guides/query-packs.md` works once `@raml-kql/extension-cli` is published to npm (Phase 12).
+- [x] **Decide where packs are published.** For example a `raml-kql-packs` repository. I'll then point the Welcome page and the docs at it. The GitHub Actions snippet in `docs/guides/writing-query-packs.md` works once `@raml-kql/extension-cli` is published to npm (Phase 12).
 
 ## Added during Phase 9
 

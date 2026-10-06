@@ -1,7 +1,7 @@
 # Starter Hunting Pack
 
 A small, practical set of queries for Log Analytics and Microsoft Sentinel, and an example of
-the Raml KQL query pack format (see `docs/spec/08-query-packs.md`).
+the Raml KQL query pack format (see `docs/design/08-query-packs.md`).
 
 Every query runs unchanged in the Azure Portal: parameters are ordinary `let` statements with a
 default value, which Raml KQL replaces with the values from the parameter bar.
