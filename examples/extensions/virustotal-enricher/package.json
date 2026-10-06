@@ -35,7 +35,7 @@
     "commands": [
       {
         "command": "virustotal.setApiKey",
-        "title": "Set API Key…",
+        "title": "Set API Key\u2026",
         "category": "VirusTotal"
       },
       {
@@ -66,7 +66,21 @@
           "default": 25,
           "minimum": 1,
           "maximum": 500,
-          "description": "At most this many values are looked up per enrichment (the public API allows 4 per minute)."
+          "description": "At most this many NEW values are looked up per run; answers already found are kept for the next run."
+        },
+        "virustotal-enricher.requestsPerMinute": {
+          "type": "number",
+          "default": 4,
+          "minimum": 0.1,
+          "maximum": 1000,
+          "description": "How fast to look values up. The public API key allows 4 per minute; premium keys allow more."
+        },
+        "virustotal-enricher.maxSecondsPerRun": {
+          "type": "integer",
+          "default": 90,
+          "minimum": 10,
+          "maximum": 110,
+          "description": "A run stops starting new lookups after this long and returns what it has; run it again to continue."
         }
       }
     }
