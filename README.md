@@ -6,7 +6,7 @@ Raml KQL is an open-source desktop app for macOS, Windows and Linux. It looks an
 
 ![Raml KQL running one query across ten workspaces in five tenants](docs/images/results-dark.png)
 
-> **Status: 1.0 release candidate.** Installers are not signed yet, so your OS will warn you the first time ([details](#install)). Please [open an issue](../../issues) if something is off.
+> **Status: version 1.0.** The macOS app is signed and notarized by Apple. The Windows installer is not signed yet, so SmartScreen will warn you the first time ([details](#install)). Please [open an issue](../../issues) if something is off.
 
 ## What it does
 
@@ -46,13 +46,13 @@ Raml KQL only ever does what you are allowed to do: it uses your delegated permi
 
 Download the installer for your system from the [latest release](../../releases/latest).
 
-| System  | File                                                                         | First start                                                                                                                            |
-| ------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| macOS   | `Raml-KQL-<version>-mac-arm64.dmg` (Apple Silicon) or `-mac-x64.dmg` (Intel) | Drag to Applications. If macOS says the app can't be opened, open **System Settings → Privacy & Security** and choose **Open Anyway**. |
-| Windows | `Raml-KQL-<version>-win-x64.exe` (or `-arm64`)                               | Run the installer. If SmartScreen appears, choose **More info → Run anyway**. Installs per user, no administrator needed.              |
-| Linux   | `.AppImage`, `.deb` or `.rpm`                                                | AppImage: `chmod +x` it and run it (it updates itself). deb/rpm: install with your package manager.                                    |
+| System  | File                                                                         | First start                                                                                                               |
+| ------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| macOS   | `Raml-KQL-<version>-mac-arm64.dmg` (Apple Silicon) or `-mac-x64.dmg` (Intel) | Open the dmg and drag the app to Applications. It is signed and notarized, so macOS opens it without a warning.           |
+| Windows | `Raml-KQL-<version>-win-x64.exe` (or `-arm64`)                               | Run the installer. If SmartScreen appears, choose **More info → Run anyway**. Installs per user, no administrator needed. |
+| Linux   | `.AppImage`, `.deb` or `.rpm`                                                | AppImage: `chmod +x` it and run it (it updates itself). deb/rpm: install with your package manager.                       |
 
-**Why the warnings?** The installers are not code-signed yet, so macOS Gatekeeper and Windows SmartScreen don't know the publisher. Each release has a `SHA256SUMS` file: check your download against it (`shasum -a 256 -c SHA256SUMS --ignore-missing`). Signing is planned.
+**Windows and SmartScreen.** The Windows installer is not code-signed yet (free signing for open-source projects is being set up), so SmartScreen doesn't know the publisher. Each release has a `SHA256SUMS` file: check your download against it (`shasum -a 256 -c SHA256SUMS --ignore-missing`, or `Get-FileHash` on Windows).
 
 **Updates.** The app checks GitHub Releases for new versions and offers "Restart to Update". Turn it off with the setting `update.checkAutomatically`, or choose the `beta` channel with `update.channel`.
 
