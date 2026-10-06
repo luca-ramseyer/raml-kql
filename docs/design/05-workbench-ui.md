@@ -1,4 +1,9 @@
-# 05 — Workbench UI, editor, IntelliSense, tabs, history
+---
+title: Workbench, editor and IntelliSense
+description: The VS Code look, layout, editor, schema-aware IntelliSense, tabs, history and keybindings.
+---
+
+# Workbench UI, editor, IntelliSense, tabs, history
 
 ## Look and feel: "as close to VS Code as possible"
 

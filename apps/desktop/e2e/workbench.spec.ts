@@ -5,7 +5,7 @@ import type { Page } from '@playwright/test';
 
 import { expect, MOD, quickInput, test } from './fixtures';
 
-/** Phase 1 acceptance (docs/spec/00-roadmap.md). */
+/** Phase 1 acceptance (project/roadmap.md). */
 
 const editorBackground = (window: Page): Promise<string> =>
   // A string expression: this runs in the renderer, and the e2e tsconfig has no DOM types.

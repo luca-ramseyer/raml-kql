@@ -1,4 +1,4 @@
-# Continuous integration (spec 11). Explained for humans in docs/guides/testing-and-ci-explained.md.
+# Continuous integration (spec 11). Explained for humans in docs/contributing/testing-and-ci.md.
 name: CI
 
 on:
@@ -46,6 +46,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test --coverage
       - run: pnpm check:licenses
+      # Public docs: front matter, navigation, links, and the generated reference pages.
+      - run: pnpm check:docs
 
       - name: Upload coverage report
         if: always()

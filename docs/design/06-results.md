@@ -1,4 +1,9 @@
-# 06 — Results: grid, group-by, charts, export, deep links
+---
+title: Results
+description: The results grid, group-by, charts, export and deep links.
+---
+
+# Results: grid, group-by, charts, export, deep links
 
 ## Panel tabs per query tab
 

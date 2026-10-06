@@ -1,4 +1,9 @@
-# 02 — Accounts and authentication
+---
+title: Accounts and authentication
+description: Multi-account, multi-tenant sign-in with MSAL, token routing and tenant enumeration.
+---
+
+# Accounts and authentication
 
 ## Goals
 
@@ -11,7 +16,7 @@
 
 ## Auth provider modes (setting `auth.provider`)
 
-1. **`builtin`** (default): MSAL public client using the Raml KQL multi-tenant app registration. The client ID is injected at build time from `RAML_KQL_CLIENT_ID`. Until Luca provides it, fall back to `custom` mode and add a HUMAN-TODO item. See `docs/guides/entra-app-registration.md`.
+1. **`builtin`** (default): MSAL public client using the Raml KQL multi-tenant app registration. The client ID is injected at build time from `RAML_KQL_CLIENT_ID`. Builds without a client ID fall back to `custom` mode. See [Registering your own Entra app](../guides/register-your-own-entra-app.md).
 2. **`custom`**: same MSAL flow with a user-supplied client ID (and optional authority host for sovereign clouds). This is for organisations that won't consent to a third-party app and register their own.
 3. **`azureCli`**: tokens via `az account get-access-token --tenant <id> --resource <res>`. This requires Azure CLI installed and `az login` done. Accounts then mirror `az account list`. It is useful where app consent is impossible. "Sign in" for a tenant that needs it runs `az login --tenant <id>`, which opens the system browser (D-035).
 
@@ -78,4 +83,4 @@ Keep the authority host and resource endpoints in a `CloudProfile` object (`publ
 
 - Unit: routing decisions, request coalescing, `needsReauth` aggregation. Uses a fake MSAL client.
 - Integration: discovery + auth against the fake Azure server in demo mode.
-- Manual live test: add a HUMAN-TODO item with steps for Luca (sign in with 2 accounts, verify Lighthouse workspace listing, verify guest-tenant re-auth prompt).
+- Manual live test (needs real tenants): sign in with two accounts, verify the Lighthouse workspace listing, verify the guest-tenant re-auth prompt.

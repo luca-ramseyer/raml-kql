@@ -498,7 +498,7 @@ if (!app.requestSingleInstanceLock()) {
 
 /**
  * The built-in Entra client ID, injected at build time from RAML_KQL_CLIENT_ID (see
- * electron.vite.config.ts and docs/guides/entra-app-registration.md). Not a secret.
+ * electron.vite.config.ts and docs/guides/register-your-own-entra-app.md). Not a secret.
  */
 const BUILTIN_CLIENT_ID = /^[0-9a-f-]{36}$/i.test(__RAML_KQL_CLIENT_ID__)
   ? __RAML_KQL_CLIENT_ID__

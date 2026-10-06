@@ -6,7 +6,7 @@ Raml KQL is an open-source desktop app for macOS, Windows and Linux. It looks an
 
 ![Raml KQL running one query across ten workspaces in five tenants](docs/images/results-dark.png)
 
-> **Status: version 1.0.** The macOS app is signed and notarized by Apple. The Windows installer is not signed yet, so SmartScreen will warn you the first time ([details](#install)). Please [open an issue](../../issues) if something is off.
+> **Status: version 1.0.** The macOS app is signed and notarized by Apple. The Windows installer is not signed yet, so SmartScreen will warn you the first time ([details](#install)). Please [open an issue](https://github.com/luca-ramseyer/raml-kql/issues) if something is off.
 
 ## What it does
 
@@ -44,7 +44,7 @@ Raml KQL only ever does what you are allowed to do: it uses your delegated permi
 
 ## Install
 
-Download the installer for your system from the [latest release](../../releases/latest).
+Download the installer for your system from the [latest release](https://github.com/luca-ramseyer/raml-kql/releases/latest).
 
 | System  | File                                                                         | First start                                                                                                               |
 | ------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
@@ -64,7 +64,7 @@ Download the installer for your system from the [latest release](../../releases/
 
 No Azure access at hand? Start in demo mode with fake accounts, tenants, workspaces and data: `pnpm dev:demo` (see [Development](#development)), or run **Restart in Demo Mode** from the Command Palette (<kbd>F1</kbd>) in an installed app.
 
-You need at least the **Log Analytics Reader** role (or `Microsoft.OperationalInsights/workspaces/query/read`) on each workspace you want to query. Some organizations require an administrator to approve the app first; see the [consent notes](docs/guides/entra-app-registration.md#how-consent-works-for-other-users). You can also sign in with the Azure CLI, or register your own app with [these steps](docs/guides/entra-app-registration.md).
+You need at least the **Log Analytics Reader** role (or `Microsoft.OperationalInsights/workspaces/query/read`) on each workspace you want to query. Some organizations require an administrator to approve the app first; see the [consent notes](docs/guides/register-your-own-entra-app.md#how-consent-works). You can also sign in with the Azure CLI, or register your own app with [these steps](docs/guides/register-your-own-entra-app.md).
 
 ## Privacy
 
@@ -80,11 +80,12 @@ More in [`SECURITY.md`](SECURITY.md). To report a vulnerability, use the reposit
 
 ## Documentation
 
-- [Writing extensions](docs/guides/writing-extensions.md) and the [example extensions](examples/extensions)
-- [Writing query packs](docs/guides/query-packs.md) and the [example pack](examples/packs)
-- [Registering your own Entra app](docs/guides/entra-app-registration.md)
-- [Testing and CI, explained](docs/guides/testing-and-ci-explained.md)
-- [Design specs](docs/spec) and the [decision log](docs/DECISIONS.md)
+Everything is in [`docs/`](docs/index.md):
+
+- [Getting started](docs/getting-started.md) and the [user guide](docs/index.md#using-raml-kql): accounts, workspaces, queries, results, query packs, extensions, privacy, troubleshooting
+- [Settings](docs/reference/settings.md), [keyboard shortcuts](docs/reference/keyboard-shortcuts.md) and the [configuration folder](docs/reference/config-files.md)
+- [Writing extensions](docs/guides/writing-extensions.md), [writing query packs](docs/guides/writing-query-packs.md) and [registering your own Entra app](docs/guides/register-your-own-entra-app.md)
+- [Contributing: architecture](docs/contributing/architecture.md), [testing and CI](docs/contributing/testing-and-ci.md), [releasing](docs/contributing/releasing.md), and the [design documents](docs/design/index.md)
 
 ## Development
 

@@ -1,3 +1,8 @@
+---
+title: Writing extensions
+description: How to build, test and package a Raml KQL extension.
+---
+
 # Writing extensions
 
 Raml KQL extensions add commands, result enrichers, result renderers, sidebar views, colour
@@ -5,7 +10,7 @@ themes and settings. They are written in TypeScript or JavaScript. The model wil
 familiar if you know VS Code extensions (`package.json` with `contributes`,
 `activate(context)`, disposables), but the APIs are not compatible.
 
-Three complete examples live in [`examples/extensions/`](../../examples/extensions):
+Three complete examples live in [`examples/extensions/`](https://github.com/luca-ramseyer/raml-kql/tree/main/examples/extensions):
 
 | Example                | Shows                                                          |
 | ---------------------- | -------------------------------------------------------------- |

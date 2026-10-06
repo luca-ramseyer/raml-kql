@@ -1,3 +1,8 @@
+---
+title: Decision log
+description: The design decisions behind Raml KQL, with context and consequences.
+---
+
 # Decision log
 
 Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Consequences**. Append only. Supersede by adding a new entry that references the old one.
@@ -648,7 +653,7 @@ The extension host's own session blocks all requests, so it never appears. READM
 
 ## D-054 — Raml brand themes are the default (2026-09-28)
 
-**Context:** Luca asked for a default theme in the Raml design system (style guide: `luca-ramseyer.github.io/brand/style-guide.html`). Spec 05 made VS Code's Dark Modern / Light Modern the defaults.
+**Context:** The maintainer asked for a default theme in the Raml design system (style guide: `luca-ramseyer.github.io/brand/style-guide.html`). Spec 05 made VS Code's Dark Modern / Light Modern the defaults.
 
 **Decision:** two built-in themes, **Raml Dark** and **Raml Light**, are now the defaults (`workbench.colorTheme` and `workbench.preferredDarkColorTheme` are "Raml Dark", `workbench.preferredLightColorTheme` is "Raml Light"; the OS still picks between them). The VS Code themes stay built in and selectable. This deviates from spec 05; the layout, spacing, icons and keyboard behaviour stay VS Code's, only the colours change.
 
@@ -670,12 +675,12 @@ The extension host's own session blocks all requests, so it never appears. READM
 - **macOS:** `dmg` + `zip` for **arm64 and x64 as separate artifacts** (not universal: there are no native modules to merge, and universal doubles the download). Hardened runtime with the two entitlements Electron's documentation lists (`allow-jit`, `allow-unsigned-executable-memory`), nothing else. Notarization switches itself on when `APPLE_API_KEY` (a file path), `APPLE_API_KEY_ID` and `APPLE_API_ISSUER` are set. The release workflow decodes the base64 `.p8` secret to a file because electron-builder wants a path.
 - **Unsigned by default.** Without `CSC_LINK` the mac config sets `identity: null`. Otherwise a plain `pnpm dist` signs with whatever Apple Development certificate is in the developer's keychain (it did, and then failed).
 - **Windows:** `nsis` for x64 and arm64, per-user by default. Signing: Microsoft's cloud signing service when all four `AZURE_SIGNING_*` values and the `AZURE_*` credentials exist; a certificate through `WIN_CSC_LINK`; **SignPath Foundation is not a per-file hook** (it signs a finished artifact through its own GitHub action), so it will be added as a workflow step once the project is accepted. Unsigned until then.
-- **Linux:** `AppImage`, `deb`, `rpm`, x64 only for now (the arm64 deb/rpm tooling needs extra setup; revisit on demand). `SHA256SUMS` is attached to every release. A GPG signature is still open (HUMAN-TODO).
+- **Linux:** `AppImage`, `deb`, `rpm`, x64 only for now (the arm64 deb/rpm tooling needs extra setup; revisit on demand). `SHA256SUMS` is attached to every release. A GPG signature is still open.
 - **Fuses** use electron-builder's built-in `electronFuses` option, not a separate `afterPack` script or the `@electron/fuses` package: `RunAsNode`, `EnableNodeOptionsEnvironmentVariable` and `EnableNodeCliInspectArguments` off; `EnableEmbeddedAsarIntegrityValidation`, `OnlyLoadAppFromAsar` and `EnableCookieEncryption` on (spec 01). Nothing in the app forks itself (`azure-cli-provider` runs the separate `az` program), so turning `RunAsNode` off is safe.
 - **`resetAdHocDarwinSignature`** is set for unsigned builds. Flipping fuses invalidates Electron's ad-hoc signature, and without re-signing, Apple Silicon killed the packaged app at launch with "Code Signature Invalid". Found by running the packaged app, not by any test of the unpackaged one.
 - **`pnpm smoke:packaged`** starts the packaged app in demo mode and checks it stays up for 15 s. CI and the release workflow run it on all three systems. Playwright can't drive a packaged app (the "no inspect arguments" fuse removes the flag it needs), so e2e tests keep running the unpackaged build.
 
-**Consequences:** the first release will be unsigned on all systems until Luca adds the secrets. No code changes are needed when he does.
+**Consequences:** the first release will be unsigned on all systems until the maintainer adds the secrets. No code changes are needed then.
 
 ## D-056 — Auto-update and releases (2026-10-06)
 

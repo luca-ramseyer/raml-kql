@@ -45,7 +45,7 @@ const onwarn: NonNullable<NonNullable<UserConfig['build']>['rollupOptions']>['on
 
 /**
  * RAML_KQL_CLIENT_ID comes from the environment (CI secret) or the repo-root `.env` (local).
- * It is a public identifier, not a secret; see docs/guides/entra-app-registration.md.
+ * It is a public identifier, not a secret; see docs/guides/register-your-own-entra-app.md.
  */
 const buildEnv = {
   ...loadEnv('production', resolve(__dirname, '../..'), 'RAML_KQL_'),

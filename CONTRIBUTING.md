@@ -6,7 +6,7 @@ customer data), so a few rules keep it dependable. By taking part you agree to t
 
 ## Before you start
 
-- **Bugs and ideas:** open an [issue](../../issues/new/choose). For anything bigger than a small
+- **Bugs and ideas:** open an [issue](https://github.com/luca-ramseyer/raml-kql/issues/new/choose). For anything bigger than a small
   fix, please discuss it in an issue first, so you don't build something we can't merge.
 - **Security problems:** never in a public issue. See [`SECURITY.md`](SECURITY.md).
 - **Never post real data.** No tenant or subscription IDs, customer names, e-mail addresses,
@@ -35,14 +35,15 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm test:e2e      # builds the app and drives it in demo mode
+pnpm check:docs    # if you touched docs/: front matter, navigation, links, generated reference
 ```
 
 - **Add tests** for new behaviour and bug fixes. See
-  [`docs/guides/testing-and-ci-explained.md`](docs/guides/testing-and-ci-explained.md) for what
+  [`docs/contributing/testing-and-ci.md`](docs/contributing/testing-and-ci.md) for what
   kind of test goes where.
-- **Read the spec** for the area you touch in [`docs/spec/`](docs/spec). The specs are the
+- **Read the design document** for the area you touch in [`docs/design/`](docs/design/index.md). They are the
   source of truth. If you have to deviate, add an entry to
-  [`docs/DECISIONS.md`](docs/DECISIONS.md) and update the spec.
+  [`docs/design/decisions.md`](docs/design/decisions.md) and update the design document.
 - **Match the code around yours.** Strict TypeScript, zod at every boundary (IPC, config
   files, API responses), no `any`.
 - **KQL in samples, tests and packs** targets Log Analytics: the time column is
@@ -71,7 +72,7 @@ numbers from it. Use `feat!:` or a `BREAKING CHANGE:` note for breaking changes.
 
 You don't need to change the app to extend it. See
 [Writing extensions](docs/guides/writing-extensions.md) and
-[Writing query packs](docs/guides/query-packs.md).
+[Writing query packs](docs/guides/writing-query-packs.md).
 
 ## Releases
 

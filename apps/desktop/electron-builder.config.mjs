@@ -1,6 +1,6 @@
 /**
  * electron-builder packaging config (spec 11). Explained for humans in
- * docs/guides/testing-and-ci-explained.md ("Releases").
+ * docs/contributing/testing-and-ci.md ("Releases").
  *
  * It is a script instead of YAML for one reason: signing is optional. Every signing step
  * switches on only when its secrets are present in the environment, so the same config
@@ -10,7 +10,7 @@
  *            and APPLE_API_ISSUER also notarize. Without them the app is unsigned.
  *   Windows  AZURE_* variables (Microsoft's cloud signing service) or WIN_CSC_LINK +
  *            WIN_CSC_KEY_PASSWORD (a certificate) sign. SignPath Foundation signs the finished
- *            installer in a separate workflow step instead (see docs/HUMAN-TODO.md).
+ *            installer in a separate workflow step instead (see project/HUMAN-TODO.md).
  *   Linux    not signed by the OS; releases ship a SHA256SUMS file.
  */
 

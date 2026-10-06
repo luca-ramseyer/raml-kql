@@ -1,4 +1,9 @@
-# 03 — Discovery, workspace management, tenant groups and aliasing
+---
+title: Discovery, workspaces and aliasing
+description: Workspace discovery, access paths, tenant groups, aliasing and presentation privacy.
+---
+
+# Discovery, workspace management, tenant groups and aliasing
 
 ## Discovery
 
@@ -58,7 +63,7 @@ resources
 This is a VS Code settings-editor-like page with a tree:
 
 ```
-▾ luca@contoso.com  (builtin)                                  [Refresh]
+▾ analyst@contoso.com  (builtin)                                  [Refresh]
   ▾ Contoso Managing (tenant)                    home
     ▾ Sub: SOC-Prod
       ☑ la-soc-weu          West Europe  ● Sentinel   alias: —
@@ -66,7 +71,7 @@ This is a VS Code settings-editor-like page with a tree:
     ▾ Sub: Fabrikam-Security
       ☑ la-fabrikam-sentinel  North Europe ● Sentinel alias: Customer 01
       ☐ la-fabrikam-apps      North Europe
-▾ luca@woodgrove.onmicrosoft.com (guest account)
+▾ analyst@woodgrove.onmicrosoft.com (guest account)
   ...
 ```
 

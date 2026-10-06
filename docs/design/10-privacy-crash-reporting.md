@@ -1,4 +1,9 @@
-# 10 — Privacy stance and crash reporting
+---
+title: Privacy and crash reporting
+description: The privacy stance and how crash reports work without telemetry.
+---
+
+# Privacy stance and crash reporting
 
 ## Privacy stance (put this verbatim-ish in README and SECURITY.md)
 
@@ -37,6 +42,6 @@ The goal is to get actionable crash reports without a telemetry backend and with
    - `"off"`: capture locally only, never prompt.
    - `"auto"`: send sanitized reports to a configured endpoint.
      - Implement the plumbing behind an interface, with a Sentry adapter (`@sentry/electron`, `sendDefaultPii: false`, `beforeSend` running the same sanitizer, no breadcrumbs of user data) enabled only when a DSN is configured at build time.
-     - Ship public builds **without** a DSN until Luca decides otherwise. Add a HUMAN-TODO entry explaining the option.
+     - Public builds ship **without** a DSN. Enabling it is a maintainer decision and would be documented in the privacy stance first.
 
 Tests: the sanitizer gets a corpus-based unit test (fixtures containing GUIDs, UPNs, IPs, JWTs, paths, KQL). Every sensitive token must be removed.

@@ -1,6 +1,11 @@
-# 11 — Testing, CI, signing, auto-update, release
+---
+title: Quality, CI, signing and release
+description: Testing strategy, CI, signing, auto-update and release automation.
+---
 
-The maintainer is learning testing and CI with this project. Keep configs conventional and well commented, and keep `docs/guides/testing-and-ci-explained.md` in sync when you change anything here.
+# Testing, CI, signing, auto-update, release
+
+The maintainer is learning testing and CI with this project. Keep configs conventional and well commented, and keep `docs/contributing/testing-and-ci.md` in sync when you change anything here.
 
 ## Testing strategy
 
@@ -14,7 +19,7 @@ The maintainer is learning testing and CI with this project. Keep configs conven
 
 - Coverage: V8 coverage via Vitest. Enforce **≥80% lines on `src/main/query`, `src/main/auth`, `src/main/results`, `src/main/audit` and `packages/*`**. Global threshold 60%. Don't chase 100%.
 - Tests must be deterministic: fake timers for backoff and rate limits, seeded PRNG for demo data, no real network. Add a guard that fails a test if a real outbound request happens.
-- **Live smoke tests** (optional, manual): `pnpm test:live` runs a tiny read-only query against a workspace configured via env vars, used by Luca against his own tenant. It is never run in CI by default.
+- **Live smoke tests** (optional, manual): `pnpm test:live` runs a tiny read-only query against a workspace configured via env vars, used by maintainers against their own tenant. It is never run in CI by default.
 
 ## Lint and format
 
@@ -51,24 +56,24 @@ ESLint flat config (typescript-eslint strict + stylistic off, react, react-hooks
 - mac: `dmg` + `zip` (zip is required for auto-update), arm64 + x64 as separate artifacts (D-055), `hardenedRuntime: true`, entitlements minimal (JIT for V8 if required by Electron; no camera/mic).
 - win: `nsis` (per-user install by default, optional per-machine), x64 + arm64.
 - linux: `AppImage` (auto-update capable), `deb`, `rpm`. Correct `chrome-sandbox` permissions.
-- Icons generated from a single 1024 px source in `build/icon.png` (placeholder until Luca provides branding; add a HUMAN-TODO).
+- Icons generated from a single 1024 px source in `build/icon.png` (the project's own icon).
 
 ## Code signing (all via CI secrets; skip gracefully when absent)
 
-- **macOS:** Developer ID Application certificate + notarization with an App Store Connect API key (`APPLE_API_KEY`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`) using electron-builder's built-in notarize. Luca has an Apple Developer membership. HUMAN-TODO: create the Developer ID cert, export the .p12, and add the secrets `CSC_LINK`, `CSC_KEY_PASSWORD` plus the API key.
+- **macOS:** Developer ID Application certificate + notarization with an App Store Connect API key (`APPLE_API_KEY`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`) using electron-builder's built-in notarize. The maintainer's Apple Developer membership provides the Developer ID certificate; export it as `.p12` and add `CSC_LINK`, `CSC_KEY_PASSWORD` plus the API key as environment secrets.
 - **Windows:** implement a pluggable `win.sign` hook supporting:
   - (a) **SignPath Foundation**: free code signing for OSS projects. Requires a public repo with an OSI license; apply after going public.
   - (b) **Microsoft's cloud signing service** (Trusted Signing, possibly renamed since; check the current name and whether individuals in Switzerland are eligible).
   - (c) a classic certificate via `CSC_LINK`.
   - Before signing is available, Windows builds are unsigned and SmartScreen warns; document this in the README.
-- **Linux:** no OS signing. Publish SHA-256 checksums (`SHA256SUMS`) with every release and optionally sign them with a GPG key (HUMAN-TODO).
+- **Linux:** no OS signing. Publish SHA-256 checksums (`SHA256SUMS`) with every release and optionally sign them with a GPG key.
 
 ## Auto-update
 
 - electron-updater with the GitHub provider.
   - It checks on startup (delayed 30 s) and every 6 h when `update.checkAutomatically` is set.
   - Downloads happen in the background, then a VS Code-like notification offers "Restart to Update". There is also a manual "Check for Updates…" command.
-- **Private repo caveat:** electron-updater can't read private GitHub Releases without a token, so auto-update effectively starts when the repo goes public. During the private phase, test updates with a local update server (electron-builder's `generic` provider pointing to a local folder), described in HUMAN-TODO.
+- **Private repo caveat:** electron-updater can't read private GitHub Releases without a token, so auto-update effectively starts when the repo goes public. During the private phase, test updates with a local update server (electron-builder's `generic` provider pointing to a local folder).
 - macOS auto-update requires signed builds. Windows works unsigned but with warnings. AppImage works unsigned.
 
 ## Repository hygiene for going public later

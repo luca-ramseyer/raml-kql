@@ -1,4 +1,9 @@
-# 08 — Query packs, My Queries, sources
+---
+title: Query packs
+description: The query pack format, parameters, git sources and file import.
+---
+
+# Query packs, My Queries, sources
 
 ## Principles
 
@@ -37,7 +42,7 @@ id: raml.identity-hunting            # publisher.name, lowercase, [a-z0-9.-]
 name: Identity Hunting
 version: 1.3.0                        # semver
 description: Sign-in and identity hunting queries for Entra ID logs.
-authors: ["Luca Ramseyer <luca@raml.ch>"]
+authors: ["Jane Analyst <jane@contoso.example>"]
 license: MIT
 homepage: https://github.com/raml/raml-kql-packs
 minAppVersion: 1.0.0
