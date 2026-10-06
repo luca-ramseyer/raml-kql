@@ -140,36 +140,29 @@ Claude Code appends items here when blocked, and keeps working. Tick them off wh
 
 ---
 
-## Summary: what is really still open (2026-10-06)
+## Summary: what is really still open (updated 2026-10-06, after going public)
 
-Written after v1.0.0 was released from the new repository. Everything ticked above is done. This is the list of what is genuinely left, in the order you'll meet it.
+The repository is public, v1.0.0 is released (macOS signed and notarized), the old repository is deleted. Everything ticked above is done. What is genuinely left:
 
-### 1. To go public (you)
+### Done since going public
 
-- [ ] **Flip the repository to public:** Settings → General → Danger zone → Change visibility. Add topics if you like (they are already set).
-- [ ] **Delete the old repository** `raml-kql-old` (it still has the old history). My token can't delete repositories.
-- [ ] **Check Settings → Advanced Security on the new repository:** the settings of the old repository did not carry over. Malware alerts, Dependabot alerts and security updates should be on.
-- [ ] **Try the signed macOS installer once** on a Mac: open the dmg, move the app to Applications, start it. `spctl -a -vv "/Applications/Raml KQL.app"` should say "accepted … Notarized Developer ID".
+- [x] Repository public, old repository deleted, Advanced Security checked, signed macOS installer tried.
+- [x] Private vulnerability reporting, CodeQL (default setup), secret scanning with push protection: enabled.
+- [x] Branch protection: the ruleset "Protect main" requires a pull request (squash only), the three checks (`Lint, typecheck, unit tests`, `End-to-end tests (demo mode)`, `conventional-title`), and blocks force pushes and deletion. Nobody can bypass it, so to change it, edit or pause the ruleset in Settings → Rules.
+- [x] README says macOS is signed and notarized (pull request "docs: README now says macOS is signed…").
+- [x] Dependabot alerts: dompurify, uuid and source-map-js are overridden to patched versions (pull request "fix(deps): override vulnerable transitive dependencies"). The two alerts with no patch that only come in through electron-builder at build time (sprintf-js, http-cache-semantics) are dismissed as not used. One low alert, a DOMPurify `IN_PLACE` issue with no patch yet, stays open on purpose: Monaco is not known to use that mode, and it will clear when DOMPurify ships a fix.
 
-### 2. Right after it is public (Claude Code can do most of these through the API, on your say-so)
+### Still open (you)
 
-- [ ] **Private vulnerability reporting** (`SECURITY.md` and the issue chooser point to it). Only available on a public repository.
-- [ ] **CodeQL** (default setup) and **secret scanning with push protection**.
-- [ ] **Branch protection on `main`:** require the `Lint, typecheck, unit tests`, `End-to-end tests (demo mode)` and `conventional-title` checks; squash merge only is already set. Not available on the private repository.
-- [ ] **README:** the Install section still says the installers are unsigned on macOS. Claude Code updates it (macOS is now signed and notarized, Windows is not yet).
-- [ ] **Look at the 23 Dependabot alerts** (mostly `dompurify`, pulled in by Monaco) and merge the security-update pull requests.
+- [ ] **Apply to SignPath Foundation** for free Windows signing (steps in the Phase 11 section above). The repository is public and a release exists, so you can apply now. Until then Windows shows SmartScreen warnings. Send Claude Code the slugs once accepted.
+- [ ] **Publish `@raml-kql/extension-api` and `@raml-kql/extension-cli` to npm.** The scaffold and the author guide already use those names. Needs an npm account (and a login on your machine), so Claude Code can prepare but not publish.
+- [ ] **Try an update end to end:** install v1.0.0, release the next version (the release pull request "release 1.1.0" can be it), start the old one and wait about 30 seconds for "Restart to Update". Now possible, because the repository is public.
+- [ ] **Look at the installs on Windows and Linux:** SmartScreen "More info → Run anyway", AppImage (`chmod +x`), and the deb and rpm.
 
-### 3. Soon after (needs the repository to be public and a real release)
+### Your decisions (not urgent)
 
-- [ ] **Apply to SignPath Foundation** for free Windows signing (steps in the Phase 11 section above). Until then Windows shows SmartScreen warnings.
-- [ ] **Publish `@raml-kql/extension-api` and `@raml-kql/extension-cli` to npm.** The scaffold and the author guide already use those names.
-- [ ] **Try an update end to end:** install v1.0.0, release the next version (the open release PR "release 1.1.0" could be it), start the old one and wait about 30 seconds for "Restart to Update". Not possible while the repository is private.
-- [ ] **Look at the installs on Windows and Linux:** SmartScreen "More info → Run anyway", AppImage (`chmod +x`), and the deb and rpm. macOS is covered in section 1.
-
-### 4. Your decisions (not urgent)
-
-- [ ] **Code of Conduct contact.** Reports currently go through GitHub's private reporting. If you want a mailbox instead (for example `conduct@` on your own domain), tell Claude Code and it replaces the text.
+- [ ] **Code of Conduct contact.** Reports currently go through GitHub's private reporting. If you want a mailbox instead, tell Claude Code and it replaces the text.
 - [ ] **Your GitHub commit email** (Settings → Emails): set raml.ch as primary, "Keep my email addresses private" and "Block command line pushes that expose my email". Two squash-merge commits use your work address; you decided that is acceptable.
 - [ ] **Whether to build "Verified by Raml KQL"** for the two example extensions (signed `.rkqlx` packages, a public key in the app). Not started; fine to leave for 1.1.
 - [ ] **Optional GPG key** to sign `SHA256SUMS` (Linux users). Not started.
-- [ ] **Release PR "release 1.1.0":** leave it open until there is something worth shipping, then merge it.
+- [ ] **Release pull request "release 1.1.0":** leave it open until there is something worth shipping, then merge it.
