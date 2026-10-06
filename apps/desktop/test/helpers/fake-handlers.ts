@@ -26,6 +26,11 @@ export function fakeHandlerDependencies(
     now: () => new Date(0),
     relaunch: vi.fn(),
     showAbout: vi.fn(),
+    update: {
+      state: () => ({ status: 'idle' as const }),
+      check: () => Promise.resolve({ status: 'upToDate' as const }),
+      install: vi.fn(),
+    },
     accounts: {
       snapshot: () => ({ accounts: [], builtinAvailable: true, persistence: 'encrypted' }),
       addAccount: vi.fn(() =>

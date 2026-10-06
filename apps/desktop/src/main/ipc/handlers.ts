@@ -46,6 +46,7 @@ import type {
 } from '../../shared/results/requests';
 import type { ViewPage } from '../../shared/results/view';
 import type { MergedSchema, SchemaRequest } from '../../shared/schema/models';
+import type { UpdateState } from '../../shared/update/models';
 import type { Group, GroupsSnapshot } from '../../shared/workspaces/groups';
 import type { Inventory, TenantUpdate, WorkspaceUpdate } from '../../shared/workspaces/models';
 import { isAllowedExternalUrl } from '../security/navigation';
@@ -71,6 +72,11 @@ export interface HandlerDependencies {
   relaunch: (options: { demo: boolean }) => void;
   showAbout: () => void;
   networkActivity: () => NetworkActivity;
+  update: {
+    state(): UpdateState;
+    check(): Promise<UpdateState>;
+    install(): void;
+  };
   crash: {
     pending(): Promise<PendingCrashes>;
     report(): Promise<CrashReport>;
@@ -212,6 +218,13 @@ export function createIpcHandlers(deps: HandlerDependencies): IpcHandlers {
         deps.showAbout();
       },
       networkActivity: () => deps.networkActivity(),
+    },
+    update: {
+      state: () => deps.update.state(),
+      check: () => deps.update.check(),
+      install: () => {
+        deps.update.install();
+      },
     },
     crash: {
       pending: () => deps.crash.pending(),

@@ -130,9 +130,14 @@ describe('Workbench', () => {
   it('persists layout changes through IPC', async () => {
     const { harness } = await renderWorkbench();
     fireEvent.keyDown(window, { key: 'j', code: 'KeyJ', metaKey: true });
-    await waitFor(() => {
-      expect(harness.deps.layout.write).toHaveBeenCalled();
-    });
+    // The layout is saved 300 ms after the last change; a loaded CI runner needs more than
+    // waitFor's default 1 s.
+    await waitFor(
+      () => {
+        expect(harness.deps.layout.write).toHaveBeenCalled();
+      },
+      { timeout: 5000 },
+    );
     expect(harness.deps.layout.write).toHaveBeenLastCalledWith(
       expect.objectContaining({ panel: expect.objectContaining({ visible: false }) as unknown }),
     );

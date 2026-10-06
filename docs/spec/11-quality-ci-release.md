@@ -42,13 +42,13 @@ ESLint flat config (typescript-eslint strict + stylistic off, react, react-hooks
 - **Conventional Commits → release-please** (`googleapis/release-please-action`, node release type, monorepo manifest config).
   - release-please keeps a "Release PR" open that bumps versions and writes `CHANGELOG.md` from commit messages.
   - Merging that PR creates the tag `vX.Y.Z` and a GitHub Release draft.
-- **`.github/workflows/release.yml`**, on release published (or tag push): matrix mac/win/linux → build → sign/notarize (when secrets exist) → `electron-builder --publish always` uploads installers + `latest*.yml` update metadata to that GitHub Release.
+- **`.github/workflows/release.yml`**, on push to `main` (release-please and the build live in one workflow, because releases made with `GITHUB_TOKEN` don't trigger other workflows; D-056): matrix mac/win/linux → build → sign/notarize (when secrets exist) → `electron-builder --publish always` uploads installers + `latest*.yml` update metadata to that GitHub Release.
 - Pre-releases for the beta channel use a `-beta.N` suffix and are marked as prerelease; electron-updater's `allowPrerelease` follows `update.channel`.
 
 ## Packaging (electron-builder)
 
 - `appId: ch.raml.kql`, `productName: Raml KQL`, artifact names `Raml-KQL-${version}-${os}-${arch}.${ext}`.
-- mac: `dmg` + `zip` (zip is required for auto-update), arm64 + x64 (or universal), `hardenedRuntime: true`, entitlements minimal (JIT for V8 if required by Electron; no camera/mic).
+- mac: `dmg` + `zip` (zip is required for auto-update), arm64 + x64 as separate artifacts (D-055), `hardenedRuntime: true`, entitlements minimal (JIT for V8 if required by Electron; no camera/mic).
 - win: `nsis` (per-user install by default, optional per-machine), x64 + arm64.
 - linux: `AppImage` (auto-update capable), `deb`, `rpm`. Correct `chrome-sandbox` permissions.
 - Icons generated from a single 1024 px source in `build/icon.png` (placeholder until Luca provides branding; add a HUMAN-TODO).

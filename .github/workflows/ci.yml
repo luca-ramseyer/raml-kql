@@ -117,6 +117,18 @@ jobs:
           # The built-in Entra client ID (a public identifier, kept as a secret so it stays out
           # of logs). Empty for PRs from forks: those builds offer custom client ID and Azure CLI.
           RAML_KQL_CLIENT_ID: ${{ secrets.RAML_KQL_CLIENT_ID }}
+
+      # The unit and e2e tests run the unpackaged app. This starts the real packaged one, so a
+      # broken fuse or signature (the app builds, then dies at start) fails the build.
+      - name: Smoke test the packaged app
+        if: runner.os != 'Linux'
+        run: pnpm smoke:packaged
+      - name: Smoke test the packaged app (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          xvfb-run --auto-servernum pnpm smoke:packaged
+
       - uses: actions/upload-artifact@v7
         with:
           name: installers-${{ matrix.os }}

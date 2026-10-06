@@ -49,6 +49,7 @@ import {
 } from '../results/requests';
 import { ViewPageSchema } from '../results/view';
 import { MergedSchemaSchema, SchemaRequestSchema } from '../schema/models';
+import { UpdateStateSchema } from '../update/models';
 import { GroupSchema, GroupsSnapshotSchema } from '../workspaces/groups';
 import { InventorySchema, TenantUpdateSchema, WorkspaceUpdateSchema } from '../workspaces/models';
 
@@ -114,6 +115,14 @@ export const ipcContracts = {
     showAbout: defineChannel('app:showAbout', z.undefined(), z.undefined()),
     /** Hosts contacted this session (spec 10, "Developer: Show Network Activity"). */
     networkActivity: defineChannel('app:networkActivity', z.undefined(), NetworkActivitySchema),
+  },
+  update: {
+    /** The current state, without checking. */
+    state: defineChannel('update:state', z.undefined(), UpdateStateSchema),
+    /** Check GitHub Releases now (a manual check). Resolves with the state it ended in. */
+    check: defineChannel('update:check', z.undefined(), UpdateStateSchema),
+    /** Quit and install a downloaded update. */
+    install: defineChannel('update:install', z.undefined(), z.undefined()),
   },
   crash: {
     /** Crashes since the user last looked (empty unless `crashReporting.mode` is "ask"). */

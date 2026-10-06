@@ -139,3 +139,16 @@ test('application menu: native on macOS, custom menu bar elsewhere', async ({
   await window.getByRole('menuitem', { name: /Command Palette/ }).click();
   await expect(quickInput(window)).toHaveValue('>');
 });
+
+test('"Check for Updates…" says why demo mode cannot update, without a network call', async ({
+  window,
+}) => {
+  await window.keyboard.press(`${MOD}+Shift+P`);
+  const input = quickInput(window);
+  await input.pressSequentially('check for updates');
+  await expect(
+    window.getByRole('dialog', { name: 'Quick input' }).getByRole('option').first(),
+  ).toContainText('Check for Updates');
+  await window.keyboard.press('Enter');
+  await expect(window.getByText('Updates are disabled in demo mode.')).toBeVisible();
+});

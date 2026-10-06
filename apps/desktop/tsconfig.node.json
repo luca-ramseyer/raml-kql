@@ -12,6 +12,7 @@
   },
   "include": [
     "electron.vite.config.ts",
+    "electron-builder.config.d.mts",
     "playwright.config.ts",
     "src/main/**/*",
     "src/preload/**/*",

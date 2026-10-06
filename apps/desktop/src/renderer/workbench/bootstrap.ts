@@ -34,6 +34,7 @@ import {
   syncTargetsWithInventory,
   useTargets,
 } from '../features/targets/targets-store';
+import { registerUpdateCommands, startUpdateNotifications } from '../features/update/update';
 import {
   applyGroups,
   applyInventory,
@@ -136,6 +137,8 @@ export async function startWorkbench({
     registerPackCommands(),
     registerExtensionCommands(),
     registerDiagnosticsCommands(),
+    registerUpdateCommands(),
+    startUpdateNotifications(),
     startErrorCapture(),
     startExtensionContributions(),
     registerResultCommands(),

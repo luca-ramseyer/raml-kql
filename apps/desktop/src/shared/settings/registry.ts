@@ -473,6 +473,29 @@ export const settingDefinitions = [
     scope: 'user',
   }),
   define({
+    key: 'update.channel',
+    schema: z.enum(['stable', 'beta']),
+    default: 'stable',
+    description:
+      '`stable` installs released versions only; `beta` also installs pre-releases (`-beta.N`).',
+    category: ['Application', 'Update'],
+    scope: 'user',
+    control: {
+      kind: 'enum',
+      options: ['stable', 'beta'],
+      optionDescriptions: ['Released versions only.', 'Released versions and pre-releases.'],
+    },
+  }),
+  define({
+    key: 'update.checkAutomatically',
+    schema: z.boolean(),
+    default: true,
+    description:
+      'Check GitHub Releases for a new version 30 seconds after start and every 6 hours. Turn this off to stop all update traffic; "Check for Updates…" still works.',
+    category: ['Application', 'Update'],
+    scope: 'user',
+  }),
+  define({
     key: 'crashReporting.mode',
     schema: z.enum(['ask', 'off', 'auto']),
     default: 'ask',

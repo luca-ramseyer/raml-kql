@@ -128,6 +128,8 @@ import { NEW_SETTINGS_FILE, SettingsService } from './settings/settings-service'
 import { LayoutStore } from './state/layout-store';
 import { TabsStore } from './state/tabs-store';
 import { UserThemesService } from './themes/user-themes';
+import { createElectronBackend, unsupportedReason } from './update/electron-backend';
+import { Updater } from './update/updater';
 import { buildMacMenuTemplate } from './window/menu';
 import { titleBarOptions } from './window/title-bar';
 
@@ -164,6 +166,7 @@ const layoutStore = new LayoutStore(paths.layoutStateFile);
 const tabsStore = new TabsStore(paths.tabsStateFile);
 
 let mainWindow: BrowserWindow | undefined;
+let updater: Updater | undefined;
 const emit = createEventSender(() => (mainWindow === undefined ? [] : [mainWindow.webContents]));
 
 // Machine-local data (MSAL cache, session result cache). Overridable like VS Code's
@@ -226,6 +229,7 @@ app.on('child-process-gone', (_event, details) => {
   }
 });
 app.on('will-quit', () => {
+  updater?.stop();
   crashes.end();
 });
 
@@ -292,6 +296,30 @@ if (!app.requestSingleInstanceLock()) {
     userThemes.onDidChange((snapshot) => {
       emit('themes.changed', snapshot);
     });
+    const cannotUpdate = unsupportedReason({
+      packaged: app.isPackaged,
+      demo: mode.demo,
+      platform: process.platform,
+      appImage: process.env['APPIMAGE'],
+    });
+    updater = new Updater({
+      backend:
+        cannotUpdate === undefined
+          ? await createElectronBackend()
+          : {
+              configure: () => undefined,
+              checkForUpdates: () => Promise.resolve(),
+              quitAndInstall: () => undefined,
+              subscribe: () => () => undefined,
+            },
+      unsupportedReason: cannotUpdate,
+      channel: () => effective('update.channel'),
+      checkAutomatically: () => effective('update.checkAutomatically'),
+      emit: (state) => {
+        emit('update.changed', state);
+      },
+    });
+    updater.start();
     // Live reload (spec 09): external edits, e.g. a `git pull` in a dotfiles repo, apply at once.
     watchDirectory(paths.root, (file) => {
       if (file === undefined || file === 'settings.jsonc') void settings.reload();
@@ -384,6 +412,13 @@ if (!app.requestSingleInstanceLock()) {
         },
         showAbout,
         networkActivity: () => networkActivity.snapshot(),
+        update: {
+          state: () => updater?.state() ?? { status: 'idle' },
+          check: () => updater?.check() ?? Promise.resolve({ status: 'idle' }),
+          install: () => {
+            updater?.install();
+          },
+        },
         crash: {
           pending: () => crashes.pending(),
           report: () => crashes.report(),

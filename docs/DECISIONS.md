@@ -659,3 +659,33 @@ The extension host's own session blocks all requests, so it never appears. READM
 - Fonts (Cormorant Garamond, Montserrat) and 3 px corners are not part of a colour theme and are unchanged; the UI keeps VS Code's system font stack.
 
 **Consequences:** the example theme extension, previously also called "Raml Dark" (teal), is renamed to `teal-theme` / "Teal Dark" so its label doesn't clash with the built-in theme (extension themes with a duplicate label are skipped).
+
+## D-055 — Packaging, signing and fuses (2026-10-06)
+
+**Context:** Phase 11 turns the Phase 0 unsigned stub into the real installer config.
+
+**Decision:**
+
+- **`electron-builder.config.mjs` replaces `electron-builder.yml`.** Signing must be optional per secret, and YAML can't express "only if the variable exists". The file exports `createConfig(env)` so a unit test can check every branch.
+- **macOS:** `dmg` + `zip` for **arm64 and x64 as separate artifacts** (not universal: there are no native modules to merge, and universal doubles the download). Hardened runtime with the two entitlements Electron's documentation lists (`allow-jit`, `allow-unsigned-executable-memory`), nothing else. Notarization switches itself on when `APPLE_API_KEY` (a file path), `APPLE_API_KEY_ID` and `APPLE_API_ISSUER` are set. The release workflow decodes the base64 `.p8` secret to a file because electron-builder wants a path.
+- **Unsigned by default.** Without `CSC_LINK` the mac config sets `identity: null`. Otherwise a plain `pnpm dist` signs with whatever Apple Development certificate is in the developer's keychain (it did, and then failed).
+- **Windows:** `nsis` for x64 and arm64, per-user by default. Signing: Microsoft's cloud signing service when all four `AZURE_SIGNING_*` values and the `AZURE_*` credentials exist; a certificate through `WIN_CSC_LINK`; **SignPath Foundation is not a per-file hook** (it signs a finished artifact through its own GitHub action), so it will be added as a workflow step once the project is accepted. Unsigned until then.
+- **Linux:** `AppImage`, `deb`, `rpm`, x64 only for now (the arm64 deb/rpm tooling needs extra setup; revisit on demand). `SHA256SUMS` is attached to every release. A GPG signature is still open (HUMAN-TODO).
+- **Fuses** use electron-builder's built-in `electronFuses` option, not a separate `afterPack` script or the `@electron/fuses` package: `RunAsNode`, `EnableNodeOptionsEnvironmentVariable` and `EnableNodeCliInspectArguments` off; `EnableEmbeddedAsarIntegrityValidation`, `OnlyLoadAppFromAsar` and `EnableCookieEncryption` on (spec 01). Nothing in the app forks itself (`azure-cli-provider` runs the separate `az` program), so turning `RunAsNode` off is safe.
+- **`resetAdHocDarwinSignature`** is set for unsigned builds. Flipping fuses invalidates Electron's ad-hoc signature, and without re-signing, Apple Silicon killed the packaged app at launch with "Code Signature Invalid". Found by running the packaged app, not by any test of the unpackaged one.
+- **`pnpm smoke:packaged`** starts the packaged app in demo mode and checks it stays up for 15 s. CI and the release workflow run it on all three systems. Playwright can't drive a packaged app (the "no inspect arguments" fuse removes the flag it needs), so e2e tests keep running the unpackaged build.
+
+**Consequences:** the first release will be unsigned on all systems until Luca adds the secrets. No code changes are needed when he does.
+
+## D-056 — Auto-update and releases (2026-10-06)
+
+**Decision:**
+
+- **`Updater` (main)** wraps electron-updater behind a small `UpdaterBackend` interface, so the state machine (idle → checking → available → downloading → ready, or error) is unit-tested with fake timers and no Electron. First check 30 s after start, then every 6 h, re-reading `update.checkAutomatically` on every tick so the setting takes effect without a restart.
+- **Settings:** `update.channel` (`stable` | `beta`; beta sets `allowPrerelease`) and `update.checkAutomatically` (default on), as in spec 09.
+- **Quiet failures:** automatic checks that fail only record an `error` state. A manual "Check for Updates…" (Help menu and Command Palette) always reports the outcome. Error text is the first line only, with URLs and paths replaced, since URLs can carry tokens.
+- **Where it can't run:** demo mode, development builds and Linux installs that aren't an AppImage report an "unsupported" state with the reason, and make no network call.
+- **Downloads and installs** use electron-updater's defaults: download in the background, offer "Restart to Update", and also install on the next quit.
+- **Private repository:** the updater can't read private releases and we ship no token. Auto-update therefore starts working when the repository becomes public (as spec 11 already warned).
+- **Releases:** one `release.yml` runs release-please on every push to `main`. A merged Release PR creates a draft release, the same workflow builds and uploads, and a last job adds `SHA256SUMS` and publishes (as a pre-release when the version has a hyphen). A separate "on release published" workflow was rejected: releases created with the default `GITHUB_TOKEN` don't trigger other workflows. release-please runs as a single root package (`release-type: simple`) and also bumps `apps/desktop/package.json`; the three publishable packages keep their own versions until they are published to npm in Phase 12.
+- **Network Activity:** the updater uses Electron's network stack, so its requests to GitHub show up in "Developer: Show Network Activity" like everything else.

@@ -1,0 +1,150 @@
+# Releases (spec 11). Explained for humans in docs/guides/testing-and-ci-explained.md.
+#
+# 1. Every push to main runs release-please. It keeps a "Release PR" open that bumps the version
+#    and writes CHANGELOG.md from the Conventional Commit messages.
+# 2. Merging that PR makes release-please tag the commit and create a DRAFT GitHub Release.
+# 3. This same workflow then builds the installers on macOS, Windows and Linux, uploads them
+#    (plus the latest*.yml files the auto-updater reads) to the draft, adds SHA256SUMS, and only
+#    then publishes the release. Nobody ever sees a half-finished release.
+#
+# Why one workflow and not "run when a release is published": events caused by the default
+# GITHUB_TOKEN don't trigger other workflows, so a separate workflow would never start.
+#
+# Signing is optional: every step below that needs a secret skips itself when the secret is
+# missing, and you get unsigned installers. Secrets to add are listed in docs/HUMAN-TODO.md.
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release-please:
+    name: Release PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # tags and the draft release
+      pull-requests: write # the Release PR
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+    steps:
+      - id: rp
+        uses: googleapis/release-please-action@v5
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  build:
+    name: Build and upload (${{ matrix.os }})
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write # upload assets to the draft release
+    env:
+      # The tag created for this release, e.g. v1.2.3.
+      TAG: ${{ needs.release-please.outputs.tag_name }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # The built-in Entra client ID (a public identifier, kept as a secret so it stays out of logs).
+      RAML_KQL_CLIENT_ID: ${{ secrets.RAML_KQL_CLIENT_ID }}
+      # macOS notarization key (base64 .p8), its ID and its issuer. Turned into the variables
+      # electron-builder expects in the "Prepare notarization key" step.
+      APPLE_KEY_B64: ${{ matrix.os == 'macos-latest' && secrets.APPLE_API_KEY || '' }}
+      APPLE_KEY_ID: ${{ matrix.os == 'macos-latest' && secrets.APPLE_API_KEY_ID || '' }}
+      APPLE_KEY_ISSUER: ${{ matrix.os == 'macos-latest' && secrets.APPLE_API_ISSUER || '' }}
+      # macOS: Developer ID certificate (base64 .p12) and its password.
+      CSC_LINK: ${{ matrix.os == 'macos-latest' && secrets.CSC_LINK || '' }}
+      CSC_KEY_PASSWORD: ${{ matrix.os == 'macos-latest' && secrets.CSC_KEY_PASSWORD || '' }}
+      # Windows: a classic certificate (base64 .pfx), or Microsoft's cloud signing service.
+      WIN_CSC_LINK: ${{ matrix.os == 'windows-latest' && secrets.WIN_CSC_LINK || '' }}
+      WIN_CSC_KEY_PASSWORD: ${{ matrix.os == 'windows-latest' && secrets.WIN_CSC_KEY_PASSWORD || '' }}
+      AZURE_TENANT_ID: ${{ matrix.os == 'windows-latest' && secrets.AZURE_TENANT_ID || '' }}
+      AZURE_CLIENT_ID: ${{ matrix.os == 'windows-latest' && secrets.AZURE_CLIENT_ID || '' }}
+      AZURE_CLIENT_SECRET: ${{ matrix.os == 'windows-latest' && secrets.AZURE_CLIENT_SECRET || '' }}
+      AZURE_SIGNING_ENDPOINT: ${{ matrix.os == 'windows-latest' && vars.AZURE_SIGNING_ENDPOINT || '' }}
+      AZURE_SIGNING_ACCOUNT: ${{ matrix.os == 'windows-latest' && vars.AZURE_SIGNING_ACCOUNT || '' }}
+      AZURE_SIGNING_PROFILE: ${{ matrix.os == 'windows-latest' && vars.AZURE_SIGNING_PROFILE || '' }}
+      AZURE_SIGNING_PUBLISHER: ${{ matrix.os == 'windows-latest' && vars.AZURE_SIGNING_PUBLISHER || '' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }} # the tagged commit, with the version release-please wrote
+
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install rpm tooling (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes rpm
+
+      # electron-builder wants the notarization key as a file path, not as base64 text.
+      - name: Prepare notarization key (macOS)
+        if: runner.os == 'macOS' && env.CSC_LINK != '' && env.APPLE_KEY_B64 != ''
+        run: |
+          echo "$APPLE_KEY_B64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+          echo "APPLE_API_KEY=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
+          echo "APPLE_API_KEY_ID=$APPLE_KEY_ID" >> "$GITHUB_ENV"
+          echo "APPLE_API_ISSUER=$APPLE_KEY_ISSUER" >> "$GITHUB_ENV"
+
+      # No certificate: stop electron-builder from searching for one (it would only warn).
+      - name: Build unsigned when there is no certificate
+        if: env.CSC_LINK == '' && env.WIN_CSC_LINK == '' && env.AZURE_CLIENT_ID == ''
+        run: echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
+        shell: bash
+
+      # Builds, signs when it can, and uploads to the draft release for $TAG.
+      - run: pnpm --filter @raml-kql/desktop dist:publish
+
+      - name: Smoke test the packaged app
+        if: runner.os != 'Linux'
+        run: pnpm smoke:packaged
+      - name: Smoke test the packaged app (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          xvfb-run --auto-servernum pnpm smoke:packaged
+
+  publish:
+    name: Checksums and publish
+    needs: [release-please, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.release-please.outputs.tag_name }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Write SHA256SUMS
+        run: |
+          mkdir assets && cd assets
+          gh release download "$TAG" --pattern '*.dmg' --pattern '*.zip' --pattern '*.exe' \
+            --pattern '*.AppImage' --pattern '*.deb' --pattern '*.rpm'
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+          gh release upload "$TAG" SHA256SUMS --clobber
+
+      # A version with a hyphen (1.2.0-beta.1) is a pre-release: the "beta" update channel only.
+      - name: Publish the release
+        run: |
+          if [[ "$TAG" == *-* ]]; then
+            gh release edit "$TAG" --draft=false --prerelease
+          else
+            gh release edit "$TAG" --draft=false --latest
+          fi

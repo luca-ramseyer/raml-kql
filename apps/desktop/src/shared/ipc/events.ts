@@ -8,6 +8,7 @@ import {
 } from '../config/config-snapshots';
 import { UiRequestEventSchema } from '../extensions/models';
 import { RunSnapshotSchema } from '../query/models';
+import { UpdateStateSchema } from '../update/models';
 import { GroupsSnapshotSchema } from '../workspaces/groups';
 import { InventorySchema } from '../workspaces/models';
 
@@ -42,6 +43,8 @@ export const ipcEvents = {
   'extensions.changed': z.object({}),
   /** An extension needs the workbench (a message, a prompt, the editor); answer with `extensions.respond`. */
   'extensions.uiRequest': UiRequestEventSchema,
+  /** The auto-updater changed state (downloading, ready to install, failed). */
+  'update.changed': UpdateStateSchema,
   /** An extension posted a message to its sidebar view. */
   'extensions.webviewPost': z.object({ viewId: z.string(), message: z.json() }),
 } as const satisfies Record<string, z.ZodType>;

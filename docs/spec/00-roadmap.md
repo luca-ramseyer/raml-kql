@@ -210,14 +210,20 @@ Version targets:
 
 ## Phase 11 — Packaging, signing, auto-update
 
-- [ ] electron-builder configs: mac (dmg + zip, universal or arm64+x64), win (nsis), linux (AppImage, deb, rpm)
-- [ ] macOS hardened runtime + notarization via env secrets
-- [ ] Windows signing hook (SignPath or Trusted Signing) via env secrets, no-op when absent
-- [ ] electron-updater against GitHub Releases, with stable/beta channel setting and a "check for updates" command
-- [ ] Electron fuses set (spec 01)
-- [ ] `release.yml` workflow with release-please
+- [x] electron-builder configs: mac (dmg + zip, universal or arm64+x64), win (nsis), linux (AppImage, deb, rpm)
+- [x] macOS hardened runtime + notarization via env secrets
+- [x] Windows signing hook (SignPath or Trusted Signing) via env secrets, no-op when absent
+- [x] electron-updater against GitHub Releases, with stable/beta channel setting and a "check for updates" command
+- [x] Electron fuses set (spec 01)
+- [x] `release.yml` workflow with release-please
 
 **Acceptance:** Unsigned local builds install on all three OSes (CI artifacts). Signing steps are documented in HUMAN-TODO.
+
+**Done (2026-10-06):** decisions D-055 and D-056.
+
+- Built and started locally on macOS (arm64 and x64 artifacts, `latest-mac.yml`, fuses read back from the packaged app). Windows and Linux installers, and a signed and notarized build, are verified by CI and the first release, not locally.
+- New: `electron-builder.config.mjs` (replaces the YAML), `build/entitlements.mac.plist`, `src/main/update/` (`Updater`, electron-updater backend), `update.*` settings, "Check for Updates…" command and Help menu item, `.github/workflows/release.yml`, `release-please-config.json`, `scripts/smoke-packaged.mjs`.
+- Open items for Luca are in `docs/HUMAN-TODO.md` (signing secrets, SignPath, GPG key).
 
 ## Phase 12 — Public readiness (1.0.0)
 

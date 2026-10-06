@@ -100,6 +100,26 @@ Commit messages follow a pattern:
 
 So releasing becomes: _merge the release PR_. That's it.
 
+### What happens when you merge the release PR (`release.yml`)
+
+1. release-please tags the commit (`v1.2.0`) and creates a **draft** GitHub Release. Drafts are invisible to everyone but you.
+2. The same workflow builds the installers on three machines (macOS, Windows, Linux) and uploads them to that draft, together with the small `latest*.yml` files that installed apps read to learn that an update exists.
+3. After each packaged app has been started once as a smoke test, a last job writes `SHA256SUMS` and **publishes** the release. If any build fails, the release stays a draft and nobody sees it. Fix the problem and re-run the failed job.
+
+(It is one workflow, not "run when a release is published", because events caused by GitHub's built-in token don't start other workflows.)
+
+**Signing is optional, per secret.** Without the secrets listed in `docs/HUMAN-TODO.md` you simply get unsigned installers (macOS Gatekeeper and Windows SmartScreen warn). Add a secret and the next release is signed. Nothing else changes.
+
+**Choosing the version.** release-please works it out from the commits. To force one, add a line `Release-As: 1.0.0` to the body of a commit (or the squash-merge description). Pre-release versions such as `1.1.0-beta.1` are published as GitHub pre-releases and are only offered to people who set `update.channel` to `beta`.
+
+### Building installers yourself
+
+`pnpm dist` builds unsigned installers for your current OS into `apps/desktop/release/` (on a Mac: arm64 and x64 dmg + zip). `pnpm smoke:packaged` then starts the packaged app in demo mode and checks it stays up for 15 seconds. CI does both on all three systems. Why a separate smoke test? The Playwright tests run the _unpackaged_ app. Packaging flips Electron "fuses" (switches that remove risky features) and signs the result, and either can leave an app that builds fine but dies at start. That happened once already during development: flipping fuses broke the ad-hoc signature and Apple Silicon killed the app.
+
+### Auto-update in one paragraph
+
+Installed apps look at GitHub Releases 30 seconds after start and every 6 hours (setting `update.checkAutomatically`; **Help → Check for Updates…** works regardless). A new version downloads in the background; then a notification offers **Restart to Update**. `update.channel` picks `stable` or `beta`. Development builds, demo mode and deb/rpm installs never update themselves. While this repository is private the updater cannot read its releases (no token is shipped, on purpose), so updates start working once it is public.
+
 ## Other robots in the repo
 
 - **Dependabot** opens PRs when dependencies have updates. If CI is green, merging is usually safe.

@@ -101,6 +101,8 @@ function menuDefinitions(platform: Platform): MenuDef[] {
         'separator',
         { command: 'workbench.action.openIssueReporter', label: 'Report Issue' },
         'separator',
+        { command: 'update.checkForUpdates', label: 'Check for Updates…' },
+        'separator',
         { command: 'workbench.action.toggleDevTools', label: 'Toggle Developer Tools' },
         ...(mac
           ? []
