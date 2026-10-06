@@ -108,7 +108,7 @@ So releasing becomes: _merge the release PR_. That's it.
 
 (It is one workflow, not "run when a release is published", because events caused by GitHub's built-in token don't start other workflows.)
 
-**Signing is optional, per secret.** Without the secrets listed in `docs/HUMAN-TODO.md` you simply get unsigned installers (macOS Gatekeeper and Windows SmartScreen warn). Add a secret and the next release is signed. Nothing else changes.
+**Signing is optional, per secret.** The secrets live in a GitHub _environment_ called `release` that only the `main` branch may use, so other branches can't read the certificate. Without the secrets listed in `docs/HUMAN-TODO.md` you simply get unsigned installers (macOS Gatekeeper and Windows SmartScreen warn). Add a secret and the next release is signed. Nothing else changes.
 
 **Choosing the version.** release-please works it out from the commits. To force one, add a line `Release-As: 1.0.0` to the body of a commit (or the squash-merge description). Pre-release versions such as `1.1.0-beta.1` are published as GitHub pre-releases and are only offered to people who set `update.channel` to `beta`.
 
