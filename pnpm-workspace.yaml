@@ -15,3 +15,15 @@ allowBuilds:
   electron-winstaller: false
   # Pulled in by @kusto/monaco-kusto; its install script only prints a banner.
   core-js-pure: false
+
+# Security fixes for transitive dependencies that their parents have not updated yet
+# (GitHub Dependabot alerts). Each entry says which package pulls it in; remove it once the
+# parent ships a fixed version.
+overrides:
+  # monaco-editor 0.55 (the query editor renders markdown hovers with it).
+  dompurify: ^3.4.16
+  # exceljs 4.4 (XLSX export). It only calls v4(), which the advisory does not cover, but
+  # 11.x has a CommonJS build and the same API for that.
+  exceljs>uuid: ^11.1.1
+  # css-tree, through jsdom (tests only).
+  source-map-js: ^1.2.2
