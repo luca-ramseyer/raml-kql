@@ -161,3 +161,7 @@ A command run from the result cell menu receives `{ value, column, entityType }`
 
 Point `contributes.themes` at VS Code colour theme files (`colors`, `tokenColors`). They
 appear in **Preferences: Color Theme**.
+
+## Signing and the verified badge
+
+`raml-kql-ext sign` signs a `.rkqlx` with an Ed25519 key, and `raml-kql-ext verify` checks a signature. The app only shows **Verified by Raml KQL** for packages signed with a key it trusts, which today means the project's own key, used for the project's example extensions. A package you sign with your own key is accepted but is shown as not verified. Signing your own packages is still useful: users who know your public key can check them with `raml-kql-ext verify`.

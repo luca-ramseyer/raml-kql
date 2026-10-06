@@ -13,7 +13,7 @@ Extensions add features to Raml KQL: commands, result **enrichers** (look up an 
 - **Extensions: Install from Git URL…** installs from a repository's release (or a tagged build).
 - **Extensions: Check for Extension Updates** shows available updates. They are never installed automatically (`extensions.autoUpdate` is off by default), and an update that asks for more permissions shows you the difference first.
 
-Extensions from outside the project are marked **Not verified by Raml KQL**. Only install extensions from authors you trust. You can enable, disable and uninstall each one in the Extensions view.
+An extension shows **Verified by Raml KQL** when its package was signed with the project's signing key and has not been changed since. That tells you the package is the one the project published; it is not a security review of the code. The project's example extensions are signed this way. Everything else is marked **Not verified by Raml KQL**. Only install extensions from authors you trust. You can enable, disable and uninstall each one in the Extensions view.
 
 Two example extensions live in the [source repository](https://github.com/luca-ramseyer/raml-kql/tree/main/examples/extensions): a VirusTotal enricher and a Country Map renderer. Build them with `pnpm build:examples` and install the resulting `.rkqlx` files.
 

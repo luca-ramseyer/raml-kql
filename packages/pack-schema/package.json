@@ -11,7 +11,8 @@
     "./kql-literal": "./src/kql-literal.ts",
     "./schemas/*.json": "./schemas/*.json",
     "./extension-manifest": "./src/extension-manifest.ts",
-    "./semver": "./src/semver.ts"
+    "./semver": "./src/semver.ts",
+    "./extension-signature": "./src/extension-signature.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",

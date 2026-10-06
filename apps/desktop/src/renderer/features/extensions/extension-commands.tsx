@@ -52,9 +52,16 @@ export async function confirmInstall(preview: InstallPreview): Promise<boolean> 
         : `Update ${extension.displayName} from ${replaces.version} to ${extension.version}?`,
     detail: (
       <div className="extension-install">
-        <p className="extension-unverified">
-          <Codicon name="warning" /> Not verified by Raml KQL — only install extensions you trust.
-        </p>
+        {extension.verified ? (
+          <p className="extension-verified">
+            <Codicon name="verified-filled" /> Verified by {extension.verifiedBy ?? 'Raml KQL'}:
+            signed, and unchanged since.
+          </p>
+        ) : (
+          <p className="extension-unverified">
+            <Codicon name="warning" /> Not verified by Raml KQL — only install extensions you trust.
+          </p>
+        )}
         <p>
           {extension.id} · {extension.publisher}
           {extension.repository === undefined ? '' : ` · ${extension.repository}`}

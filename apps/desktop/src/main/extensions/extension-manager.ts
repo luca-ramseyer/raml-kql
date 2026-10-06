@@ -13,6 +13,7 @@ import {
   type ExtensionManifest,
   type PermissionDeclaration,
 } from '@raml-kql/pack-schema/extension-manifest';
+import { checkSignature, type TrustedKey } from '@raml-kql/pack-schema/extension-signature';
 import { z } from 'zod';
 
 import type { ConfigProblem } from '../../shared/config/config-snapshots';
@@ -35,10 +36,12 @@ import { ExtensionConnection, type ConnectionPort } from './extension-connection
 import {
   extensionError,
   HOST_API_VERSION,
+  readExtensionFolder,
   writePackage,
   type ExtensionPackage,
 } from './extension-package';
 import type { PermissionBroker } from './permission-broker';
+import { TRUSTED_SIGNING_KEYS } from './trusted-keys';
 
 /**
  * Installed extensions and their workers (spec 07): install (with a preview first), enable,
@@ -101,6 +104,8 @@ export interface ExtensionManagerOptions {
   now?: () => Date;
   /** Activation and call timeouts (tests shorten them). */
   timeouts?: { activateMs?: number; commandMs?: number };
+  /** Keys whose signatures earn the "Verified" badge. Defaults to the app's own (tests inject theirs). */
+  trustedKeys?: readonly TrustedKey[];
 }
 
 /** Host commands extensions may run (spec 07: a public allowlist). */
@@ -127,6 +132,8 @@ interface Loaded {
   dir: string;
   state: ExtensionInfo['state'];
   error?: string | undefined;
+  /** Who signed the installed files, when a trusted key did (re-checked at every load). */
+  verifiedBy?: string | undefined;
   connection?: ExtensionConnection | undefined;
   starting?: Promise<ExtensionConnection> | undefined;
   commands: Set<string>;
@@ -306,12 +313,21 @@ export class ExtensionManager {
       } catch {
         error = 'The extension files are missing. Reinstall the extension.';
       }
+      let verifiedBy: string | undefined;
+      if (manifest !== undefined) {
+        try {
+          verifiedBy = this.signedBy((await readExtensionFolder(dir)).files);
+        } catch {
+          // Unreadable files: not verified, and the extension reports its own problem.
+        }
+      }
       next.push({
         entry,
         manifest,
         dir,
         state: error !== undefined ? 'failed' : entry.enabled ? 'inactive' : 'disabled',
         error,
+        verifiedBy,
         commands: new Set(),
         enrichers: new Set(),
         views: new Set(),
@@ -331,10 +347,21 @@ export class ExtensionManager {
     }
   }
 
+  /** The name on the badge when a trusted key signed exactly these files. */
+  private signedBy(files: ReadonlyMap<string, Uint8Array>): string | undefined {
+    const check = checkSignature(files, this.options.trustedKeys ?? TRUSTED_SIGNING_KEYS);
+    return check.status === 'verified' ? check.signedBy : undefined;
+  }
+
   private info(
     ext:
       | Loaded
-      | { entry: InstalledEntry; manifest: ExtensionManifest; state: ExtensionInfo['state'] },
+      | {
+          entry: InstalledEntry;
+          manifest: ExtensionManifest;
+          state: ExtensionInfo['state'];
+          verifiedBy?: string | undefined;
+        },
   ): ExtensionInfo | undefined {
     const { manifest, entry } = ext;
     if (manifest === undefined) {
@@ -374,7 +401,8 @@ export class ExtensionManager {
       installedAt: entry.installedAt,
       permissions: manifest.permissions ?? [],
       contributes: manifest.contributes ?? {},
-      verified: false,
+      verified: ext.verifiedBy !== undefined,
+      ...(ext.verifiedBy === undefined ? {} : { verifiedBy: ext.verifiedBy }),
     };
   }
 
@@ -441,7 +469,12 @@ export class ExtensionManager {
       sha256: pkg.sha256,
       installedAt: (this.options.now?.() ?? new Date()).toISOString(),
     };
-    const extension = this.info({ entry, manifest: pkg.manifest, state: 'inactive' });
+    const extension = this.info({
+      entry,
+      manifest: pkg.manifest,
+      state: 'inactive',
+      verifiedBy: this.signedBy(pkg.files),
+    });
     if (extension === undefined) throw extensionError('The extension could not be read.');
     const readmeBytes = pkg.files.get('README.md') ?? pkg.files.get('readme.md');
     const previous = existing?.manifest?.permissions ?? [];

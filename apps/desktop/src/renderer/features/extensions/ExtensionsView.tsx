@@ -67,7 +67,11 @@ function ExtensionItem({
                 ? `${extension.source.url} ${extension.source.tag}`
                 : `development: ${extension.source.path}`}
           </p>
-          {extension.verified ? null : (
+          {extension.verified ? (
+            <p className="extension-verified">
+              <Codicon name="verified-filled" /> Verified by {extension.verifiedBy ?? 'Raml KQL'}
+            </p>
+          ) : (
             <p className="extension-unverified">
               <Codicon name="warning" /> Not verified by Raml KQL.
             </p>

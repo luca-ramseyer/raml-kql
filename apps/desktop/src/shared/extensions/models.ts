@@ -43,8 +43,10 @@ export const ExtensionInfoSchema = z.object({
   installedAt: z.string(),
   permissions: z.array(PermissionDeclarationSchema),
   contributes: ContributesSchema,
-  /** No verified-publisher program yet (spec 07): always false. */
+  /** Signed by a key the app trusts, and unchanged since (D-057). */
   verified: z.boolean(),
+  /** Who signed it, for the badge: "Raml KQL". Only when `verified`. */
+  verifiedBy: z.string().optional(),
   /** An update is available (git sources, after a check). */
   update: z.object({ version: z.string(), tag: z.string() }).optional(),
 });
