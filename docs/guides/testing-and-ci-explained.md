@@ -104,7 +104,7 @@ So releasing becomes: _merge the release PR_. That's it.
 
 1. release-please tags the commit (`v1.2.0`) and creates a **draft** GitHub Release. Drafts are invisible to everyone but you.
 2. The same workflow builds the installers on three machines (macOS, Windows, Linux) and uploads them to that draft, together with the small `latest*.yml` files that installed apps read to learn that an update exists.
-3. After each packaged app has been started once as a smoke test, a last job writes `SHA256SUMS` and **publishes** the release. If any build fails, the release stays a draft and nobody sees it. Fix the problem and re-run the failed job.
+3. After each packaged app has been started once as a smoke test, a last job writes `SHA256SUMS` and **publishes** the release. If any build fails, the release stays a draft and nobody sees it. Fix the problem on `main`, then build the draft again with `gh workflow run release.yml -f tag=v1.2.0` (or Actions → Release → Run workflow). Re-running the old failed run can't pick up fixes to the workflow itself.
 
 (It is one workflow, not "run when a release is published", because events caused by GitHub's built-in token don't start other workflows.)
 
