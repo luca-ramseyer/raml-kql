@@ -16,6 +16,9 @@ export default defineConfig({
           name: 'desktop-node',
           root: './apps/desktop',
           environment: 'node',
+          // File-system and fake-server tests slow down when the whole suite runs at once.
+          testTimeout: 15_000,
+          hookTimeout: 15_000,
           include: [
             'src/main/**/*.test.ts',
             'src/preload/**/*.test.ts',
