@@ -30,6 +30,9 @@ export default defineConfig({
           name: 'desktop-renderer',
           root: './apps/desktop',
           environment: 'jsdom',
+          // Whole-workbench renders are slow on CI runners; see test/setup/dom.ts.
+          testTimeout: 20_000,
+          hookTimeout: 20_000,
           include: ['src/renderer/**/*.test.{ts,tsx}'],
           setupFiles: ['./test/setup/no-network.ts', './test/setup/dom.ts'],
         },

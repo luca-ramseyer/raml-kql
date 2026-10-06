@@ -2,7 +2,7 @@
 import '@testing-library/jest-dom/vitest';
 
 import type { TestingLibraryMatchers } from '@testing-library/jest-dom/matchers';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterEach } from 'vitest';
 
 // jest-dom's bundled typings augment `Assertion`; Vitest 5 reads custom matchers from
@@ -16,6 +16,11 @@ declare module 'vitest' {
   > extends TestingLibraryMatchers<unknown, R> {}
 }
 /* eslint-enable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-unused-vars */
+
+// GitHub's CI runners are several times slower than a laptop, and these tests render the whole
+// workbench under coverage. A longer wait costs nothing when the UI is quick (waitFor and
+// findBy return as soon as they succeed), but stops one-in-twenty timing failures.
+configure({ asyncUtilTimeout: 5000 });
 
 afterEach(() => {
   cleanup();
