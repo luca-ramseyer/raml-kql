@@ -17,6 +17,16 @@ name: Release
 on:
   push:
     branches: [main]
+  # Builds and publishes an EXISTING draft release again, for when a build failed. Run it from the
+  # main branch: gh workflow run release.yml -f tag=v1.0.0
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The release tag, e.g. v1.0.0 (the draft release must exist)
+        required: true
+      ref:
+        description: Commit or branch to build (it must already contain that version)
+        default: main
 
 concurrency:
   group: release
@@ -28,6 +38,7 @@ permissions:
 jobs:
   release-please:
     name: Release PR
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: write # tags and the draft release
@@ -35,6 +46,7 @@ jobs:
     outputs:
       release_created: ${{ steps.rp.outputs.release_created }}
       tag_name: ${{ steps.rp.outputs.tag_name }}
+      sha: ${{ steps.rp.outputs.sha }}
     steps:
       - id: rp
         uses: googleapis/release-please-action@v5
@@ -45,7 +57,10 @@ jobs:
   build:
     name: Build and upload (${{ matrix.os }})
     needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
+    # always(): the release-please job is skipped on a manual run, which would skip this one too.
+    if: >-
+      always() && (needs.release-please.outputs.release_created == 'true' ||
+      github.event_name == 'workflow_dispatch')
     strategy:
       fail-fast: false
       matrix:
@@ -60,8 +75,8 @@ jobs:
     permissions:
       contents: write # upload assets to the draft release
     env:
-      # The tag created for this release, e.g. v1.2.3.
-      TAG: ${{ needs.release-please.outputs.tag_name }}
+      # The tag of this release, e.g. v1.2.3.
+      TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # The built-in Entra client ID (a public identifier, kept as a secret so it stays out of logs).
       RAML_KQL_CLIENT_ID: ${{ secrets.RAML_KQL_CLIENT_ID }}
@@ -86,7 +101,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ env.TAG }} # the tagged commit, with the version release-please wrote
+          # The release commit, with the version release-please wrote. Not the tag: a draft
+          # release has no git tag until it is published.
+          ref: ${{ needs.release-please.outputs.sha || inputs.ref }}
 
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
@@ -129,11 +146,12 @@ jobs:
   publish:
     name: Checksums and publish
     needs: [release-please, build]
+    if: always() && needs.build.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     env:
-      TAG: ${{ needs.release-please.outputs.tag_name }}
+      TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: ${{ github.repository }}
     steps:
