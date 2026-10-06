@@ -203,6 +203,7 @@ export function initExtension(
     },
     devDependencies: {
       '@raml-kql/extension-api': '^1.0.0',
+      '@raml-kql/extension-cli': '^1.0.0',
       esbuild: '^0.28.0',
       typescript: '^6.0.0',
     },

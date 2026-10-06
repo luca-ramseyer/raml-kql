@@ -95,8 +95,7 @@ validate `rkqlpack.yaml` with the JSON Schema in
 
 ### In GitHub Actions
 
-Once `@raml-kql/extension-cli` is published to npm, a pack repository can validate every pull
-request:
+A pack repository can validate every pull request with `@raml-kql/extension-cli` from npm:
 
 ```yaml
 # .github/workflows/validate-packs.yml

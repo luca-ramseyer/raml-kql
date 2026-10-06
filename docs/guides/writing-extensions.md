@@ -59,9 +59,9 @@ The `reason` is shown in the prompt. Keep it short and specific.
 ## Getting started
 
 ```bash
-npx raml-kql-ext init my-extension --publisher contoso
+npx @raml-kql/extension-cli init my-extension --publisher contoso
 cd my-extension
-npm install
+npm install                   # also installs the raml-kql-ext command
 npm run build                 # esbuild bundles src/extension.ts into dist/extension.js
 npx raml-kql-ext validate     # the same checks the app runs when installing
 npx raml-kql-ext package      # builds contoso.my-extension-0.1.0.rkqlx

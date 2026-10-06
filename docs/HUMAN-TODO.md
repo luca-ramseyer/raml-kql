@@ -109,6 +109,18 @@ Claude Code appends items here when blocked, and keeps working. Tick them off wh
 
 - [x] **Brand colours for Raml Dark.** Done: the brand themes are built in (D-054); the teal example is now "Teal Dark".
 - [ ] **Publish `@raml-kql/extension-api` and `@raml-kql/extension-cli` to npm** when the repo goes public (Phase 12). The scaffold's `package.json` and the author guide already point at those names.
+  - Prepared 2026-10-06: both packages are version 1.0.0, build to `dist/`, and were installed from their tarballs in a scratch project (scaffold, build, typecheck, validate and package all worked). Only the actual publish is left. You need:
+    1. An npm account with two-factor authentication, and the npm **organization** `raml-kql` (npmjs.com → Add Organization, the free plan is enough for public packages), so the `@raml-kql` scope is yours.
+    2. `npm login` on your machine.
+    3. From the repository root, once the pull request "feat: make the extension packages publishable" is merged:
+       ```bash
+       git checkout main && git pull && pnpm install
+       pnpm --filter @raml-kql/extension-api publish --access public
+       pnpm --filter @raml-kql/extension-cli publish --access public
+       ```
+       npm asks for your one-time password. `pnpm publish` builds first (`prepack`) and refuses to publish from a dirty or non-main branch.
+    4. Check `npm view @raml-kql/extension-cli version` and `npx @raml-kql/extension-cli --version` in an empty folder.
+  - Later: publish from GitHub Actions with npm trusted publishing (no token, with provenance). Say so, and Claude Code adds the workflow once the packages exist on npm.
 
 ## Added during Phase 10
 
