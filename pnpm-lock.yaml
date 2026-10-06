@@ -180,7 +180,7 @@ importers:
   packages/extension-api: {}
 
   packages/extension-cli:
-    dependencies:
+    devDependencies:
       '@raml-kql/pack-schema':
         specifier: workspace:*
         version: link:../pack-schema

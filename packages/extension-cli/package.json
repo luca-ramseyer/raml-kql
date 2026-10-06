@@ -1,25 +1,54 @@
 {
   "name": "@raml-kql/extension-cli",
-  "version": "0.0.0",
-  "private": true,
+  "version": "1.0.0",
   "description": "raml-kql-ext: scaffold, validate and package Raml KQL extensions.",
   "license": "MIT",
   "type": "module",
+  "keywords": [
+    "raml-kql",
+    "kql",
+    "extension",
+    "cli",
+    "azure",
+    "log-analytics"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luca-ramseyer/raml-kql.git",
+    "directory": "packages/extension-cli"
+  },
+  "homepage": "https://github.com/luca-ramseyer/raml-kql#readme",
+  "bugs": {
+    "url": "https://github.com/luca-ramseyer/raml-kql/issues"
+  },
+  "author": "Luca Ramseyer",
+  "bin": {
+    "raml-kql-ext": "dist/cli.cjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "build": "esbuild src/cli.ts --bundle --platform=node --format=cjs --target=node22 --outfile=dist/cli.cjs --banner:js='#!/usr/bin/env node'"
+    "build": "esbuild src/cli.ts --bundle --platform=node --format=cjs --target=node22 --outfile=dist/cli.cjs --banner:js='#!/usr/bin/env node'",
+    "prepack": "pnpm run build"
   },
-  "dependencies": {
+  "devDependencies": {
     "@raml-kql/pack-schema": "workspace:*",
     "fflate": "0.8.3"
   },
-  "bin": {
-    "raml-kql-ext": "dist/cli.cjs"
-  },
   "files": [
-    "dist"
-  ]
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      "./package.json": "./package.json"
+    }
+  }
 }

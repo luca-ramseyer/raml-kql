@@ -1,19 +1,57 @@
 {
   "name": "@raml-kql/extension-api",
-  "version": "0.0.0",
-  "private": true,
+  "version": "1.0.0",
   "description": "Public TypeScript types and runtime shim for Raml KQL extension authors.",
   "license": "MIT",
   "type": "module",
+  "keywords": [
+    "raml-kql",
+    "kql",
+    "extension",
+    "azure",
+    "log-analytics"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luca-ramseyer/raml-kql.git",
+    "directory": "packages/extension-api"
+  },
+  "homepage": "https://github.com/luca-ramseyer/raml-kql#readme",
+  "bugs": {
+    "url": "https://github.com/luca-ramseyer/raml-kql/issues"
+  },
+  "author": "Luca Ramseyer",
   "exports": {
     ".": "./src/index.ts",
     "./runtime": "./src/runtime.ts",
     "./protocol": "./src/protocol.ts"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "build": "node build.mjs",
+    "prepack": "pnpm run build"
   },
   "files": [
-    "src"
-  ]
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./runtime": {
+        "types": "./dist/runtime.d.ts",
+        "default": "./dist/runtime.js"
+      },
+      "./protocol": {
+        "types": "./dist/protocol.d.ts",
+        "default": "./dist/protocol.js"
+      }
+    }
+  }
 }
