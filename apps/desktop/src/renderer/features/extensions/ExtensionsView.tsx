@@ -4,6 +4,8 @@ import type { ExtensionInfo, Grant } from '../../../shared/extensions/models';
 import { executeCommand } from '../../platform/commands';
 import { Codicon } from '../../workbench/common/Codicon';
 
+import { BrowseExtensions } from './BrowseExtensions';
+import { setExtensionsSearch, setExtensionsTab, useCatalog } from './catalog-store';
 import {
   PermissionList,
   revokeGrant,
@@ -65,7 +67,9 @@ function ExtensionItem({
               ? `from ${extension.source.name}`
               : extension.source.type === 'git'
                 ? `${extension.source.url} ${extension.source.tag}`
-                : `development: ${extension.source.path}`}
+                : extension.source.type === 'url'
+                  ? `from ${extension.source.url}`
+                  : `development: ${extension.source.path}`}
           </p>
           {extension.verified ? (
             <p className="extension-verified">
@@ -137,46 +141,92 @@ function ExtensionItem({
   );
 }
 
-/** The Extensions view (spec 07): installed extensions, their state, permissions and grants. */
+/** The Extensions view (spec 07): installed extensions and the Browse catalog (D-058). */
 export function ExtensionsView(): React.JSX.Element {
   const { snapshot, loaded } = useExtensions();
+  const { tab, search } = useCatalog();
   useEffect(() => {
     if (!loaded) void loadExtensions();
   }, [loaded]);
 
-  if (loaded && snapshot.extensions.length === 0) {
-    return (
-      <div className="welcome-view">
-        <p>
-          Extensions add commands, enrichers, result views and themes. They run sandboxed and ask
-          before they use the network or your results.
-        </p>
-        <button
-          type="button"
-          className="button button-primary welcome-view-button"
-          onClick={() => void executeCommand('extensions.installFromFile')}
-        >
-          Install from File…
-        </button>
-        <button
-          type="button"
-          className="button button-secondary welcome-view-button"
-          onClick={() => void executeCommand('extensions.installFromGit')}
-        >
-          Install from Git URL…
-        </button>
-      </div>
-    );
-  }
+  const query = search.toLowerCase().trim();
+  const installed = snapshot.extensions.filter((extension) =>
+    [extension.displayName, extension.id, extension.description ?? '']
+      .join(' ')
+      .toLowerCase()
+      .includes(query),
+  );
   return (
-    <ul className="extensions-list" aria-label="Installed extensions">
-      {snapshot.extensions.map((extension) => (
-        <ExtensionItem
-          key={extension.id}
-          extension={extension}
-          grants={snapshot.grants.filter((g) => g.extensionId === extension.id)}
-        />
-      ))}
-    </ul>
+    <div className="extensions-view">
+      <div className="extensions-tabs" role="tablist" aria-label="Extensions">
+        {(['installed', 'browse'] as const).map((id) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            className={`extensions-tab${tab === id ? ' active' : ''}`}
+            onClick={() => {
+              setExtensionsTab(id);
+            }}
+          >
+            {id === 'installed' ? `Installed (${String(snapshot.extensions.length)})` : 'Browse'}
+          </button>
+        ))}
+      </div>
+      <input
+        type="search"
+        className="extensions-search"
+        aria-label="Search extensions"
+        placeholder={tab === 'installed' ? 'Search installed extensions' : 'Search the catalog'}
+        value={search}
+        onChange={(event) => {
+          setExtensionsSearch(event.target.value);
+        }}
+      />
+      {tab === 'browse' ? (
+        <BrowseExtensions />
+      ) : loaded && snapshot.extensions.length === 0 ? (
+        <div className="welcome-view">
+          <p>
+            Extensions add commands, enrichers, result views and themes. They run sandboxed and ask
+            before they use the network or your results.
+          </p>
+          <button
+            type="button"
+            className="button button-primary welcome-view-button"
+            onClick={() => {
+              setExtensionsTab('browse');
+            }}
+          >
+            Browse Extensions
+          </button>
+          <button
+            type="button"
+            className="button button-secondary welcome-view-button"
+            onClick={() => void executeCommand('extensions.installFromFile')}
+          >
+            Install from File…
+          </button>
+          <button
+            type="button"
+            className="button button-secondary welcome-view-button"
+            onClick={() => void executeCommand('extensions.installFromGit')}
+          >
+            Install from Git URL…
+          </button>
+        </div>
+      ) : (
+        <ul className="extensions-list" aria-label="Installed extensions">
+          {installed.map((extension) => (
+            <ExtensionItem
+              key={extension.id}
+              extension={extension}
+              grants={snapshot.grants.filter((g) => g.extensionId === extension.id)}
+            />
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

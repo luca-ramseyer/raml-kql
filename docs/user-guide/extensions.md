@@ -7,7 +7,18 @@ description: Install extensions, understand the permissions they ask for, and ke
 
 Extensions add features to Raml KQL: commands, result **enrichers** (look up an IP or file hash on a threat intelligence service), result **renderers** (for example a world map), sidebar views and colour themes. Open the **Extensions** view with <kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd>.
 
-## Installing
+## Browsing and installing
+
+Open the **Browse** tab of the Extensions view (or run **Extensions: Browse Extensions**) to see extensions you can install, with search. The list comes from the project's extension catalog, a small JSON file on GitHub. It is fetched **only when you open Browse or press Refresh**, never at startup, and saved on your computer so reopening it is instant and works offline.
+
+Choose **Install** on an entry: Raml KQL downloads the package, shows what it is and the permissions it asks for, and installs it only when you confirm. The catalog is just a list of links. It never decides what an extension may do or whether it is **Verified**: that comes from the package itself, as described below. If a package turns out to be a different extension than the entry says, nothing is installed.
+
+- `extensions.catalog.enabled` turns Browse off completely (nothing is fetched).
+- `extensions.catalog.urls` lists the catalogs to read, for example an organization's own list of approved extensions. The first catalog that lists an extension wins.
+- Extensions installed from the catalog are checked for newer versions like other extensions, and updates show their permission changes first.
+- Want your extension listed? See [Writing extensions](../guides/writing-extensions.md#publishing-your-extension).
+
+## Installing from a file or a repository
 
 - **Extensions: Install from File…** installs a `.rkqlx` package.
 - **Extensions: Install from Git URL…** installs from a repository's release (or a tagged build).

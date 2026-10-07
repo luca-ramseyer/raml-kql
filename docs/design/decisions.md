@@ -712,3 +712,18 @@ The extension host's own session blocks all requests, so it never appears. READM
 
 **Consequences:** "verified" means the package is the one the project published and signed, not that it was reviewed for safety, and the UI and docs say so. Rotating a key is an app release (add the new key, re-sign, later remove the old one). Third-party publishers can't get the badge yet; extending the trust list is possible but would need a review process first. Apps released before a key is added can't verify packages signed with it.
 
+## D-058 — Extension catalog and the Browse tab (2026-10-07)
+
+**Context:** VS Code shows installable extensions inside the app. Raml KQL has no servers and no telemetry, so a marketplace backend is out; people still need a way to discover extensions without knowing a git URL.
+
+**Decision:**
+
+- **A catalog is a JSON file of pointers** (`schemaVersion`, `name`, `extensions[]` with id, display name, publisher, description, categories, package URL, optional repository, version and license). The format and a JSON Schema live in `@raml-kql/pack-schema` (`extension-catalog`). Entries are validated one by one, so a bad entry is skipped and reported instead of hiding the rest.
+- **It lives in its own repository** (`raml-kql-extensions`), where a pull request adds an entry and CI validates the file against the JSON Schema. Catalog changes don't need an app release. Users can add catalogs (`extensions.catalog.urls`), for example an organization's approved list; the first catalog listing an id wins.
+- **Fetched only on demand:** when the user opens Browse or presses Refresh. Never at startup. The list is saved to `state/extension-catalog.json` (24 hours counts as fresh; offline shows the saved copy). `extensions.catalog.enabled` turns the feature and its request off. Only https catalogs; 1 MB and 15 s limits.
+- **Install** downloads the entry's `package` link (a "latest release" URL is fine), reads it like a file the user picked, requires its manifest id to equal the entry's id, and shows the normal preview (permissions, README, Verified or not). A new source type `url` records the link, so the existing update check can compare versions by downloading the package again.
+- **Nothing in a catalog is trusted.** Permissions come from the package manifest; "Verified by Raml KQL" comes from the signature check (D-057), never from a catalog field.
+- **Demo mode** shows built-in sample entries and cannot install them (no network).
+
+**Consequences:** the privacy policy lists the catalog request. Git-hosted extensions keep working through "Install from Git URL". Version numbers of catalog extensions are the package's own; the entry's `version` is only a hint. A catalog could point at a malicious package, which is why the permission preview and signature check happen on the downloaded file and not on the catalog text.
+

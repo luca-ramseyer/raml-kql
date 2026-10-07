@@ -8,6 +8,8 @@ import { homedir, release } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import { extensionId } from '@raml-kql/pack-schema/extension-manifest';
+import { compareVersions, parseVersion } from '@raml-kql/pack-schema/semver';
 import {
   app,
   BrowserWindow,
@@ -75,6 +77,7 @@ import { DiscoveryService } from './discovery/discovery-service';
 import { GroupsService } from './discovery/groups-service';
 import { FileInventoryCache, MemoryInventoryCache } from './discovery/inventory-cache';
 import { ExportService } from './export/export-service';
+import { CatalogService } from './extensions/catalog-service';
 import { ExtensionHostWindow, extensionHostPreload } from './extensions/extension-host';
 import { ExtensionManager, InstalledEntrySchema } from './extensions/extension-manager';
 import { EXTENSION_LIMITS, extensionError, readExtensionZip } from './extensions/extension-package';
@@ -91,6 +94,7 @@ import {
   type PromptAnswer,
 } from './extensions/permission-broker';
 import { UiBroker } from './extensions/ui-broker';
+import { fetchPackageFromUrl } from './extensions/url-install';
 import { HistoryService } from './history/history-service';
 import { createEventSender } from './ipc/events';
 import {
@@ -773,9 +777,40 @@ async function createExtensions(audit: AuditLog) {
   });
   // Release lookups (GitHub/GitLab APIs) are the app's own traffic, through the OS proxy.
   const appFetch = (url: string, init?: RequestInit): Promise<Response> => net.fetch(url, init);
+  const catalog = new CatalogService({
+    fetch: appFetch,
+    cacheFile: path.join(paths.stateDir, 'extension-catalog.json'),
+    urls: () => effective('extensions.catalog.urls'),
+    enabled: () => effective('extensions.catalog.enabled'),
+    demo: mode.demo,
+  });
+  /** Newer version of an extension installed from a catalog link, if there is one. */
+  const newerFromUrl = async (source: { url: string; version: string }) => {
+    const pkg = await fetchPackageFromUrl(source.url, appFetch);
+    const next = parseVersion(pkg.manifest.version);
+    const current = parseVersion(source.version);
+    if (next === undefined || current === undefined || compareVersions(next, current) <= 0) {
+      return undefined;
+    }
+    return pkg;
+  };
   const checkUpdates = async (): Promise<{ updates: number; errors: string[] }> => {
     let updates = 0;
     const errors: string[] = [];
+    for (const source of manager.urlSources()) {
+      try {
+        const newer = await newerFromUrl(source);
+        manager.setUpdate(
+          source.id,
+          newer === undefined
+            ? undefined
+            : { version: newer.manifest.version, tag: newer.manifest.version },
+        );
+        if (newer !== undefined) updates += 1;
+      } catch (error) {
+        errors.push(`${source.id}: ${error instanceof Error ? error.message : 'the check failed'}`);
+      }
+    }
     for (const source of manager.gitSources()) {
       try {
         const newer = await resolveGitExtension({
@@ -810,7 +845,12 @@ async function createExtensions(audit: AuditLog) {
   };
   // Daily update check (spec 07); updates are shown, never installed silently.
   setTimeout(() => {
-    if (!effective('extensions.checkForUpdates') || manager.gitSources().length === 0) return;
+    if (
+      !effective('extensions.checkForUpdates') ||
+      manager.gitSources().length + manager.urlSources().length === 0
+    ) {
+      return;
+    }
     void checkUpdates().catch(() => undefined);
   }, 20_000);
   const refreshNames = async (): Promise<void> => {
@@ -863,11 +903,48 @@ async function createExtensions(audit: AuditLog) {
         }),
       };
     },
+    catalog: (refresh) => catalog.load(refresh),
+    installFromCatalog: async (id) => {
+      const entry = await catalog.find(id);
+      if (entry === undefined) {
+        throw extensionError(
+          'That extension is not in the catalog. Refresh the list and try again.',
+        );
+      }
+      if (mode.demo) {
+        throw extensionError(
+          'Installing from the catalog needs network access, which demo mode does not have.',
+        );
+      }
+      const pkg = await fetchPackageFromUrl(entry.package, appFetch);
+      const actual = extensionId(pkg.manifest);
+      if (actual !== entry.id) {
+        throw extensionError(
+          `The package behind this catalog entry is a different extension (${actual}, not ${entry.id}), so it was not installed.`,
+        );
+      }
+      return {
+        type: 'preview',
+        preview: manager.preview(pkg, { type: 'url', url: entry.package }),
+      };
+    },
     checkUpdates: () => checkUpdates(),
     update: async (id) => {
+      const urlSource = manager.urlSources().find((s) => s.id === id);
+      if (urlSource !== undefined) {
+        const pkg = await newerFromUrl(urlSource);
+        if (pkg === undefined) {
+          manager.setUpdate(id, undefined);
+          return { type: 'cancelled' };
+        }
+        return {
+          type: 'preview',
+          preview: manager.preview(pkg, { type: 'url', url: urlSource.url }),
+        };
+      }
       const source = manager.gitSources().find((s) => s.id === id);
       if (source === undefined)
-        throw extensionError('Only extensions installed from git can be updated.');
+        throw extensionError('Only extensions installed from git or the catalog can be updated.');
       const resolved = await resolveGitExtension({
         url: source.url,
         fetch: appFetch,

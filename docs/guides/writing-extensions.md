@@ -162,6 +162,14 @@ A command run from the result cell menu receives `{ value, column, entityType }`
 Point `contributes.themes` at VS Code colour theme files (`colors`, `tokenColors`). They
 appear in **Preferences: Color Theme**.
 
+## Publishing your extension
+
+1. Build the package with `raml-kql-ext package` and attach the `.rkqlx` to a GitHub release (or any https address that always serves the current version).
+2. To make it appear in **Browse**, add an entry to the project's catalog repository, [raml-kql-extensions](https://github.com/luca-ramseyer/raml-kql-extensions), with a pull request. An entry is only a pointer: the extension id, a name and description, and the link to the package. The catalog's rules and checks are described in that repository's README.
+3. Organizations can keep their own catalog (the same JSON format, validated by the published JSON Schema) and add its address to the `extensions.catalog.urls` setting.
+
+Listing in the catalog does not give an extension the **Verified** badge; see below.
+
 ## Signing and the verified badge
 
 `raml-kql-ext sign` signs a `.rkqlx` with an Ed25519 key, and `raml-kql-ext verify` checks a signature. The app only shows **Verified by Raml KQL** for packages signed with a key it trusts, which today means the project's own key, used for the project's example extensions. A package you sign with your own key is accepted but is shown as not verified. Signing your own packages is still useful: users who know your public key can check them with `raml-kql-ext verify`.

@@ -4,13 +4,14 @@ import {
 } from '@raml-kql/pack-schema/extension-manifest';
 
 import type { InstallPreview, InstallResult } from '../../../shared/extensions/models';
-import { registerCommand } from '../../platform/commands';
+import { executeCommand, registerCommand } from '../../platform/commands';
 import { showDialog } from '../../platform/dialogs';
 import { dismissNotification, notify } from '../../platform/notifications';
 import { showInputBox } from '../../platform/quickinput/quick-input';
 import { getBridge, unwrap } from '../../services/ipc';
 import { Codicon } from '../../workbench/common/Codicon';
 
+import { setExtensionsTab } from './catalog-store';
 import { loadExtensions, reportExtensionError, setExtensionsSnapshot } from './extensions-store';
 
 /** Installing and managing extensions (spec 07, "Distribution"). */
@@ -139,6 +140,23 @@ function askUrl(): Promise<string | undefined> {
   });
 }
 
+/** Install an entry of the extension catalog: download, show the permissions, then confirm. */
+export async function installFromCatalog(id: string, displayName: string): Promise<void> {
+  const progress = notify({
+    severity: 'info',
+    message: `Downloading ${displayName}…`,
+    source: 'Extensions',
+  });
+  try {
+    const result = await unwrap(getBridge().extensions.installFromCatalog({ id }));
+    dismissNotification(progress);
+    await installPreview(result);
+  } catch (error) {
+    dismissNotification(progress);
+    reportExtensionError(error, 'The extension could not be installed.');
+  }
+}
+
 export async function installFromGit(): Promise<void> {
   const url = await askUrl();
   if (url === undefined || url === '') return;
@@ -232,6 +250,16 @@ export function registerExtensionCommands(): () => void {
       category: 'Extensions',
       icon: 'desktop-download',
       run: installFromFile,
+    }),
+    registerCommand({
+      id: 'extensions.browse',
+      title: 'Browse Extensions',
+      category: 'Extensions',
+      icon: 'extensions',
+      run: () => {
+        void executeCommand('workbench.view.extensions');
+        setExtensionsTab('browse');
+      },
     }),
     registerCommand({
       id: 'extensions.installFromGit',

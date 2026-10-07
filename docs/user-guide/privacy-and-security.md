@@ -11,7 +11,7 @@ Raml KQL handles access tokens and customer security data, so it is built to kee
 
 - **No telemetry.** Raml KQL does not collect usage data, analytics, feature counters or identifiers.
 - Your queries go from your machine straight to Microsoft, with your own identity. No Raml KQL server exists.
-- The only network traffic the app starts itself goes to the Microsoft identity and Azure endpoints you query, to git hosts of query pack and extension sources you added, and to GitHub for the update check (which you can turn off with `update.checkAutomatically`).
+- The only network traffic the app starts itself goes to the Microsoft identity and Azure endpoints you query, to git hosts of query pack and extension sources you added, to GitHub for the update check (which you can turn off with `update.checkAutomatically`), and to GitHub for the extension catalog, but only when you open the Browse tab (turn it off with `extensions.catalog.enabled`).
 - Extensions can reach the network only after you allow it, per host.
 - **You can check this yourself:** the command **Developer: Show Network Activity** lists every host contacted in the current session, with counts.
 

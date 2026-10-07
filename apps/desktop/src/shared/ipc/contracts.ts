@@ -8,6 +8,7 @@ import {
 } from '../config/config-snapshots';
 import { CrashReportSchema, PendingCrashesSchema } from '../crash/models';
 import {
+  CatalogResultSchema,
   EnrichmentResultSchema,
   EntitySchema,
   ExtensionIdSchema,
@@ -355,6 +356,18 @@ export const ipcContracts = {
     installFromGit: defineChannel(
       'extensions:installFromGit',
       z.object({ url: z.string().min(1).max(2000) }).strict(),
+      InstallResultSchema,
+    ),
+    /** The extension catalog for the Browse tab. Fetches only when asked (D-058). */
+    catalog: defineChannel(
+      'extensions:catalog',
+      z.object({ refresh: z.boolean().optional() }).strict(),
+      CatalogResultSchema,
+    ),
+    /** Download a catalog entry's package and describe it (nothing is installed yet). */
+    installFromCatalog: defineChannel(
+      'extensions:installFromCatalog',
+      z.object({ id: ExtensionIdSchema }).strict(),
       InstallResultSchema,
     ),
     /** Look for newer releases of git-installed extensions. */
