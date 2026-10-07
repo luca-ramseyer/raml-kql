@@ -11,7 +11,7 @@ export interface CliIo {
 }
 
 export const CLI_NAME = 'raml-kql-ext';
-export const CLI_VERSION = '1.0.0';
+export const CLI_VERSION = '1.1.0';
 
 const HELP = `Usage: ${CLI_NAME} <command>
 

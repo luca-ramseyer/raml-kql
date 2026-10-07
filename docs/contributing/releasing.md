@@ -43,7 +43,7 @@ The Country Map and VirusTotal example extensions are published signed, so the a
 
 **Setting the key up (once):**
 
-1. Generate a key pair on your own machine: `npx @raml-kql/extension-cli keygen --out ~/raml-kql-signing`. It prints a key id and writes `raml-kql-signing.key` (private) and `raml-kql-signing.pub` (public).
+1. Generate a key pair on your own machine: `npx @raml-kql/extension-cli keygen --out ~/raml-kql-signing` (needs `@raml-kql/extension-cli` 1.1.0 or newer, the first version with `keygen`, `sign` and `verify`). It prints a key id and writes `raml-kql-signing.key` (private) and `raml-kql-signing.pub` (public).
 2. Store the private key in a password manager. Add its full text as the secret `EXTENSION_SIGNING_KEY` in the `release` environment. Never commit it or paste it anywhere else.
 3. Add the public key to `TRUSTED_SIGNING_KEYS` in `trusted-keys.ts` (name: `Raml KQL`) in a pull request. The next app release can then verify packages signed with it.
 
