@@ -9,4 +9,12 @@ import type { TrustedKey } from '@raml-kql/pack-schema/extension-signature';
  * remove the old one when extensions signed with it have been re-released. See
  * docs/contributing/releasing.md ("Signing the example extensions").
  */
-export const TRUSTED_SIGNING_KEYS: readonly TrustedKey[] = [];
+export const TRUSTED_SIGNING_KEYS: readonly TrustedKey[] = [
+  {
+    name: 'Raml KQL',
+    publicKeyPem: `-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAlKagWJnrArQJM76wDtY7MyOim0XznrGVAhbThtbMm50=
+-----END PUBLIC KEY-----
+`,
+  },
+];
