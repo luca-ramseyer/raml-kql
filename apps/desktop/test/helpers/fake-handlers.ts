@@ -142,6 +142,16 @@ export function fakeHandlerDependencies(
       snapshot: vi.fn(() => Promise.resolve({ extensions: [], grants: [], problems: [] })),
       installFromFile: vi.fn(() => Promise.resolve({ type: 'cancelled' as const })),
       installFromGit: vi.fn(() => Promise.resolve({ type: 'cancelled' as const })),
+      catalog: vi.fn(() =>
+        Promise.resolve({
+          enabled: true,
+          demo: false,
+          entries: [],
+          fromCache: false,
+          problems: [],
+        }),
+      ),
+      installFromCatalog: vi.fn(() => Promise.resolve({ type: 'cancelled' as const })),
       checkUpdates: vi.fn(() => Promise.resolve({ updates: 0, errors: [] })),
       update: vi.fn(() => Promise.resolve({ type: 'cancelled' as const })),
       confirmInstall: vi.fn(() => Promise.resolve({ extensions: [], grants: [], problems: [] })),

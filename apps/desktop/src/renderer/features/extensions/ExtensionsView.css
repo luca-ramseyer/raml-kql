@@ -133,3 +133,83 @@
   border: none;
   background: transparent;
 }
+
+.extensions-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--vscode-panel-border, transparent);
+  gap: 2px;
+}
+
+.extensions-tab {
+  padding: 6px 10px;
+  border: none;
+  border-bottom: 1px solid transparent;
+  background: none;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  font: inherit;
+}
+
+.extensions-tab.active {
+  border-bottom-color: var(--vscode-focusBorder);
+  color: var(--vscode-foreground);
+}
+
+.extensions-search {
+  box-sizing: border-box;
+  width: calc(100% - 16px);
+  margin: 8px;
+  padding: 4px 6px;
+  border: 1px solid var(--vscode-input-border, transparent);
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  font: inherit;
+}
+
+.browse-status {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+  gap: 6px;
+}
+
+.browse-refresh {
+  padding: 2px;
+  border: none;
+  margin-left: auto;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.browse-problems,
+.browse-empty {
+  padding: 0 8px;
+}
+
+.browse-publisher {
+  margin: 0 0 0 20px;
+}
+
+.browse-description {
+  margin-top: 2px;
+}
+
+.browse-categories {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0;
+  margin: 4px 0 0 20px;
+  gap: 4px;
+  list-style: none;
+}
+
+.browse-categories li {
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  font-size: 11px;
+}

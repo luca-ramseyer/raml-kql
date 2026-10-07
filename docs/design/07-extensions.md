@@ -153,6 +153,7 @@ namespace ramlKql {
   - The host lists tags (`vX.Y.Z`) via isomorphic-git `getRemoteInfo`/`listServerRefs`.
   - It installs the newest compatible version: first choice is a GitHub/GitLab **release asset** `*.rkqlx` for that tag (via the provider REST API, unauthenticated, rate-limit aware); fallback is a shallow clone of the tag expecting a prebuilt `dist/` directory.
   - It validates the manifest and `engines`, shows a details page (README, permissions, repository, version) → Install.
+- **Catalog (D-058):** the Extensions view has a Browse tab listing entries of one or more catalogs (a JSON file of pointers: id, name, description, categories, package link). The catalog is fetched only when the user opens Browse or presses Refresh, then cached. An entry's package is downloaded on Install, checked like any other package, and its manifest id must equal the entry's id. A catalog never grants trust: permissions come from the package manifest, and "Verified" from its signature.
 - **Install from file:** `.rkqlx` via the "Extensions: Install from File…" command or drag and drop.
 - **Pinning and integrity:**
   - Record the source URL, tag, commit SHA and the SHA-256 of the installed package in `extensions.jsonc`.

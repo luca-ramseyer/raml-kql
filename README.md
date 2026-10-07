@@ -16,7 +16,7 @@ Raml KQL is an open-source desktop app for macOS, Windows and Linux. It looks an
 - **A real KQL editor.** The Monaco editor with the Kusto language service: schema-aware IntelliSense merged across the selected workspaces (with "available in 3/5 selected" hints), formatting, snippets, parse checks before anything is sent.
 - **Results you can work with.** A fast grid (half a million rows scroll smoothly), group by tenant, `render` charts and a chart builder, and export to CSV, JSON, XLSX, Markdown or a KQL `datatable`. Right-click a cell to open the query in the Azure portal or an entity in Microsoft Defender.
 - **Query packs.** Share and reuse queries with parameters, from git repositories or files. An example pack ships in [`examples/packs`](examples/packs).
-- **Extensions, with least privilege.** Sandboxed extensions can add enrichers (the VirusTotal example), result renderers (the Country Map example), themes and more. Each permission is asked for, and can be revoked.
+- **Extensions, with least privilege.** Sandboxed extensions can add enrichers (the VirusTotal example), result renderers (the Country Map example), themes and more. Each permission is asked for, and can be revoked. Browse and install extensions from inside the app.
 - **Built for customer data.** Tenant and workspace names are aliased on screen by default ("Customer 01"), which makes screen sharing and screenshots safe. A hash-chained audit log records what ran where, without result values.
 
 |                                                                            |                                                                                        |

@@ -415,6 +415,15 @@ export class ExtensionManager {
     );
   }
 
+  /** Extensions installed from a catalog link (for the update check). */
+  urlSources(): { id: string; url: string; version: string }[] {
+    return this.loaded.flatMap((ext) =>
+      ext.entry.source.type === 'url'
+        ? [{ id: ext.entry.id, url: ext.entry.source.url, version: ext.entry.version }]
+        : [],
+    );
+  }
+
   setUpdate(id: string, update: { version: string; tag: string } | undefined): void {
     if (update === undefined) this.updates.delete(id);
     else this.updates.set(id, update);

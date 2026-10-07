@@ -10,6 +10,7 @@ import type {
 import type { CrashReport, PendingCrashes } from '../../shared/crash/models';
 import { AppError } from '../../shared/errors';
 import type {
+  CatalogResult,
   EnrichmentResultData,
   ExtensionsSnapshot,
   InstallResult,
@@ -179,6 +180,8 @@ export interface ExtensionsOperations {
   snapshot(): Promise<ExtensionsSnapshot>;
   installFromFile(): Promise<InstallResult>;
   installFromGit(url: string): Promise<InstallResult>;
+  catalog(refresh: boolean): Promise<CatalogResult>;
+  installFromCatalog(id: string): Promise<InstallResult>;
   checkUpdates(): Promise<{ updates: number; errors: string[] }>;
   update(id: string): Promise<InstallResult>;
   confirmInstall(previewId: string): Promise<ExtensionsSnapshot>;
@@ -307,6 +310,8 @@ export function createIpcHandlers(deps: HandlerDependencies): IpcHandlers {
       list: () => deps.extensions.snapshot(),
       installFromFile: () => deps.extensions.installFromFile(),
       installFromGit: ({ url }) => deps.extensions.installFromGit(url),
+      catalog: ({ refresh }) => deps.extensions.catalog(refresh ?? false),
+      installFromCatalog: ({ id }) => deps.extensions.installFromCatalog(id),
       checkUpdates: () => deps.extensions.checkUpdates(),
       update: ({ id }) => deps.extensions.update(id),
       confirmInstall: ({ previewId }) => deps.extensions.confirmInstall(previewId),

@@ -1,3 +1,4 @@
+import { CatalogEntrySchema } from '@raml-kql/pack-schema/extension-catalog';
 import {
   ContributesSchema,
   ENTITY_TYPES,
@@ -22,6 +23,8 @@ export const ExtensionSourceSchema = z.discriminatedUnion('type', [
     tag: z.string().max(200),
     sha: z.string().max(64).optional(),
   }),
+  /** Installed from the catalog (or any https link to a `.rkqlx`); updates re-read that link. */
+  z.object({ type: z.literal('url'), url: z.string().max(2000) }),
   z.object({ type: z.literal('dev'), path: z.string().max(2000) }),
 ]);
 export type ExtensionSource = z.infer<typeof ExtensionSourceSchema>;
@@ -182,3 +185,21 @@ export const EnrichmentResultSchema = z.object({
     .optional(),
 });
 export type EnrichmentResultData = z.infer<typeof EnrichmentResultSchema>;
+
+/** The extension catalog as the workbench's Browse view sees it (D-058). */
+export const CatalogResultSchema = z.object({
+  /** `extensions.catalog.enabled` is off: nothing was fetched. */
+  enabled: z.boolean(),
+  /** Built-in sample entries (demo mode has no network). */
+  demo: z.boolean(),
+  entries: z.array(CatalogEntrySchema),
+  /** When the list was last fetched; shown as "updated 3 hours ago". */
+  fetchedAt: z.string().optional(),
+  /** Showing the saved copy because the network failed (or no refresh was due). */
+  fromCache: z.boolean(),
+  /** Entries or catalogs that were skipped, in words. */
+  problems: z.array(z.string()),
+  /** Nothing could be loaded at all. */
+  error: z.string().optional(),
+});
+export type CatalogResult = z.infer<typeof CatalogResultSchema>;

@@ -69,6 +69,20 @@ Check extensions installed from git for newer releases on startup. Updates are s
 - **Type:** boolean
 - **Default:** `true`
 
+### `extensions.catalog.enabled`
+
+Let the Extensions view's Browse tab list extensions from the catalogs below. Nothing is fetched until you open Browse. Turn this off to remove the feature and its network request.
+
+- **Type:** boolean
+- **Default:** `true`
+
+### `extensions.catalog.urls`
+
+Extension catalogs (JSON files) that Browse reads, for example an organization's own list. The first catalog that lists an extension id wins.
+
+- **Type:** JSON (edit it in `settings.jsonc`)
+- **Default:** `["https://raw.githubusercontent.com/luca-ramseyer/raml-kql-extensions/main/catalog.json"]`
+
 ### `extensions.autoUpdate`
 
 Update extensions without asking. Off by default: updates show their changelog and any new permissions first.

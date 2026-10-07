@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { DEFAULT_CATALOG_URL } from '../extensions/catalog-url';
 import { MaskingRulesSchema } from '../privacy/masking';
 import { ATTRIBUTION_COLUMNS } from '../query/models';
 
@@ -564,6 +565,31 @@ export const settingDefinitions = [
     default: true,
     description:
       'Check extensions installed from git for newer releases on startup. Updates are shown, not installed.',
+    category: ['Extensions'],
+    scope: 'user',
+  }),
+  define({
+    key: 'extensions.catalog.enabled',
+    schema: z.boolean(),
+    default: true,
+    description:
+      "Let the Extensions view's Browse tab list extensions from the catalogs below. Nothing is fetched until you open Browse. Turn this off to remove the feature and its network request.",
+    category: ['Extensions'],
+    scope: 'user',
+  }),
+  define({
+    key: 'extensions.catalog.urls',
+    schema: z
+      .array(
+        z
+          .string()
+          .max(2000)
+          .refine((value) => value.startsWith('https://'), 'must start with https://'),
+      )
+      .max(10),
+    default: [DEFAULT_CATALOG_URL],
+    description:
+      "Extension catalogs (JSON files) that Browse reads, for example an organization's own list. The first catalog that lists an extension id wins.",
     category: ['Extensions'],
     scope: 'user',
   }),

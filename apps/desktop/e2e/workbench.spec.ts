@@ -152,3 +152,19 @@ test('"Check for Updates…" says why demo mode cannot update, without a network
   await window.keyboard.press('Enter');
   await expect(window.getByText('Updates are disabled in demo mode.')).toBeVisible();
 });
+
+test('Browse lists the demo catalog, searches it, and cannot install in demo mode', async ({
+  window,
+}) => {
+  await window.keyboard.press(`${MOD}+Shift+X`);
+  await window.getByRole('tab', { name: 'Browse' }).click();
+  await expect(window.getByText('Demo catalog')).toBeVisible();
+  await expect(window.getByText('Contoso WHOIS Lookup')).toBeVisible();
+
+  await window.getByRole('searchbox', { name: 'Search extensions' }).fill('theme');
+  await expect(window.getByText('Woodgrove Paper')).toBeVisible();
+  await expect(window.getByText('Contoso WHOIS Lookup')).toBeHidden();
+
+  await window.getByRole('button', { name: 'Install Woodgrove Paper' }).click();
+  await expect(window.getByText(/demo mode does not have/)).toBeVisible();
+});

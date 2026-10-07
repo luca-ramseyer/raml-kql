@@ -33,6 +33,7 @@ Settings, saved queries, query history (the text and counts, never results), wor
 
 - **Microsoft** identity and Azure endpoints, for sign-in, discovery and your queries.
 - **GitHub**, to check for new versions (release information and downloads). Like any web request, this lets GitHub see your IP address, the app version and your operating system. You can turn it off with the setting `update.checkAutomatically`.
+- **The extension catalog**, a small JSON list on GitHub, but only when you open the **Browse** tab or press Refresh in the Extensions view (never at startup), and only if you leave `extensions.catalog.enabled` on. The packages you choose to install are downloaded from the addresses the catalog lists, usually GitHub.
 - **Git hosts of query pack and extension sources that you add**, and nothing else.
 - **Extensions you installed**, only for the hosts you allow, and only after you allow them. Extensions are written by third parties, who have their own privacy practices. For example, the VirusTotal example extension sends the values you choose to enrich to VirusTotal.
 
