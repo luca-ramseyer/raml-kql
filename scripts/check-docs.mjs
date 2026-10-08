@@ -39,6 +39,17 @@ for (const page of pages) {
   const fields = frontMatter(readFileSync(page, 'utf8'));
   if (!fields) problems.push(`${rel(page)}: missing front matter (--- title, description ---)`);
   else {
+    // Front matter is YAML: an unquoted value that contains ": " or " #" is a syntax error for
+    // the website's parser (it reads "A: b" as a nested mapping). Such values must be quoted.
+    const raw = /^---\n([\s\S]*?)\n---\n/.exec(readFileSync(page, 'utf8'))?.[1] ?? '';
+    for (const line of raw.split('\n')) {
+      const pair = /^([a-zA-Z_]+):\s*(.*)$/.exec(line);
+      if (pair && pair[2] && !/^["']/.test(pair[2]) && /(: | #)/.test(pair[2])) {
+        problems.push(
+          `${rel(page)}: quote the ${pair[1]} in the front matter (it contains ": " or " #")`,
+        );
+      }
+    }
     if (!fields.title) problems.push(`${rel(page)}: front matter needs a title`);
     if (!fields.description) problems.push(`${rel(page)}: front matter needs a description`);
   }
