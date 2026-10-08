@@ -1,6 +1,6 @@
 ---
 title: Architecture overview
-description: A short map of the code for contributors: processes, where things live, and the rules that shape the design.
+description: 'A short map of the code for contributors: processes, where things live, and the rules that shape the design.'
 ---
 
 # Architecture overview
