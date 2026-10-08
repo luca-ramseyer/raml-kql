@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/luca-ramseyer/raml-kql/compare/v1.1.0...v1.2.0) (2026-10-08)
+
+
+### Features
+
+* **extensions:** browse and install extensions from a catalog ([#23](https://github.com/luca-ramseyer/raml-kql/issues/23)) ([51fc5f5](https://github.com/luca-ramseyer/raml-kql/commit/51fc5f5134a0cce74cb5a9ede87cd82e20b766c1))
+* **extensions:** trust the Raml KQL extension signing key ([#22](https://github.com/luca-ramseyer/raml-kql/issues/22)) ([11cf7d1](https://github.com/luca-ramseyer/raml-kql/commit/11cf7d18d1eb507a402aa4722a2ef6cdbfc0a308))
+
 ## [1.1.0](https://github.com/luca-ramseyer/raml-kql/compare/v1.0.0...v1.1.0) (2026-10-06)
 
 
