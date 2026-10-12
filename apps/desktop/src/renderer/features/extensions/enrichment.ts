@@ -89,9 +89,16 @@ interface CellContext {
   column: number;
   columnName: string;
   value: unknown;
-  /** Distinct values of this column among the rows loaded in the grid. */
-  columnValues: () => unknown[];
+  /**
+   * Distinct values of this column in the whole result (current filters and search applied),
+   * most frequent first. The grid only holds the rows it has loaded, so this asks the main
+   * process.
+   */
+  columnValues: () => Promise<unknown[]>;
 }
+
+/** The host sends at most this many values to an enricher per call. */
+export const MAX_ENRICH_VALUES = 500;
 
 async function enrich(
   extension: ExtensionInfo,
@@ -124,6 +131,43 @@ async function enrich(
   }
 }
 
+async function enrichColumn(
+  extension: ExtensionInfo,
+  enricher: { id: string; title: string },
+  cell: CellContext,
+  type: EntityType,
+): Promise<void> {
+  let all: string[];
+  try {
+    all = [
+      ...new Set(
+        (await cell.columnValues()).filter(
+          (v): v is string => typeof v === 'string' && detectEntity(cell.columnName, v) === type,
+        ),
+      ),
+    ];
+  } catch (error) {
+    reportExtensionError(error, 'The column values could not be read.');
+    return;
+  }
+  if (all.length === 0) {
+    notify({
+      severity: 'info',
+      message: `${cell.columnName} has no ${ENTITY_LABELS[type]} to enrich.`,
+      source: extension.displayName,
+    });
+    return;
+  }
+  if (all.length > MAX_ENRICH_VALUES) {
+    notify({
+      severity: 'info',
+      message: `${cell.columnName} has ${String(all.length)} different ${ENTITY_LABELS[type]}: enriching the ${String(MAX_ENRICH_VALUES)} most frequent.`,
+      source: extension.displayName,
+    });
+  }
+  await enrich(extension, enricher, cell, type, all.slice(0, MAX_ENRICH_VALUES));
+}
+
 /** Context menu entries for a result cell: enrichers and extension menu items. */
 export function extensionCellMenu(cell: CellContext): MenuEntry[] {
   const type = detectEntity(cell.columnName, cell.value);
@@ -144,19 +188,7 @@ export function extensionCellMenu(cell: CellContext): MenuEntry[] {
           {
             kind: 'item',
             label: `Enrich Column with ${enricher.title}`,
-            run: () => {
-              const values = [
-                ...new Set(
-                  cell
-                    .columnValues()
-                    .filter(
-                      (v): v is string =>
-                        typeof v === 'string' && detectEntity(cell.columnName, v) === type,
-                    ),
-                ),
-              ].slice(0, 100);
-              void enrich(extension, enricher, cell, type, values);
-            },
+            run: () => void enrichColumn(extension, enricher, cell, type),
           },
         );
       }

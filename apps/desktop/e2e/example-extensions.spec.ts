@@ -119,3 +119,32 @@ test('enriching with IPinfo asks before any value leaves the app', async ({
   await prompt.getByRole('button', { name: 'Deny' }).click();
   await expect(window.getByText('Permission denied: the values were not sent.')).toBeVisible();
 });
+
+test('Enrich Column adds the enricher columns for the whole column', async ({
+  electronApp,
+  window,
+}) => {
+  await install(electronApp, window, 'ipinfo-enricher.rkqlx', 'IPinfo Enricher');
+  await runQuery(window, 'SigninLogs | project IPAddress | take 20');
+  const cell = window
+    .locator('.results-grid .ag-cell')
+    .filter({ hasText: /^203\.0\.113\.\d+$/ })
+    .first();
+  await cell.click({ button: 'right' });
+  await window.getByRole('menuitem', { name: 'Enrich Column with IPinfo' }).click();
+  const prompt = window.getByRole('dialog', { name: 'Permission request from IPinfo Enricher' });
+  await prompt.getByRole('button', { name: 'Allow for This Run' }).click();
+  // The token prompt. Demo addresses are documentation ranges: answered locally, never sent.
+  await quickInput(window).fill('00000000-0000-0000-0000-000000000000');
+  await window.keyboard.press('Enter');
+  await expect(window.getByText(/IPinfo: enriched \d+ of \d+ IP addresses\./)).toBeVisible();
+  await window
+    .locator('.ag-body-horizontal-scroll-viewport')
+    .evaluate((el: { scrollLeft: number; scrollWidth: number }) => {
+      el.scrollLeft = el.scrollWidth;
+    });
+  await expect(window.locator('.enrichment-header').first()).toContainText('IPinfo: country');
+  await expect(
+    window.locator('.cell-enrichment').filter({ hasText: 'private or reserved address' }).first(),
+  ).toBeVisible();
+});

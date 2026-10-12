@@ -29,7 +29,7 @@ import {
   openUrl,
   workspaceByCustomerId,
 } from '../result-actions';
-import { updateTabResults, useTabResults } from '../results-ui';
+import { tabResults, updateTabResults, useTabResults } from '../results-ui';
 
 import { formatCell, toTsv } from './cell-format';
 import { buildColumnDefs, fieldOf, viewFromGrid, type GridRow } from './column-defs';
@@ -347,12 +347,20 @@ export function ResultsGrid({
           column: index,
           columnName: column?.name ?? '',
           value,
-          columnValues: () => {
-            const values: unknown[] = [];
-            apiRef.current?.forEachNode((node) => {
-              values.push(node.data?.[fieldOf(index)]);
-            });
-            return values;
+          // Group the whole result by this column in the main process: the grid only holds
+          // the blocks it has loaded. Masked values stay masked (the display names apply).
+          columnValues: async () => {
+            const display = displayRef.current;
+            const groups = await unwrap(
+              getBridge().results.aggregate({
+                runId: run.runId,
+                tableIndex,
+                view: tabResults(tabId, run.runId).view,
+                ...(display === undefined ? {} : { display }),
+                spec: { groupBy: [index], aggregations: [{ fn: 'count' }] },
+              }),
+            );
+            return groups.rows.toSorted((a, b) => Number(b[1]) - Number(a[1])).map((row) => row[0]);
           },
         }),
       ];
@@ -360,6 +368,7 @@ export function ResultsGrid({
     },
     [
       columns,
+      tableIndex,
       filterToValue,
       linksEnabled,
       run.query,
