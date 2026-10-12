@@ -1,0 +1,26 @@
+{
+  "name": "test-renderer",
+  "publisher": "contoso",
+  "displayName": "Row Counter",
+  "version": "1.0.0",
+  "description": "Test extension: a result renderer that shows how many rows it received.",
+  "license": "MIT",
+  "engines": {
+    "raml-kql": "^1.0.0"
+  },
+  "permissions": [
+    {
+      "id": "results.read",
+      "reason": "Count the result rows"
+    }
+  ],
+  "contributes": {
+    "resultRenderers": [
+      {
+        "id": "rowCounter.view",
+        "title": "Row Counter",
+        "ui": "dist/ui/rows.html"
+      }
+    ]
+  }
+}

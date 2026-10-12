@@ -10,7 +10,7 @@ themes and settings. They are written in TypeScript or JavaScript. The model wil
 familiar if you know VS Code extensions (`package.json` with `contributes`,
 `activate(context)`, disposables), but the APIs are not compatible.
 
-Four complete examples live in [`examples/extensions/`](https://github.com/luca-ramseyer/raml-kql/tree/main/examples/extensions):
+Four complete examples live in the [raml-kql-extensions](https://github.com/luca-ramseyer/raml-kql-extensions/tree/main/examples) repository:
 
 | Example                | Shows                                                          |
 | ---------------------- | -------------------------------------------------------------- |
@@ -19,7 +19,7 @@ Four complete examples live in [`examples/extensions/`](https://github.com/luca-
 | `country-map-renderer` | A result renderer (sandboxed UI, bundled data, `results.read`) |
 | `teal-theme`           | A theme-only extension (no code, no permissions)               |
 
-Build them with `pnpm build:examples`. The `.rkqlx` files land in `examples/extensions/dist/`.
+Clone that repository and run `npm ci && npm run build`. The `.rkqlx` files land in `dist/`. They build against the published `@raml-kql/extension-api` and `@raml-kql/extension-cli`, exactly like your own extension will.
 
 ## The sandbox
 

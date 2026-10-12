@@ -39,15 +39,15 @@ The secrets are _environment secrets_ of the `release` environment, which only t
 
 ## Signing the example extensions
 
-The Country Map and VirusTotal example extensions are published signed, so the app shows **Verified by Raml KQL**. The release workflow signs them with an Ed25519 key; the app trusts the matching public key, which is compiled into it (`apps/desktop/src/main/extensions/trusted-keys.ts`).
+The project's example extensions (VirusTotal Enricher, IPinfo Enricher, Country Map, Teal Dark) live in the [raml-kql-extensions](https://github.com/luca-ramseyer/raml-kql-extensions) repository, together with the extension catalog. They are published signed, so the app shows **Verified by Raml KQL**: that repository's **Release examples** workflow builds them, signs them with an Ed25519 key, checks each signature and creates a release. The catalog links to `releases/latest/download/<name>.rkqlx`, so it never changes for a new version. The app trusts the matching public key, which is compiled into it (`apps/desktop/src/main/extensions/trusted-keys.ts`).
 
 **Setting the key up (once):**
 
 1. Generate a key pair on your own machine: `npx @raml-kql/extension-cli keygen --out ~/raml-kql-signing` (needs `@raml-kql/extension-cli` 1.1.0 or newer, the first version with `keygen`, `sign` and `verify`). It prints a key id and writes `raml-kql-signing.key` (private) and `raml-kql-signing.pub` (public).
-2. Store the private key in a password manager. Add its full text as the secret `EXTENSION_SIGNING_KEY` in the `release` environment. Never commit it or paste it anywhere else.
+2. Store the private key in a password manager. Add its full text as the secret `EXTENSION_SIGNING_KEY` in the `release` environment of the raml-kql-extensions repository. Never commit it or paste it anywhere else.
 3. Add the public key to `TRUSTED_SIGNING_KEYS` in `trusted-keys.ts` (name: `Raml KQL`) in a pull request. The next app release can then verify packages signed with it.
 
-The release after that signs the two examples and attaches them to the release. Packages signed before an app that trusts the key is released show as not verified in older apps.
+Packages signed before an app that trusts the key is released show as not verified in older apps. The workflow signs with the published `@raml-kql/extension-cli`, so publish 1.1.0 or newer to npm first (see below).
 
 **Rotating or revoking a key:** add the new public key to the list first and re-sign the examples with it; remove the old key in a later app release. Removing a key from the list removes the badge from everything it signed.
 

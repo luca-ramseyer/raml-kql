@@ -175,7 +175,9 @@ Also:
 - Publish the `@raml-kql/extension-api` types to npm when the repo goes public. Until then, build them locally and document how.
 - Write an author guide: `docs/guides/writing-extensions.md`.
 
-## Example extensions (ship in `examples/extensions/`)
+## Example extensions (in the [raml-kql-extensions](https://github.com/luca-ramseyer/raml-kql-extensions) repository, `examples/`)
+
+The catalog lists them with the category **Example**; that repository builds, signs and releases them (D-059). Community extensions keep their source in their own repositories and appear in the catalog only as an entry.
 
 1. **virustotal-enricher**: IP, domain and hash lookups. Needs the VirusTotal API key via `secrets`. Adds result columns "VT malicious/total" as an enrichment overlay (a derived view, not modifying the source data).
 2. **ipinfo-enricher**: IP lookups on IPinfo (country and ASN on the free Lite API; city, network type and privacy flags on the lookup API). Needs an IPinfo access token via `secrets`. Private and reserved addresses are answered locally and never sent.

@@ -728,15 +728,17 @@ The extension host's own session blocks all requests, so it never appears. READM
 **Consequences:** the privacy policy lists the catalog request. Git-hosted extensions keep working through "Install from Git URL". Version numbers of catalog extensions are the package's own; the entry's `version` is only a hint. A catalog could point at a malicious package, which is why the permission preview and signature check happen on the downloaded file and not on the catalog text.
 
 
-## D-059 — The project's extensions in the catalog (2026-10-12)
+## D-059 — Example extensions move to the catalog repository (2026-10-12)
 
-**Context:** The catalog (D-058) was empty, so Browse showed nothing, and the release job only built and uploaded the example extensions when the signing key was set. The examples are also e2e fixtures and authoring examples, so their source has to stay in this repository.
+**Context:** The catalog (D-058) was empty, so Browse showed nothing. The example extensions lived in `examples/extensions/` and were only published when the app's release job had the signing key, so no package had ever been published. Extensions also could not change without an app release.
 
 **Decision:**
 
-- The project's extensions (VirusTotal Enricher, IPinfo Enricher, Country Map, Teal Dark) keep their source in `examples/extensions/`. Every release attaches all of them as `<name>.rkqlx`.
-- The `raml-kql-extensions` catalog lists them with `https://github.com/luca-ramseyer/raml-kql/releases/latest/download/<name>.rkqlx`, so the catalog never changes for a new version, and the app's update check finds new versions the same way.
-- The release job always builds and uploads them. It signs them when `EXTENSION_SIGNING_KEY` is set, and otherwise uploads them unsigned with a warning, so the catalog links never break because of a missing secret.
-- New example: **IPinfo Enricher** (`raml.ipinfo-enricher`). It uses `api.ipinfo.io`, the free Lite API by default or the lookup API (Core and higher) via `ipinfo-enricher.api`. The token goes in the `Authorization` header, because `net.fetch` URLs are shown in Network Activity. Private and reserved addresses are answered locally and never sent.
+- **The example extensions live in `raml-kql-extensions/examples/`**, next to the catalog: VirusTotal Enricher, IPinfo Enricher (new), Country Map and Teal Dark. They build against the *published* `@raml-kql/extension-api` and `@raml-kql/extension-cli`, like any third-party extension, which also keeps those packages honest.
+- **That repository releases them on its own schedule.** Its **Release examples** workflow (manual) type-checks, tests, builds, signs with `EXTENSION_SIGNING_KEY` (its own `release` environment), verifies each signature and creates a release with every package. The catalog links to `releases/latest/download/<name>.rkqlx`, so it never changes for a new version, and the app's update check finds new versions the same way.
+- **They are marked as examples:** the catalog gives them the category **Example**, which Browse shows and searches.
+- **Community extensions keep their source in their own repositories.** A pull request to the catalog adds one entry, never source code (README, PR template, CODEOWNERS on `examples/`).
+- **The app's release no longer builds or signs extensions.** Its e2e tests use small test extensions in `apps/desktop/e2e/fixtures/extensions/` (a renderer, a theme, an enricher), plain files zipped by the tests, so this repository needs no extension build step.
+- **IPinfo Enricher** (`raml.ipinfo-enricher`) uses `api.ipinfo.io`: the free Lite API by default or the lookup API (Core and higher) via `ipinfo-enricher.api`. The token goes in the `Authorization` header, because `net.fetch` URLs are shown in Network Activity. Private and reserved addresses are answered locally and never sent.
 
-**Consequences:** extensions ship with app releases; an extension fix needs an app release (or a manual upload to the latest release). Until a release with the packages is published, Browse lists the entries but Install reports that the package was not found. If the extensions should release on their own schedule later, they can move to the catalog repository with their own release workflow.
+**Consequences:** extension fixes ship without an app release. Signing in the catalog repository needs `@raml-kql/extension-cli` 1.1.0 or newer on npm. The examples are no longer in this repository's lint, typecheck and test runs; the catalog repository's CI covers them. The first release there (`packages-2026-10-12`) was signed by hand with the project key.

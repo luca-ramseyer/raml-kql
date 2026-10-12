@@ -78,8 +78,8 @@ apps/desktop/                 Electron app (main, preload, renderer)
 packages/extension-api/       public TS types + runtime shim for extension authors (@raml-kql/extension-api)
 packages/pack-schema/         zod + generated JSON Schema for query packs and manifests
 packages/extension-cli/       `raml-kql-ext` CLI: scaffold, validate, package (.rkqlx)
-examples/extensions/          example extensions (enrichment, result renderer, theme)
 examples/packs/               example query pack
+                              (example extensions live in the raml-kql-extensions repo, with the catalog)
 docs/                         PUBLIC documentation, also the source of the project website:
   index.md, getting-started.md   landing page and first steps
   user-guide/                 how to use the app
