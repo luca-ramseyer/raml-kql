@@ -173,10 +173,12 @@ jobs:
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           xvfb-run --auto-servernum pnpm smoke:packaged
 
-  # The two example extensions are signed with the project's extension signing key, so the app
-  # shows them as "Verified by Raml KQL" (D-057). Skipped when the secret is not set.
+  # The example extensions are attached to every release, so the extension catalog's
+  # "releases/latest/download/<name>.rkqlx" links always serve the newest ones (D-059). They are
+  # signed with the project's extension signing key when it is set, so the app shows them as
+  # "Verified by Raml KQL" (D-057); without the key they are uploaded unsigned.
   sign-extensions:
-    name: Sign the example extensions
+    name: Build and sign the example extensions
     needs: [release-please, build]
     if: always() && needs.build.result == 'success'
     runs-on: ubuntu-latest
@@ -198,20 +200,25 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm build:examples
 
-      - name: Build, sign, check and upload the example extensions
+      - name: Sign and check the example extensions
         if: env.RAML_KQL_SIGNING_KEY != ''
         run: |
-          pnpm build:examples
           cli=packages/extension-cli/dist/cli.cjs
           # The public half of the key, to check each signature before anything is uploaded.
           node -e "const c=require('node:crypto');process.stdout.write(c.createPublicKey(c.createPrivateKey(process.env.RAML_KQL_SIGNING_KEY)).export({type:'spki',format:'pem'}))" > "$RUNNER_TEMP/signing.pub"
-          for name in country-map-renderer virustotal-enricher; do
-            file="examples/extensions/dist/$name.rkqlx"
+          for file in examples/extensions/dist/*.rkqlx; do
             node "$cli" sign "$file"
             node "$cli" verify "$file" --key "$RUNNER_TEMP/signing.pub"
           done
-          gh release upload "$TAG" examples/extensions/dist/country-map-renderer.rkqlx examples/extensions/dist/virustotal-enricher.rkqlx --clobber
+
+      - name: Warn that the extensions are not signed
+        if: env.RAML_KQL_SIGNING_KEY == ''
+        run: echo "::warning::EXTENSION_SIGNING_KEY is not set; the example extensions are uploaded unsigned."
+
+      - name: Upload the example extensions
+        run: gh release upload "$TAG" examples/extensions/dist/*.rkqlx --clobber
 
   publish:
     name: Checksums and publish

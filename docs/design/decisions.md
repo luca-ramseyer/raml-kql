@@ -727,3 +727,16 @@ The extension host's own session blocks all requests, so it never appears. READM
 
 **Consequences:** the privacy policy lists the catalog request. Git-hosted extensions keep working through "Install from Git URL". Version numbers of catalog extensions are the package's own; the entry's `version` is only a hint. A catalog could point at a malicious package, which is why the permission preview and signature check happen on the downloaded file and not on the catalog text.
 
+
+## D-059 — The project's extensions in the catalog (2026-10-12)
+
+**Context:** The catalog (D-058) was empty, so Browse showed nothing, and the release job only built and uploaded the example extensions when the signing key was set. The examples are also e2e fixtures and authoring examples, so their source has to stay in this repository.
+
+**Decision:**
+
+- The project's extensions (VirusTotal Enricher, IPinfo Enricher, Country Map, Teal Dark) keep their source in `examples/extensions/`. Every release attaches all of them as `<name>.rkqlx`.
+- The `raml-kql-extensions` catalog lists them with `https://github.com/luca-ramseyer/raml-kql/releases/latest/download/<name>.rkqlx`, so the catalog never changes for a new version, and the app's update check finds new versions the same way.
+- The release job always builds and uploads them. It signs them when `EXTENSION_SIGNING_KEY` is set, and otherwise uploads them unsigned with a warning, so the catalog links never break because of a missing secret.
+- New example: **IPinfo Enricher** (`raml.ipinfo-enricher`). It uses `api.ipinfo.io`, the free Lite API by default or the lookup API (Core and higher) via `ipinfo-enricher.api`. The token goes in the `Authorization` header, because `net.fetch` URLs are shown in Network Activity. Private and reserved addresses are answered locally and never sent.
+
+**Consequences:** extensions ship with app releases; an extension fix needs an app release (or a manual upload to the latest release). Until a release with the packages is published, Browse lists the entries but Install reports that the package was not found. If the extensions should release on their own schedule later, they can move to the catalog repository with their own release workflow.
