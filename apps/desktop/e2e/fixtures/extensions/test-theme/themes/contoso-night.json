@@ -1,0 +1,9 @@
+{
+  "name": "Contoso Night",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#101c2c",
+    "editor.foreground": "#d4dde2",
+    "focusBorder": "#3d8bfd"
+  }
+}

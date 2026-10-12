@@ -1,0 +1,39 @@
+{
+  "name": "test-enricher",
+  "publisher": "contoso",
+  "displayName": "Address Facts",
+  "version": "1.0.0",
+  "description": "Test extension: an IP address enricher that answers locally. It declares a network host so the permission prompt is the real one, but never uses it.",
+  "license": "MIT",
+  "engines": {
+    "raml-kql": "^1.0.0"
+  },
+  "main": "dist/extension.js",
+  "activationEvents": [
+    "onEnricher:addressFacts"
+  ],
+  "permissions": [
+    {
+      "id": "network",
+      "hosts": [
+        "facts.contoso.example"
+      ],
+      "reason": "Look addresses up"
+    },
+    {
+      "id": "results.readSelection",
+      "reason": "Read the values you choose to enrich"
+    }
+  ],
+  "contributes": {
+    "enrichers": [
+      {
+        "id": "addressFacts",
+        "title": "Address Facts",
+        "entityTypes": [
+          "ip"
+        ]
+      }
+    ]
+  }
+}

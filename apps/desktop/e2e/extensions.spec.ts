@@ -1,33 +1,17 @@
-import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 
 import type { ElectronApplication, Page } from '@playwright/test';
-import { zipSync } from 'fflate';
 
-import { expect, MOD, quickInput, test, writeSettings } from './fixtures';
+import { expect, MOD, packTestExtension, quickInput, test, writeSettings } from './fixtures';
 
 /**
  * Phase 9 acceptance in the running app (demo mode): an extension can't reach the network
  * without a grant, the permission prompt appears per query run by default, and "Always allow"
  * persists across a restart.
  */
-const FIXTURE = path.resolve(__dirname, 'fixtures/extensions/net-probe');
-
-function packFixture(target: string): void {
-  const files: Record<string, Uint8Array> = {};
-  const walk = (relative: string): void => {
-    for (const name of readdirSync(path.join(FIXTURE, relative))) {
-      const child = relative === '' ? name : `${relative}/${name}`;
-      if (statSync(path.join(FIXTURE, child)).isDirectory()) walk(child);
-      else files[child] = new Uint8Array(readFileSync(path.join(FIXTURE, child)));
-    }
-  };
-  walk('');
-  writeFileSync(target, zipSync(files));
-}
-
 let server: Server;
 let origin = '';
 const hits = { direct: 0, probe: 0 };
@@ -66,7 +50,7 @@ async function installProbe(
   configDir: string,
 ): Promise<void> {
   const file = path.join(configDir, 'net-probe.rkqlx');
-  packFixture(file);
+  packTestExtension('net-probe', file);
   await app.evaluate(({ dialog }, target) => {
     dialog.showOpenDialog = () => Promise.resolve({ canceled: false, filePaths: [target] });
   }, file);

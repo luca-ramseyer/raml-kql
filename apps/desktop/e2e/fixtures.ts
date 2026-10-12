@@ -82,3 +82,25 @@ export function writeSettings(configDir: string, values: Record<string, unknown>
   const { writeFileSync } = require('node:fs') as typeof import('node:fs');
   writeFileSync(path.join(configDir, 'settings.jsonc'), JSON.stringify(values, null, 2));
 }
+
+/**
+ * Zip a test extension from `e2e/fixtures/extensions/<name>` into a `.rkqlx` at `target`.
+ * The fixtures are plain files (no build step), so the zip is the package.
+ */
+export function packTestExtension(name: string, target: string): void {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- tiny sync helper for tests
+  const fs = require('node:fs') as typeof import('node:fs');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- tiny sync helper for tests
+  const { zipSync } = require('fflate') as typeof import('fflate');
+  const root = path.join(__dirname, 'fixtures', 'extensions', name);
+  const files: Record<string, Uint8Array> = {};
+  const walk = (relative: string): void => {
+    for (const entry of fs.readdirSync(path.join(root, relative))) {
+      const child = relative === '' ? entry : `${relative}/${entry}`;
+      if (fs.statSync(path.join(root, child)).isDirectory()) walk(child);
+      else files[child] = new Uint8Array(fs.readFileSync(path.join(root, child)));
+    }
+  };
+  walk('');
+  fs.writeFileSync(target, zipSync(files));
+}
