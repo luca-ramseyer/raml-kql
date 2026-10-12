@@ -10,11 +10,12 @@ themes and settings. They are written in TypeScript or JavaScript. The model wil
 familiar if you know VS Code extensions (`package.json` with `contributes`,
 `activate(context)`, disposables), but the APIs are not compatible.
 
-Three complete examples live in [`examples/extensions/`](https://github.com/luca-ramseyer/raml-kql/tree/main/examples/extensions):
+Four complete examples live in [`examples/extensions/`](https://github.com/luca-ramseyer/raml-kql/tree/main/examples/extensions):
 
 | Example                | Shows                                                          |
 | ---------------------- | -------------------------------------------------------------- |
 | `virustotal-enricher`  | An enricher, `net.fetch`, `secrets`, settings, commands        |
+| `ipinfo-enricher`      | An enricher like the above, with an `enum` setting             |
 | `country-map-renderer` | A result renderer (sandboxed UI, bundled data, `results.read`) |
 | `teal-theme`           | A theme-only extension (no code, no permissions)               |
 

@@ -99,3 +99,23 @@ test('enriching with VirusTotal asks before any value leaves the app', async ({
   await prompt.getByRole('button', { name: 'Deny' }).click();
   await expect(window.getByText('Permission denied: the values were not sent.')).toBeVisible();
 });
+
+test('enriching with IPinfo asks before any value leaves the app', async ({
+  electronApp,
+  window,
+}) => {
+  await install(electronApp, window, 'ipinfo-enricher.rkqlx', 'IPinfo Enricher');
+  await runQuery(window, 'SigninLogs | project IPAddress | take 5');
+  const cell = window
+    .locator('.results-grid .ag-cell')
+    .filter({ hasText: /^203\.0\.113\.\d+$/ })
+    .first();
+  await cell.click({ button: 'right' });
+  await window.getByRole('menuitem', { name: 'Enrich Value with IPinfo' }).click();
+  const prompt = window.getByRole('dialog', { name: 'Permission request from IPinfo Enricher' });
+  await expect(prompt).toContainText(
+    'send 1 value (IP addresses) from this result to api.ipinfo.io',
+  );
+  await prompt.getByRole('button', { name: 'Deny' }).click();
+  await expect(window.getByText('Permission denied: the values were not sent.')).toBeVisible();
+});
