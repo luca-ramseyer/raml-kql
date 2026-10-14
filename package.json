@@ -28,7 +28,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "@types/geojson": "^7946.0.16",
-    "@types/node": "^24.19.1",
+    "@types/node": "^24.19.2",
     "@types/topojson-client": "^3.1.5",
     "@types/topojson-specification": "^1.0.5",
     "@vitest/coverage-v8": "^5.0.3",
@@ -41,10 +41,10 @@
     "globals": "^17.13.0",
     "i18n-iso-countries": "7.14.0",
     "jsonc-parser": "^3.3.1",
-    "prettier": "^3.9.9",
+    "prettier": "^3.9.10",
     "topojson-client": "3.1.0",
     "typescript": "~6.0.3",
-    "typescript-eslint": "^8.71.0",
+    "typescript-eslint": "^8.71.1",
     "vitest": "^5.0.3",
     "world-atlas": "2.0.2"
   }
