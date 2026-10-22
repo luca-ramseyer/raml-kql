@@ -335,9 +335,11 @@ Format: `## D-NNN — Title (YYYY-MM-DD)`, then **Context**, **Decision**, **Con
 
 **Decision:**
 
-- The Azure CLI provider's interactive sign-in runs `az login --tenant <tenant> --output none` (no shell; the tenant is a validated GUID). The CLI opens the system browser, like the built-in sign-in, and the app waits up to 5 minutes before getting a token for the tenant as usual.
+- The Azure CLI provider's interactive sign-in runs `az login --tenant <tenant> --allow-no-subscriptions --output none` (the tenant is a validated GUID). On Windows, `az.cmd` requires a shell; other platforms use `execFile` without a shell. The CLI opens the system browser, like the built-in sign-in, and the app waits up to 5 minutes before getting a token for the tenant as usual.
 - `AZURE_CORE_LOGIN_EXPERIENCE_V2=off` is set for that call. Azure CLI 2.61+ otherwise asks in the terminal which subscription to use, and nobody can answer that from the app.
-- Azure CLI is looked up with the common install folders appended to `PATH` (`/opt/homebrew/bin`, `/usr/local/bin` on macOS; `/usr/local/bin`, `/snap/bin` on Linux). Apps started from Finder or the Dock get a minimal `PATH` without them.
+- `AZURE_CORE_ENABLE_BROKER_ON_WINDOWS=false` selects browser authentication for the login child process, avoiding the Windows broker's console-window dependency. Neither override changes the user's CLI configuration. Console windows are hidden on Windows.
+- Azure CLI is looked up with the common install folders appended to `PATH` (`/opt/homebrew/bin`, `/usr/local/bin` on macOS; `/usr/local/bin`, `/snap/bin` on Linux; the Azure CLI MSI `Microsoft SDKs/Azure/CLI2/wbin` folder under both Program Files roots on Windows). Windows environment keys are merged case-insensitively, including `Path` and `PATH`.
+- Token acquisition selects a CLI profile by username and tenant and passes its validated subscription ID (or tenant-level ID) with `--subscription`. Using `--tenant` alone would silently use the CLI's default user. Missing profiles require sign-in with the same account; the app never switches the CLI's global default to route a request.
 - Providers throw `SignInError` for failures written for the user. The auth service shows that message itself instead of "Sign-in failed." with the reason hidden in the details.
 
 ## D-036 — Dev-mode robustness: StrictMode and the Kusto worker (2026-09-25)
