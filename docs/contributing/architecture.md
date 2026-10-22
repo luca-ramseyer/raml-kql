@@ -27,7 +27,7 @@ packages/
   extension-api/   @raml-kql/extension-api: types and runtime shim for extension authors
   extension-cli/   @raml-kql/extension-cli: the raml-kql-ext command
   pack-schema/     zod schemas and generated JSON Schema for query packs and extension manifests
-examples/          example extensions and an example query pack
+examples/          an example query pack (example extensions: raml-kql-extensions repository)
 docs/              this documentation
 ```
 

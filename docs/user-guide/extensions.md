@@ -26,7 +26,7 @@ Choose **Install** on an entry: Raml KQL downloads the package, shows what it is
 
 An extension shows **Verified by Raml KQL** when its package was signed with the project's signing key and has not been changed since. That tells you the package is the one the project published; it is not a security review of the code. The project's example extensions are signed this way. Everything else is marked **Not verified by Raml KQL**. Only install extensions from authors you trust. You can enable, disable and uninstall each one in the Extensions view.
 
-Two example extensions live in the [source repository](https://github.com/luca-ramseyer/raml-kql/tree/main/examples/extensions): a VirusTotal enricher and a Country Map renderer. Build them with `pnpm build:examples` and install the resulting `.rkqlx` files.
+The project's own extensions are listed in **Browse**: a VirusTotal enricher, an IPinfo enricher, a Country Map renderer and the Teal Dark theme. They carry the category **Example**. Their source and signed packages live in the [raml-kql-extensions](https://github.com/luca-ramseyer/raml-kql-extensions) repository.
 
 ## What an extension can do
 
