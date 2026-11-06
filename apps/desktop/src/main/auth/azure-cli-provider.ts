@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { win32 } from 'node:path';
 
 import { z } from 'zod';
 
@@ -36,14 +37,32 @@ const EXTRA_PATHS: Partial<Record<NodeJS.Platform, string[]>> = {
   linux: ['/usr/local/bin', '/usr/bin', '/snap/bin'],
 };
 
-function cliPath(): string {
-  const current = process.env['PATH'] ?? '';
-  const extra = (EXTRA_PATHS[process.platform] ?? []).filter(
-    (dir) => !current.split(':').includes(dir),
-  );
-  return [current, ...extra]
-    .filter((part) => part !== '')
-    .join(process.platform === 'win32' ? ';' : ':');
+function cliEnvironment(overrides: Record<string, string> = {}): NodeJS.ProcessEnv {
+  const windows = process.platform === 'win32';
+  const env: NodeJS.ProcessEnv = {};
+  // Windows env keys are case-insensitive, but a spread produces a case-sensitive object.
+  // Node passes only one variant to the child, so normalize before applying overrides.
+  for (const source of [process.env, overrides]) {
+    for (const [key, value] of Object.entries(source)) {
+      env[windows ? key.toUpperCase() : key] = value;
+    }
+  }
+  const extra = windows
+    ? [env['PROGRAMFILES'], env['PROGRAMFILES(X86)']]
+        .filter((root): root is string => root !== undefined && root !== '')
+        .map((root) => win32.join(root, 'Microsoft SDKs', 'Azure', 'CLI2', 'wbin'))
+    : (EXTRA_PATHS[process.platform] ?? []);
+  const separator = windows ? ';' : ':';
+  const paths = (env['PATH'] ?? '').split(separator).filter((part) => part !== '');
+  for (const dir of extra) {
+    if (
+      !paths.some((entry) => (windows ? entry.toLowerCase() === dir.toLowerCase() : entry === dir))
+    ) {
+      paths.push(dir);
+    }
+  }
+  env['PATH'] = paths.join(separator);
+  return env;
 }
 
 export const execAzureCli: CommandRunner = (command, args, options = {}) =>
@@ -58,7 +77,8 @@ export const execAzureCli: CommandRunner = (command, args, options = {}) =>
         timeout: options.timeoutMs ?? 60_000,
         maxBuffer: 10 * 1024 * 1024,
         shell: process.platform === 'win32',
-        env: { ...process.env, PATH: cliPath(), ...options.env },
+        windowsHide: true,
+        env: cliEnvironment(options.env),
       },
       (error, stdout, stderr) => {
         if (error !== null) {
@@ -74,6 +94,8 @@ export const execAzureCli: CommandRunner = (command, args, options = {}) =>
 
 const AccountListSchema = z.array(
   z.object({
+    id: z.string().optional(),
+    isDefault: z.boolean().optional(),
     tenantId: z.string(),
     homeTenantId: z.string().optional(),
     user: z.object({ name: z.string(), type: z.string() }).optional(),
@@ -110,17 +132,23 @@ export class AzureCliAuthProvider implements AuthProvider {
     return `azcli:${username.toLowerCase()}`;
   }
 
+  private async cliAccounts(): Promise<z.infer<typeof AccountListSchema>> {
+    const output = await this.run('az', ['account', 'list', '--all', '--output', 'json']);
+    return AccountListSchema.parse(JSON.parse(output));
+  }
+
   async listAccounts(): Promise<ProviderAccount[]> {
-    let output: string;
+    let entries: z.infer<typeof AccountListSchema>;
     try {
-      output = await this.run('az', ['account', 'list', '--all', '--output', 'json']);
+      entries = await this.cliAccounts();
     } catch {
-      return []; // Azure CLI not installed or not logged in: no accounts from this provider.
+      return []; // Missing CLI, no login or invalid output must not prevent app startup.
     }
-    const parsed = AccountListSchema.safeParse(JSON.parse(output));
-    if (!parsed.success) return [];
     const accounts = new Map<string, ProviderAccount>();
-    for (const entry of parsed.data) {
+    // Adding an account should follow the CLI's selected identity, rather than whichever
+    // subscription happened to be written first in azureProfile.json.
+    entries.sort((a, b) => Number(b.isDefault ?? false) - Number(a.isDefault ?? false));
+    for (const entry of entries) {
       if (entry.user?.type !== 'user' || !GUID.test(entry.homeTenantId ?? entry.tenantId)) continue;
       const id = AzureCliAuthProvider.accountId(entry.user.name);
       if (!accounts.has(id)) {
@@ -139,7 +167,7 @@ export class AzureCliAuthProvider implements AuthProvider {
     const accounts = await this.listAccounts();
     const [first] = accounts;
     if (first === undefined) {
-      throw new Error(
+      throw new SignInError(
         'No Azure CLI login found. Install Azure CLI, run "az login" in a terminal, then try again.',
       );
     }
@@ -152,7 +180,7 @@ export class AzureCliAuthProvider implements AuthProvider {
   }
 
   async acquireTokenSilent(
-    _accountId: string,
+    accountId: string,
     tenantId: string,
     scope: string,
   ): Promise<AccessToken> {
@@ -162,23 +190,45 @@ export class AzureCliAuthProvider implements AuthProvider {
       : resourceUriFor(this.cloud, 'arm');
     let output: string;
     try {
+      const entries = await this.cliAccounts();
+      const entry = entries.find(
+        (candidate) =>
+          candidate.user?.type === 'user' &&
+          AzureCliAuthProvider.accountId(candidate.user.name) === accountId &&
+          candidate.tenantId.toLowerCase() === tenantId.toLowerCase() &&
+          candidate.id !== undefined &&
+          GUID.test(candidate.id),
+      );
+      if (entry?.id === undefined) {
+        throw new InteractionRequiredError(
+          'This Azure CLI account is not signed in to the requested tenant. Sign in to this tenant again with the same account.',
+          'Sign in to this tenant with the same Azure CLI account',
+        );
+      }
       output = await this.run('az', [
         'account',
         'get-access-token',
-        '--tenant',
-        tenantId,
+        // --tenant alone uses the CLI's default user, ignoring accountId. A subscription
+        // (including an --allow-no-subscriptions tenant entry) selects both user and tenant.
+        // Azure CLI does not allow combining --subscription with --tenant.
+        '--subscription',
+        entry.id,
         '--resource',
         resource,
         '--output',
         'json',
       ]);
     } catch (error) {
-      const stderr = (error as { stderr?: string }).stderr ?? '';
+      if (error instanceof InteractionRequiredError) throw error;
+      const failure = error as { stderr?: string; message?: string };
+      const stderr = failure.stderr?.trim() || failure.message || 'Unknown error';
+      // CLI errors often append "run az login" even when the user has no tenant access.
+      // Prefer the specific access error to avoid an endless reauthentication loop.
+      if (/AADSTS50020|AADSTS700016|AADSTS90072|no subscriptions/i.test(stderr)) {
+        throw new NoAccessError(stderr.slice(0, 300));
+      }
       if (/AADSTS50076|AADSTS50079|AADSTS50158|interaction|az login/i.test(stderr)) {
         throw new InteractionRequiredError(stderr.slice(0, 300), 'run "az login" for this tenant');
-      }
-      if (/AADSTS50020|AADSTS700016|AADSTS90072|not found|no subscriptions/i.test(stderr)) {
-        throw new NoAccessError(stderr.slice(0, 300));
       }
       throw new Error(`Azure CLI failed: ${stderr.slice(0, 300)}`);
     }
@@ -203,17 +253,34 @@ export class AzureCliAuthProvider implements AuthProvider {
   ): Promise<AccessToken> {
     if (!GUID.test(tenantId)) throw new Error('Invalid tenant ID');
     try {
-      await this.run('az', ['login', '--tenant', tenantId, '--output', 'none'], {
-        timeoutMs: LOGIN_TIMEOUT_MS,
-        env: {
-          // Azure CLI 2.61+ asks which subscription to use after `az login`; nobody can answer
-          // that prompt from the app, so turn it off for this call.
-          AZURE_CORE_LOGIN_EXPERIENCE_V2: 'off',
+      await this.run(
+        'az',
+        ['login', '--tenant', tenantId, '--allow-no-subscriptions', '--output', 'none'],
+        {
+          timeoutMs: LOGIN_TIMEOUT_MS,
+          env: {
+            // Azure CLI 2.61+ asks which subscription to use after `az login`; nobody can answer
+            // that prompt from the app, so turn it off for this call.
+            AZURE_CORE_LOGIN_EXPERIENCE_V2: 'off',
+            // GUI-launched processes have no terminal for the Windows broker. Use the
+            // documented browser flow for this child only; leave the user's CLI config alone.
+            AZURE_CORE_ENABLE_BROKER_ON_WINDOWS: 'false',
+          },
         },
-      });
+      );
     } catch (error) {
-      const failure = error as { stderr?: string; killed?: boolean; code?: string };
-      if (failure.code === 'ENOENT') {
+      const failure = error as {
+        stderr?: string;
+        message?: string;
+        killed?: boolean;
+        code?: string;
+      };
+      const stderr = (failure.stderr?.trim() || failure.message || '').trim();
+      // With shell:true, cmd.exe reports a missing az.cmd as exit 1, not ENOENT.
+      if (
+        failure.code === 'ENOENT' ||
+        /['"]?az['"]? is not recognized as an internal or external command/i.test(stderr)
+      ) {
         throw new SignInError(
           'Azure CLI was not found. Install it, or add it to your PATH, and try again.',
         );
@@ -223,7 +290,6 @@ export class AzureCliAuthProvider implements AuthProvider {
           'Azure CLI sign-in timed out. Try again, and finish the sign-in in your browser.',
         );
       }
-      const stderr = (failure.stderr ?? '').trim();
       throw new SignInError(
         `Azure CLI sign-in didn't complete${stderr === '' ? '.' : `: ${stderr.split('\n').slice(-3).join(' ').slice(0, 300)}`}`,
       );

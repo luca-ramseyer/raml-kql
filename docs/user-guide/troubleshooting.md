@@ -44,6 +44,12 @@ Your region uses `;` as the list separator. Set `export.csv.delimiter` to `";"` 
 - **No keyring:** if no secret service (GNOME Keyring, KWallet) is running, Raml KQL can't store sign-ins encrypted and tells you so. Start a keyring, or set `auth.sessionOnly` to `true` to keep sign-ins in memory only.
 - **AppImage and the sandbox:** on distributions that restrict unprivileged user namespaces (for example Ubuntu 24.04), the Chromium sandbox may refuse to start. Allow user namespaces for the app (an AppArmor profile or `sysctl kernel.apparmor_restrict_unprivileged_userns=0`) rather than disabling the sandbox. Raml KQL never ships with `--no-sandbox`.
 
+## Azure CLI on Windows
+
+- **Adding an account fails:** install Azure CLI and run `az login` in a terminal, then choose **Accounts: Add Azure CLI Account**. Adding imports the CLI's selected user; it does not start the initial login.
+- **Azure CLI is not found:** standard MSI installations are detected in both Program Files folders. For a custom installation, add the folder containing `az.cmd` to `PATH` and restart Raml KQL.
+- **A tenant still needs sign-in:** use its **Sign in** action and select the same account that you added to the app. This opens the browser and allows tenants without subscriptions. The app disables the Windows authentication broker and subscription selection prompt for this login only, leaving your terminal's CLI configuration unchanged.
+
 ## Behind a proxy
 
 Sign-in, discovery and queries use the operating system's proxy settings automatically. If a proxy inspects TLS, make sure its root certificate is trusted by the operating system.

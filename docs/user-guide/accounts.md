@@ -22,6 +22,8 @@ Open the account menu at the bottom of the activity bar (or the Command Palette,
 
 Sign-ins always open your **system browser**, never an embedded window, so your password manager, passkeys and Conditional Access work as usual. Sign-in tokens are stored encrypted with your operating system's keychain, so you stay signed in across restarts. On Linux without a keyring, Raml KQL tells you and offers a session-only mode (`auth.sessionOnly`) instead of storing anything unencrypted.
 
+**Azure CLI:** adding an account imports the CLI's currently selected user; run `az login` in a terminal first. If the app asks you to sign in to a tenant again, choose the same user in the browser. The app also supports tenant-level CLI logins without a subscription and keeps using the requested account if you later change the CLI's default account.
+
 ## Lighthouse and guest access
 
 Workspaces in other tenants reach you in one of three ways, and Raml KQL handles all of them:
