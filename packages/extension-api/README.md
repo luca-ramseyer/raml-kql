@@ -27,7 +27,7 @@ asked for and can be revoked.
 - Easiest start: `npx @raml-kql/extension-cli init my-extension --publisher me` scaffolds a
   working project (see [`@raml-kql/extension-cli`](https://www.npmjs.com/package/@raml-kql/extension-cli)).
 - Guide: [Writing extensions](https://github.com/luca-ramseyer/raml-kql/blob/main/docs/guides/writing-extensions.md)
-- Examples: [`examples/extensions`](https://github.com/luca-ramseyer/raml-kql/tree/main/examples/extensions)
+- Examples: [`raml-kql-extensions/examples`](https://github.com/luca-ramseyer/raml-kql-extensions/tree/main/examples)
 
 `EXTENSION_API_VERSION` is the version of the host API. Declare a compatible range in your
 manifest's `engines`.

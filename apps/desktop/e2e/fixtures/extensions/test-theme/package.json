@@ -1,0 +1,20 @@
+{
+  "name": "test-theme",
+  "publisher": "contoso",
+  "displayName": "Contoso Night",
+  "version": "1.0.0",
+  "description": "Test extension: a theme-only extension (data, no code, no permissions).",
+  "license": "MIT",
+  "engines": {
+    "raml-kql": "^1.0.0"
+  },
+  "contributes": {
+    "themes": [
+      {
+        "label": "Contoso Night",
+        "uiTheme": "vs-dark",
+        "path": "themes/contoso-night.json"
+      }
+    ]
+  }
+}
