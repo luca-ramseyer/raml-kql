@@ -48,6 +48,7 @@ import { setContextKey, useContextKeys } from '../platform/context-keys';
 import { openEditor, useEditors } from '../platform/editors';
 import {
   applyKeybindingsSnapshot,
+  handleKeyDown,
   useKeybindings,
 } from '../platform/keybindings/keybinding-service';
 import { initLayout, useLayout } from '../platform/layout';
@@ -144,6 +145,7 @@ export async function startWorkbench({
     registerResultCommands(),
     registerQuickAccess(),
     startPrivacy(),
+    listenForKeybindings(),
   );
   setNameFormatters({
     tenant: (tenant) => currentNamer().tenant(tenant.tenantId, tenant),
@@ -316,5 +318,20 @@ export async function startWorkbench({
 
   return () => {
     for (const dispose of disposers.reverse()) dispose();
+  };
+}
+
+/**
+ * Keybindings for the whole window. Attached here, before the workbench renders, rather than in a
+ * React effect: an effect runs after paint, so a key pressed right after the workbench appears
+ * could be dropped.
+ */
+function listenForKeybindings(): () => void {
+  const listener = (event: KeyboardEvent): void => {
+    handleKeyDown(event);
+  };
+  window.addEventListener('keydown', listener);
+  return () => {
+    window.removeEventListener('keydown', listener);
   };
 }
