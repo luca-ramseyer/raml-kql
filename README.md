@@ -4,6 +4,8 @@
 
 Raml KQL is an open-source desktop app for macOS, Windows and Linux. It looks and feels like VS Code, so it is familiar from the first second. It is made for analysts who work across several customer tenants and need to ask the same question of all of them, without a Microsoft Defender multi-tenant organization (MTO).
 
+Website and documentation: **[kql.raml.ch](https://kql.raml.ch)**
+
 ![Raml KQL running one query across ten workspaces in five tenants](docs/images/results-dark.png)
 
 > **Status: version 1.0.** The macOS app is signed and notarized by Apple. The Windows installer is not signed yet, so SmartScreen will warn you the first time ([details](#install)). Please [open an issue](https://github.com/luca-ramseyer/raml-kql/issues) if something is off.
