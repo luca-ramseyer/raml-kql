@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/luca-ramseyer/raml-kql/compare/v1.2.0...v1.3.0) (2026-11-06)
+
+
+### Features
+
+* **extensions:** IPinfo enricher, fix Enrich Column, move examples to raml-kql-extensions ([#26](https://github.com/luca-ramseyer/raml-kql/issues/26)) ([947c212](https://github.com/luca-ramseyer/raml-kql/commit/947c21214b9db4e4040ef236592b781ae25d2195))
+
+
+### Bug Fixes
+
+* **workbench:** handle shortcuts pressed right after startup ([#40](https://github.com/luca-ramseyer/raml-kql/issues/40)) ([106e095](https://github.com/luca-ramseyer/raml-kql/commit/106e095dc0249054d24e817d5e502e38ed380703))
+
 ## [1.2.0](https://github.com/luca-ramseyer/raml-kql/compare/v1.1.0...v1.2.0) (2026-10-22)
 
 
