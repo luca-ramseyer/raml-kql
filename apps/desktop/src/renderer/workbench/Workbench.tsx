@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 
 import type { Platform } from '../../shared/keybindings/keys';
 import { PANEL_MIN_HEIGHT, SIDEBAR_MIN_WIDTH } from '../../shared/layout/layout-state';
-import { handleKeyDown } from '../platform/keybindings/keybinding-service';
 import {
   setPanelHeight,
   setSidebarWidth,
@@ -42,16 +41,6 @@ export function Workbench({
   const statusBarVisible = useSetting('workbench.statusBar.visible');
   const editorColumn = useRef<HTMLDivElement>(null);
   const dragStart = useRef(0);
-
-  useEffect(() => {
-    const listener = (event: KeyboardEvent): void => {
-      handleKeyDown(event);
-    };
-    window.addEventListener('keydown', listener);
-    return () => {
-      window.removeEventListener('keydown', listener);
-    };
-  }, []);
 
   const onSidebarDrag = useCallback((delta: number) => {
     const next = dragStart.current + delta;
