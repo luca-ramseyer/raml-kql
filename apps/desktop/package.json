@@ -18,19 +18,19 @@
     "dist:publish": "electron-vite build && electron-builder --config electron-builder.config.mjs --publish always"
   },
   "dependencies": {
-    "@azure/msal-node": "^7.1.2",
+    "@azure/msal-node": "^7.2.1",
     "@kusto/language-service-next": "12.4.1",
     "electron-updater": "^6.8.11",
     "exceljs": "4.4.0",
     "fflate": "0.8.3",
-    "isomorphic-git": "1.44.8",
+    "isomorphic-git": "1.44.11",
     "jsonc-parser": "^3.3.1",
     "yaml": "2.9.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@kusto/monaco-kusto": "15.0.2",
-    "@playwright/test": "^1.64.1",
+    "@playwright/test": "^1.65.0",
     "@raml-kql/extension-api": "workspace:*",
     "@raml-kql/pack-schema": "workspace:*",
     "@testing-library/jest-dom": "^7.0.1",
@@ -40,17 +40,17 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^5.2.0",
     "@vscode/codicons": "0.0.46-24",
-    "ag-grid-community": "36.2.0",
-    "ag-grid-react": "36.2.0",
+    "ag-grid-community": "36.3.0",
+    "ag-grid-react": "36.3.0",
     "echarts": "6.1.0",
-    "electron": "^45.2.1",
+    "electron": "^45.2.3",
     "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",
     "jsdom": "^30.1.3",
     "monaco-editor": "0.55.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "vite": "^8.1.6",
-    "zustand": "^5.0.16"
+    "vite": "^8.3.6",
+    "zustand": "^5.1.0"
   }
 }
